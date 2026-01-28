@@ -37,7 +37,7 @@ void UGA_Fire::ActivateAbility(
 		return;
 	}
 
-	UWeaponManageComponent* WMC = OwnerPawn->FindComponentByClass<UWeaponManageComponent>();
+	UWeaponManageComponent* WMC = OwnerPawn->GetWeaponManageComponent();
 	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
 	if (!WMC || !IsValid(Weapon) || !Weapon->WeaponData)
 	{
@@ -135,7 +135,7 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
     }
 
     APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
-    UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->FindComponentByClass<UWeaponManageComponent>() : nullptr;
+    UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->GetWeaponManageComponent() : nullptr;
     APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
     if (!OwnerPawn || !WMC || !IsValid(Weapon) || !Weapon->WeaponData)
     {
@@ -153,6 +153,12 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
     ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
  
     const FGameplayAbilityTargetData* Raw = Data.Get(0);
+	if (!Raw || Raw->GetScriptStruct() != FGameplayAbilityTargetData_LocationInfo::StaticStruct())
+	{
+		EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
     const FGameplayAbilityTargetData_LocationInfo* LocInfo = static_cast<const FGameplayAbilityTargetData_LocationInfo*>(Raw);
     if (!LocInfo)
     {

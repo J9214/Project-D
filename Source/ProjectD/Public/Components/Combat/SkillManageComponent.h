@@ -36,9 +36,6 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Skill")
 	void ServerRemoveSkillFromSlot(FGameplayTag SlotTag);
 	
-	UFUNCTION(BlueprintPure, Category = "Skill")
-	FSkillSlot GetSlotByTag(FGameplayTag SlotTag) const;
-
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

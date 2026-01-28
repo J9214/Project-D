@@ -132,20 +132,6 @@ void USkillManageComponent::ServerGrantSkillToSlot_Implementation(TSubclassOf<UG
 	}
 }
 
-FSkillSlot USkillManageComponent::GetSlotByTag(FGameplayTag SlotTag) const
-{
-	if (SlotTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(TEXT("InputTag.Ability.Skill1"))))
-	{
-		return Slots[0];
-	}
-	else if (SlotTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(TEXT("InputTag.Ability.Skill2"))))
-	{
-		return Slots[1];
-	}
-
-	return FSkillSlot{};
-}
-
 void USkillManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

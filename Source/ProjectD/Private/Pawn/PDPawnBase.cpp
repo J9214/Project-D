@@ -113,8 +113,13 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		}
 	}
 
-	UPDEnhancedInputComponent* PDInputComponent = CastChecked<UPDEnhancedInputComponent>(PlayerInputComponent);
-	PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+	if (UPDEnhancedInputComponent* PDInputComponent = Cast<UPDEnhancedInputComponent>(PlayerInputComponent))
+	{
+		if (IsValid(InputConfigDataAsset))
+		{
+			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+		}
+	}
 }
 
 void APDPawnBase::InitAbilityActorInfo()
