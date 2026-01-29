@@ -1,5 +1,6 @@
 #include "AbilitySystem/Abilities/Player/GA_Fire.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Pawn/PDPawnBase.h"
 #include "Weapon/PDWeaponBase.h"
 #include "Abilities/GameplayAbilityTargetTypes.h"
@@ -29,22 +30,56 @@ void UGA_Fire::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	
 	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
 	if (!OwnerPawn)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	UWeaponManageComponent* WMC = OwnerPawn->GetWeaponManageComponent();
-	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
-	if (!WMC || !IsValid(Weapon) || !Weapon->WeaponData)
+	
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (!WMC)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
+	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
+	if (!IsValid(Weapon) || !Weapon->WeaponData)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
+	if (HasAuthority(&ActivationInfo))
+	{
+		ApplyFireCooldownToOwner(Weapon);
+	}
+	
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
+	
+	UAnimMontage* MontageToPlay = Entry.Montage;
+	bool bStopWhenAbilityEnds = Entry.bStopWhenAbilityEnds;
+	
+	UAbilityTask_PlayMontageAndWait* PlayTask =
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, TEXT("FireMontageTask"), MontageToPlay, 1.f, NAME_None, bStopWhenAbilityEnds);
+	if (IsValid(PlayTask))
+	{
+		PlayTask->OnCompleted.AddDynamic(this, &UGA_Fire::OnMontageCompleted);
+		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Fire::OnMontageInterrupted);
+		PlayTask->OnCancelled.AddDynamic(this, &UGA_Fire::OnMontageCancelled);
+		PlayTask->ReadyForActivation();
+	}
+
 	const FPredictionKey PredKey = ActivationInfo.GetActivationPredictionKey();
 
 	if (HasAuthority(&ActivationInfo))
@@ -159,14 +194,6 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
     }
  
     const FVector AimPoint = LocInfo->TargetLocation.GetTargetingTransform().GetLocation();
-	
-	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-	
-	ApplyFireCooldownToOwner(Weapon);
 	
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 	

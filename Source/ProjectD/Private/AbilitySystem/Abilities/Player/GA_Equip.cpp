@@ -2,6 +2,9 @@
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Pawn/PDPawnBase.h"
+#include "Weapon/PDWeaponBase.h"
+#include "DataAssets/Weapon/DataAsset_Weapon.h"
 
 UGA_Equip::UGA_Equip()
 {
@@ -23,11 +26,39 @@ void UGA_Equip::ActivateAbility(
 		return;
 	}
 	
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (!WMC)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	APDWeaponBase* Weapon = WMC->GetWeaponInSlot(EquipSlotIndex);
+	if (!IsValid(Weapon) || !Weapon->WeaponData)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	APDWeaponBase* CurrentEquippedWeapon = WMC->GetEquippedWeapon();
+	if (CurrentEquippedWeapon == Weapon)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Equip);
+	
+	UAnimMontage* MontageToPlay = Entry.Montage;
+	FGameplayTag CommitTag = Entry.CommitEventTag;
+	float PlayRate = Entry.PlayRate;
+	
 	if (HasAuthority(&ActivationInfo))
 	{
 		UAbilityTask_WaitGameplayEvent* WaitEventTask =
 		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-			this, EventTag, nullptr, false, false);
+			this, CommitTag, nullptr, false, false);
 		
 		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
 		WaitEventTask->ReadyForActivation();
@@ -35,7 +66,7 @@ void UGA_Equip::ActivateAbility(
 	
 	UAbilityTask_PlayMontageAndWait* PlayTask =
 		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("EquipMontageTask"), EquipMontage, 1.f);
+			this, TEXT("EquipMontageTask"), MontageToPlay, PlayRate);
 	if (IsValid(PlayTask))
 	{
 		PlayTask->OnCompleted.AddDynamic(this, &UGA_Equip::OnMontageCompleted);

@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "Structs/PDPlayerAbilitySet.h"
 #include "Weapon/PDWeaponTypes.h"
+#include "Weapon/PDWeaponMontages.h"
 #include "DataAsset_Weapon.generated.h"
 
 class UGameplayEffect;
@@ -31,6 +32,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> FireCooldownGE = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	FPDWeaponMontageSet WeaponMontages;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float WeaponDamage = 30.f;

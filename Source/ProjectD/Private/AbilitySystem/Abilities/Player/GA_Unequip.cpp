@@ -1,5 +1,9 @@
 #include "AbilitySystem/Abilities/Player/GA_Unequip.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Weapon/PDWeaponBase.h"
+#include "DataAssets/Weapon/DataAsset_Weapon.h"
 
 UGA_Unequip::UGA_Unequip()
 {
@@ -20,11 +24,71 @@ void UGA_Unequip::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	if (UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo())
+	
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (!WMC)
 	{
-		WMC->UnequipCurrentWeapon();
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
+	if (!IsValid(Weapon) || !Weapon->WeaponData)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Unequip);
+	
+	UAnimMontage* MontageToPlay = Entry.Montage;
+	FGameplayTag CommitTag = Entry.CommitEventTag;
+	float PlayRate = Entry.PlayRate;
+	
+	if (HasAuthority(&ActivationInfo))
+	{
+		UAbilityTask_WaitGameplayEvent* WaitEventTask =
+		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this, CommitTag, nullptr, false, false);
+		
+		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Unequip::OnEventTagReceived);
+		WaitEventTask->ReadyForActivation();
+	}
+	
+	UAbilityTask_PlayMontageAndWait* PlayTask =
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, TEXT("UnequipMontageTask"), MontageToPlay, PlayRate);
+	if (IsValid(PlayTask))
+	{
+		PlayTask->OnCompleted.AddDynamic(this, &UGA_Unequip::OnMontageCompleted);
+		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Unequip::OnMontageInterrupted);
+		PlayTask->OnCancelled.AddDynamic(this, &UGA_Unequip::OnMontageCancelled);
+		PlayTask->ReadyForActivation();
+	}
+}
+
+void UGA_Unequip::OnEventTagReceived(const FGameplayEventData Payload)
+{
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (!Avatar)
+	{
+		return;
 	}
 
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	if (!Avatar->HasAuthority())
+	{
+		return;
+	}
+	
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (!WMC)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
+	WMC->UnequipCurrentWeapon();
+	
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }

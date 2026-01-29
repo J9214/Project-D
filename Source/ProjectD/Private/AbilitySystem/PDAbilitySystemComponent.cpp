@@ -3,7 +3,6 @@
 #include "GameplayTagContainer.h"
 #include "Pawn/PDPawnBase.h"
 #include "Weapon/PDWeaponBase.h"
-#include "DataAssets/Weapon/DataAsset_Weapon.h"
 #include "Components/Combat/WeaponManageComponent.h"
 #include "PDGameplayTags.h"
 
