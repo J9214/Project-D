@@ -23,9 +23,14 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ADS, "Player.Ability.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ChangeFireMode, "Player.Ability.Weapon.ChangeFireMode");
 
+	/** Player State Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Equipping, "Player.State.Equipping");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Unequipping, "Player.State.Unequipping");
+	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");
-	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipConfirm, "Event.Weapon.EquipConfirm");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
 
 	/** SetByCaller Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_Damage, "Data.Weapon.Damage");

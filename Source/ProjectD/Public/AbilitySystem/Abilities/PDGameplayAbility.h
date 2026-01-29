@@ -33,6 +33,15 @@ protected:
 		bool bWasCancelled
 	) override;
 	
+	UFUNCTION()
+	void OnMontageCompleted();
+
+	UFUNCTION()
+	void OnMontageInterrupted();
+
+	UFUNCTION()
+	void OnMontageCancelled();
+	
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponentFromActorInfo() const;
 	

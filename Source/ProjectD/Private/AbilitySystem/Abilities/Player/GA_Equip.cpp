@@ -1,5 +1,7 @@
 #include "AbilitySystem/Abilities/Player/GA_Equip.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 UGA_Equip::UGA_Equip()
 {
@@ -21,23 +23,49 @@ void UGA_Equip::ActivateAbility(
 		return;
 	}
 	
-	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
-	if (!WMC)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	if (!WMC->GetWeaponInSlot(EquipSlotIndex))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	if (HasAuthority(&ActivationInfo))
 	{
-		WMC->EquipSlot(EquipSlotIndex);
+		UAbilityTask_WaitGameplayEvent* WaitEventTask =
+		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this, EventTag, nullptr, false, false);
+		
+		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
+		WaitEventTask->ReadyForActivation();
 	}
 	
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+	UAbilityTask_PlayMontageAndWait* PlayTask =
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this, TEXT("EquipMontageTask"), EquipMontage, 1.f);
+	if (IsValid(PlayTask))
+	{
+		PlayTask->OnCompleted.AddDynamic(this, &UGA_Equip::OnMontageCompleted);
+		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Equip::OnMontageInterrupted);
+		PlayTask->OnCancelled.AddDynamic(this, &UGA_Equip::OnMontageCancelled);
+		PlayTask->ReadyForActivation();
+	}
+}
+
+void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
+{
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (!Avatar)
+	{
+		return;
+	}
+
+	if (!Avatar->HasAuthority())
+	{
+		return;
+	}
+	
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (!WMC || !WMC->GetWeaponInSlot(EquipSlotIndex))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	WMC->EquipSlot(EquipSlotIndex);
+	
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }

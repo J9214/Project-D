@@ -45,14 +45,6 @@ void UGA_Fire::ActivateAbility(
 		return;
 	}
 	
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	ApplyFireCooldownToOwner(Weapon);
-	
 	const FPredictionKey PredKey = ActivationInfo.GetActivationPredictionKey();
 
 	if (HasAuthority(&ActivationInfo))
@@ -151,7 +143,7 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
 	// }
 
     ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
- 
+	
     const FGameplayAbilityTargetData* Raw = Data.Get(0);
 	if (!Raw || Raw->GetScriptStruct() != FGameplayAbilityTargetData_LocationInfo::StaticStruct())
 	{
@@ -167,7 +159,15 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
     }
  
     const FVector AimPoint = LocInfo->TargetLocation.GetTargetingTransform().GetLocation();
- 
+	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
+	ApplyFireCooldownToOwner(Weapon);
+	
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 	
     EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, false);

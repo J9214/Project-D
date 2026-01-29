@@ -25,9 +25,14 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_ADS);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_ChangeFireMode);
 
+	/** Player State Tags **/
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Firinig);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Equipping);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Unequipping);
+	
 	/** Event Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipRequest);
-	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipConfirm);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_UnequipRequest);
 	
 	/** SetByCaller Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_Damage);
