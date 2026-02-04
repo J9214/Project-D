@@ -43,5 +43,8 @@ public:
 	float FireInterval = 0.2f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 MaxAmmo = 30;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float MaxRange = 10000.f;
 };
