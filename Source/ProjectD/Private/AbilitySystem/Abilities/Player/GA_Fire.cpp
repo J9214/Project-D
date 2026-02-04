@@ -125,7 +125,6 @@ void UGA_Fire::ActivateAbility(
 		);
 
 		const FVector AimPoint = bHit ? CameraHit.ImpactPoint : CameraEnd;
-
 		const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(CameraStart, AimPoint);
 
 		FScopedPredictionWindow PredWindow(ASC, true);
@@ -158,7 +157,7 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
         EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
         return;
     }
-
+ 
     APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
     UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->GetWeaponManageComponent() : nullptr;
     APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
@@ -168,21 +167,6 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
         return;
     }
 	
-	// if (!Weapon->ServerCanFire(Weapon->WeaponData->FireInterval))
-	// {
-	// 	ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
-	// 	EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, false);
-	// 	return;
-	// }
-
-    ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
-	
-	if (!Weapon->ServerCanFire())
-	{
-		EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
 	const FGameplayAbilityTargetData* Raw = Data.Get(0);
 	if (!Raw || Raw->GetScriptStruct() != FGameplayAbilityTargetData_LocationInfo::StaticStruct())
 	{
@@ -196,9 +180,15 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
         EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
         return;
     }
- 
-    const FVector AimPoint = LocInfo->TargetLocation.GetTargetingTransform().GetLocation();
 	
+    ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
+	
+	if (!Weapon->ServerCanFire())
+	{
+		EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+ 
 	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
@@ -208,6 +198,7 @@ void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data
 	Weapon->ServerConsumeAmmo(1);
 	ApplyFireCooldownToOwner(Weapon);
 	
+    const FVector AimPoint = LocInfo->TargetLocation.GetTargetingTransform().GetLocation();
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 	
     EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, false);
