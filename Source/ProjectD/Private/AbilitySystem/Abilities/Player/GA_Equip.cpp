@@ -81,11 +81,13 @@ void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (!Avatar)
 	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
 
 	if (!Avatar->HasAuthority())
 	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
 	

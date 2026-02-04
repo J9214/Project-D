@@ -1,30 +1,24 @@
-#include "AbilitySystem/Abilities/Player/GA_Unequip.h"
+#include "AbilitySystem/Abilities/Player/GA_Reload.h"
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Weapon/PDWeaponBase.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
 
-UGA_Unequip::UGA_Unequip()
+UGA_Reload::UGA_Reload()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	NetSecurityPolicy = EGameplayAbilityNetSecurityPolicy::ClientOrServer;
 }
 
-void UGA_Unequip::ActivateAbility(
+void UGA_Reload::ActivateAbility(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
@@ -39,8 +33,14 @@ void UGA_Unequip::ActivateAbility(
 		return;
 	}
 	
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Unequip);
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Reload);
 	
 	UAnimMontage* MontageToPlay = Entry.Montage;
 	FGameplayTag CommitTag = Entry.CommitEventTag;
@@ -52,23 +52,23 @@ void UGA_Unequip::ActivateAbility(
 		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 			this, CommitTag, nullptr, false, false);
 		
-		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Unequip::OnEventTagReceived);
+		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Reload::OnEventTagReceived);
 		WaitEventTask->ReadyForActivation();
 	}
 	
 	UAbilityTask_PlayMontageAndWait* PlayTask =
 		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("UnequipMontageTask"), MontageToPlay, PlayRate);
+			this, TEXT("ReloadMontageTask"), MontageToPlay, PlayRate);
 	if (IsValid(PlayTask))
 	{
-		PlayTask->OnCompleted.AddDynamic(this, &UGA_Unequip::OnMontageCompleted);
-		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Unequip::OnMontageInterrupted);
-		PlayTask->OnCancelled.AddDynamic(this, &UGA_Unequip::OnMontageCancelled);
+		PlayTask->OnCompleted.AddDynamic(this, &UGA_Reload::OnMontageCompleted);
+		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Reload::OnMontageInterrupted);
+		PlayTask->OnCancelled.AddDynamic(this, &UGA_Reload::OnMontageCancelled);
 		PlayTask->ReadyForActivation();
 	}
 }
 
-void UGA_Unequip::OnEventTagReceived(const FGameplayEventData Payload)
+void UGA_Reload::OnEventTagReceived(const FGameplayEventData Payload)
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	if (!Avatar)
@@ -90,7 +90,14 @@ void UGA_Unequip::OnEventTagReceived(const FGameplayEventData Payload)
 		return;
 	}
 	
-	WMC->UnequipCurrentWeapon();
+	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
+	if (!Weapon)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
 	
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	Weapon->ReloadAmmo();
+	
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
