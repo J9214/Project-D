@@ -2,8 +2,11 @@
 
 #include "AI/MassAI/CollisionProxyActor.h"
 #include "Components/CapsuleComponent.h"
+#include "AI/MassAI/MassProxyPoolSubsystem.h"
 
 ACollisionProxyActor::ACollisionProxyActor()
+	:CapsuleRadius(34.0f),
+	CapsuleHalfHeight(88.0f)
 {
 	// only Server
 	bReplicates = false;
@@ -11,6 +14,8 @@ ACollisionProxyActor::ACollisionProxyActor()
 
 	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("ProxyCapsule"));
 	SetRootComponent(Capsule);
+
+	Capsule->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
 
 	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Capsule->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -24,21 +29,19 @@ ACollisionProxyActor::ACollisionProxyActor()
 void ACollisionProxyActor::SetRepresentedEntity(const FMassEntityHandle& InEntity)
 {
 	RepresentedEntity = InEntity;
-	RepresentedEntityKey = InEntity.IsValid() ? MakeEntityKey(InEntity) : 0;
+
+	if (IsValid(Capsule) == true)
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
 }
 
 void ACollisionProxyActor::ResetProxy()
 {
 	RepresentedEntity = FMassEntityHandle();
-	RepresentedEntityKey = 0;
 
-	if (Capsule)
+	if (IsValid(Capsule) == true)
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
-}
-
-int64 ACollisionProxyActor::MakeEntityKey(const FMassEntityHandle& E)
-{
-	return (static_cast<int64>(E.Index) << 32) | static_cast<int64>(E.SerialNumber);
 }

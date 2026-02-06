@@ -21,11 +21,7 @@ public:
 	void ResetProxy();
 	
 	FORCEINLINE const FMassEntityHandle& GetRepresentedEntity() const { return RepresentedEntity; }
-	FORCEINLINE int64 GetRepresentedEntityKey() const { return RepresentedEntityKey; }
 	FORCEINLINE UCapsuleComponent* GetCapsuleComponent() const { return Capsule; }
-
-private:
-	static int64 MakeEntityKey(const FMassEntityHandle& E);
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Proxy")
@@ -34,6 +30,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Proxy")
 	float CapsuleRadius;
 
+	UPROPERTY(EditAnywhere, Category = "Proxy")
+	float CapsuleHalfHeight;
+
+private:
 	FMassEntityHandle RepresentedEntity;
-	int64 RepresentedEntityKey = 0;
 };
