@@ -14,20 +14,22 @@ void UMassProxyPoolSubsystem::Deinitialize()
 
 void UMassProxyPoolSubsystem::InitPool(int32 PoolSize)
 {
+	if (PoolSize <= 0)
+	{
+		return;
+	}
+
 	if (IsServerWorld() == false)
 	{
 		// Client Not Create Proxy Actors
 		return;
 	}
 
-	if (Proxies.Num() > 0)
+	if (Proxies.Num() > 0 ||
+		FreeList.Num() > 0 ||
+		EntityToProxyId.Num() > 0)
 	{
 		ShutdownPool();
-	}
-
-	if (PoolSize <= 0)
-	{
-		return;
 	}
 
 	Proxies.Reserve(PoolSize);
@@ -53,7 +55,7 @@ void UMassProxyPoolSubsystem::ShutdownPool()
 
 	for (TWeakObjectPtr<ACollisionProxyActor>& WeakProxy : Proxies)
 	{
-		if (WeakProxy.IsValid())
+		if (WeakProxy.IsValid() == true)
 		{
 			WeakProxy->Destroy();
 		}
@@ -70,50 +72,50 @@ ACollisionProxyActor* UMassProxyPoolSubsystem::Acquire(const FMassEntityHandle& 
 		return nullptr;
 	}
 
-	if (ACollisionProxyActor* Existing = GetProxy(Entity))
+	const int64 Key = MakeEntityKey(Entity);
+	if (Key == 0)
 	{
-		return Existing;
+		return nullptr;
 	}
 
-	if (FreeList.Num() == 0)
 	{
-		UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Acquire - FreeList Is Empty!!"));
+		const int32* FoundProxyId = EntityToProxyId.Find(Key);
+		if (FoundProxyId != nullptr)
+		{
+			const int32 ProxyId = *FoundProxyId;
+			if (Proxies.IsValidIndex(ProxyId) == true)
+			{
+				ACollisionProxyActor* Proxy = Proxies[ProxyId].Get();
+				if (IsValid(Proxy) == true)
+				{
+					return Proxy;
+				}
+			}
+
+			EntityToProxyId.Remove(Key);
+		}
+	}
+
+	if (FreeList.Num() <= 0)
+	{
 		return nullptr;
 	}
 
 	const int32 ProxyId = FreeList.Pop();
+
 	if (Proxies.IsValidIndex(ProxyId) == false)
 	{
-		UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Acquire - Is Not Valid Idx!!"));
 		return nullptr;
 	}
 
 	ACollisionProxyActor* Proxy = Proxies[ProxyId].Get();
-
-	// 혹시 액터가 날아갔으면(레벨 전환/에디터 PIE 등) 재생성
 	if (IsValid(Proxy) == false)
 	{
-		Proxy = SpawnOneProxyActor();
-		if (IsValid(Proxy) == false)
-		{
-			UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Acquire - Can't Spawn Proxy Actor!!"));
-			FreeList.Add(ProxyId);
-			return nullptr;
-		}
-		Proxies[ProxyId] = Proxy;
+		return nullptr;
 	}
 
 	Proxy->SetRepresentedEntity(Entity);
 
-	if (UCapsuleComponent* Capsule = Proxy->GetCapsuleComponent())
-	{
-		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	}
-
-	// Position is Set By Processor Soon
-	Proxy->SetActorLocation(FVector::ZeroVector);
-
-	const int64 Key = MakeEntityKey(Entity);
 	EntityToProxyId.Add(Key, ProxyId);
 
 	return Proxy;
@@ -128,6 +130,11 @@ void UMassProxyPoolSubsystem::Release(const FMassEntityHandle& Entity)
 	}
 
 	const int64 Key = MakeEntityKey(Entity);
+	if (Key == 0)
+	{
+		return;
+	}
+
 	int32 ProxyId = INDEX_NONE;
 
 	{
@@ -166,6 +173,11 @@ ACollisionProxyActor* UMassProxyPoolSubsystem::GetProxy(const FMassEntityHandle&
 	}
 
 	const int64 Key = MakeEntityKey(Entity);
+	if (Key == 0)
+	{
+		return nullptr;
+	}
+
 	const int32* FoundId = EntityToProxyId.Find(Key);
 	if (FoundId == nullptr)
 	{
@@ -178,7 +190,13 @@ ACollisionProxyActor* UMassProxyPoolSubsystem::GetProxy(const FMassEntityHandle&
 		return nullptr;
 	}
 
-	return Proxies[ProxyId].Get();
+	ACollisionProxyActor* Proxy = Proxies[ProxyId].Get();
+	if (IsValid(Proxy) == false)
+	{
+		return nullptr;
+	}
+
+	return Proxy;
 }
 
 bool UMassProxyPoolSubsystem::IsServerWorld() const
@@ -200,7 +218,7 @@ bool UMassProxyPoolSubsystem::IsServerWorld() const
 	return true;
 }
 
-int64 UMassProxyPoolSubsystem::MakeEntityKey(const FMassEntityHandle& E)
+int64 UMassProxyPoolSubsystem::MakeEntityKey(const FMassEntityHandle& E) const
 {
 	return (static_cast<int64>(E.Index) << 32) | static_cast<int64>(E.SerialNumber);
 }
@@ -222,10 +240,9 @@ ACollisionProxyActor* UMassProxyPoolSubsystem::SpawnOneProxyActor()
 
 	ACollisionProxyActor* Proxy = World->SpawnActor<ACollisionProxyActor>(SpawnClass, FTransform::Identity, Params);
 
-	if (IsValid(Proxy))
+	if (IsValid(Proxy) == true)
 	{
 		Proxy->ResetProxy();
-		Proxy->SetActorHiddenInGame(true);
 	}
 
 	return Proxy;

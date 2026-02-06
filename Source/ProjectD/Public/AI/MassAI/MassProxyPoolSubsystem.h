@@ -37,14 +37,15 @@ public:
 
 	bool IsServerWorld() const;
 
+	int64 MakeEntityKey(const FMassEntityHandle& E) const;
 public:
 	FORCEINLINE int32 GetFreeCount() const { return FreeList.Num(); }
 	FORCEINLINE int32 GetTotalCount() const { return Proxies.Num(); }
 
 private:
-	static int64 MakeEntityKey(const FMassEntityHandle& E);
 	ACollisionProxyActor* SpawnOneProxyActor();
 
+private:
 	UPROPERTY(EditDefaultsOnly, Category = "Proxy")
 	TSubclassOf<ACollisionProxyActor> ProxyActorClass;
 
