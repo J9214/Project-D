@@ -20,7 +20,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
-#include "Components/PrimitiveComponent.h" // 파일 상단에 추가
+#include "Components/PrimitiveComponent.h" 
 #include "GameFramework/PawnMovementComponent.h"
 
 APDPawnBase::APDPawnBase()
@@ -300,7 +300,7 @@ void APDPawnBase::Server_PickUpBall_Implementation(ABallCore* Ball)
 
 	CarriedBall = Ball;
 
-	Ball->Server_SetCarrier(this);
+	Ball->SetCarrier(this);
 
 	ApplyHoldingBallEffect();
 }
@@ -319,7 +319,7 @@ void APDPawnBase::Server_DropBall_Implementation()
 
 	const FVector Impulse = (Forward * 300.f) + (FVector::UpVector * 200.f);
 
-	CarriedBall->Server_DropPhysics(DropLoc, Impulse);
+	CarriedBall->DropPhysics(DropLoc, Impulse);
 
 	CarriedBall = nullptr;
 }

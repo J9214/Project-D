@@ -71,7 +71,6 @@ protected:
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out) const override;
 
-	// 입력(F)
 	UFUNCTION(BlueprintCallable)
 	void TryInteract();
 

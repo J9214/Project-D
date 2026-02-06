@@ -4,6 +4,7 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "GameState/PDGameStateBase.h"
 
 APDGameModeBase::APDGameModeBase()
 {

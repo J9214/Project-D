@@ -19,9 +19,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 
-	void Server_SetCarrier(APawn* NewCarrier);
-	void Server_ClearCarrier();
-	void Server_DropPhysics(const FVector& DropLocation, const FVector& Impulse);
+	void SetCarrier(APawn* NewCarrier);
+	void ClearCarrier();
+	void DropPhysics(const FVector& DropLocation, const FVector& Impulse);
 
 	UPROPERTY(ReplicatedUsing = OnRep_CarrierPawn, BlueprintReadOnly, VisibleInstanceOnly, Category = "Ball")
 	TObjectPtr<APawn> CarrierPawn = nullptr;
