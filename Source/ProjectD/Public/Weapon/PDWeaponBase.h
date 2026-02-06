@@ -14,12 +14,12 @@ class PROJECTD_API APDWeaponBase : public AActor
 	
 public:	
 	APDWeaponBase();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	FORCEINLINE EPDWeaponFireMode GetCurrentFireMode() const { return CurrentFireMode; }
 	FORCEINLINE bool IsFullAuto() const { return CurrentFireMode == EPDWeaponFireMode::FullAuto; }
 	
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	FVector GetMuzzlePoint() const;
 	
 	bool ClientCanFire() const;

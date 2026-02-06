@@ -1,6 +1,8 @@
 #include "AbilitySystem/Abilities/Player/GA_Fire.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Components/Combat/WeaponStateComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Pawn/PDPawnBase.h"
 #include "Weapon/PDWeaponBase.h"
 #include "Abilities/GameplayAbilityTargetTypes.h"
@@ -15,6 +17,7 @@ UGA_Fire::UGA_Fire()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	NetSecurityPolicy = EGameplayAbilityNetSecurityPolicy::ClientOrServer;
 	ActivationPolicy = EPDAbilityActivationPolicy::WhileInputActive;
+	bReplicateInputDirectly = true;
 }
 
 void UGA_Fire::ActivateAbility(
@@ -24,184 +27,314 @@ void UGA_Fire::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
-	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
-	if (!OwnerPawn)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
-	if (!WMC)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
-	if (!IsValid(Weapon) || !Weapon->WeaponData)
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
+	bKeepFiring = true;
+
 	if (IsLocallyControlled())
 	{
-		if (!Weapon->ClientCanFire())
-		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-			return;
-		}
-	}
-	
-	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
-	
-	UAnimMontage* MontageToPlay = Entry.Montage;
-	bool bStopWhenAbilityEnds = Entry.bStopWhenAbilityEnds;
-	
-	UAbilityTask_PlayMontageAndWait* PlayTask =
-		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("FireMontageTask"), MontageToPlay, 1.f, NAME_None, bStopWhenAbilityEnds);
-	if (IsValid(PlayTask))
-	{
-		PlayTask->OnCompleted.AddDynamic(this, &UGA_Fire::OnMontageCompleted);
-		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Fire::OnMontageInterrupted);
-		PlayTask->OnCancelled.AddDynamic(this, &UGA_Fire::OnMontageCancelled);
-		PlayTask->ReadyForActivation();
-	}
-
-	const FPredictionKey PredKey = ActivationInfo.GetActivationPredictionKey();
-
-	if (HasAuthority(&ActivationInfo))
-	{
-		ASC->AbilityTargetDataSetDelegate(Handle, PredKey)
-			.AddUObject(this, &UGA_Fire::OnTargetDataReceived);
-
-		ASC->CallAllReplicatedDelegatesIfSet(Handle, PredKey);
-		
-		return;
-	}
-	
-	if (ActorInfo->IsLocallyControlled())
-	{
-		UWorld* World = GetWorld();
-		if (!World)
-		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-			return;
-		}
-
-		const float MaxRange = Weapon->WeaponData->MaxRange;
-
-		const FVector ViewLocation = OwnerPawn->GetPawnViewLocation();
-		FRotator ViewRotation = OwnerPawn->GetBaseAimRotation();
-		if (AController* Controller = OwnerPawn->GetController())
-		{
-			ViewRotation = Controller->GetControlRotation();
-		}
-
-		const FVector AimDirection = ViewRotation.Vector();
-		const FVector CameraStart = ViewLocation;
-		const FVector CameraEnd = CameraStart + AimDirection * MaxRange;
-
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
-		Params.AddIgnoredActor(Weapon);
-
-		FHitResult CameraHit;
-		const bool bHit = World->LineTraceSingleByChannel(
-			CameraHit,
-			CameraStart,
-			CameraEnd,
-			ECC_GameTraceChannel1,
-			Params
-		);
-
-		const FVector AimPoint = bHit ? CameraHit.ImpactPoint : CameraEnd;
-		const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(CameraStart, AimPoint);
-
-		FScopedPredictionWindow PredWindow(ASC, true);
-		ASC->CallServerSetReplicatedTargetData(
-			Handle,
-			PredKey,
-			TargetData,
-			FGameplayTag(),
-			ASC->ScopedPredictionKey
-		);
-		
-		DrawDebugLine(World, CameraStart, AimPoint, FColor::Cyan, false, 1.f, 0, 1.f);
-		
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		StartFireNow();
 	}
 }
 
-void UGA_Fire::OnTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag ActivationTag)
+void UGA_Fire::EndAbility(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility,
+	bool bWasCancelled
+)
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
+	bKeepFiring = false;
+
+	if (WaitDelayTask)
 	{
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		WaitDelayTask->EndTask();
+		WaitDelayTask = nullptr;
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_Fire::InputReleased(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo
+)
+{
+	bKeepFiring = false;
+
+	if (WaitDelayTask)
+	{
+		WaitDelayTask->EndTask();
+		WaitDelayTask = nullptr;
+	}
+
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGA_Fire::HandleServerReceivedTargetData(
+	const FGameplayAbilityTargetDataHandle& Data,
+	FGameplayTag ActivationTag,
+	FGameplayAbilitySpecHandle Handle,
+	FPredictionKey ShotKey
+)
+{
+	if (!HasAuthority(&CurrentActivationInfo))
+	{
 		return;
 	}
-	
-    const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
-    if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
-    {
-        EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
-        return;
-    }
- 
-    APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
-    UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->GetWeaponManageComponent() : nullptr;
-    APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
-    if (!OwnerPawn || !WMC || !IsValid(Weapon) || !Weapon->WeaponData)
-    {
-        EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
-        return;
-    }
-	
+
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
+	UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->GetWeaponManageComponent() : nullptr;
+	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
+	if (!OwnerPawn || !WMC || !IsValid(Weapon) || !Weapon->WeaponData)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
 	const FGameplayAbilityTargetData* Raw = Data.Get(0);
 	if (!Raw || Raw->GetScriptStruct() != FGameplayAbilityTargetData_LocationInfo::StaticStruct())
 	{
-		EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
-	
-    const FGameplayAbilityTargetData_LocationInfo* LocInfo = static_cast<const FGameplayAbilityTargetData_LocationInfo*>(Raw);
-    if (!LocInfo)
-    {
-        EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
-        return;
-    }
-	
-    ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, CurrentActivationInfo.GetActivationPredictionKey());
-	
+
+	const FGameplayAbilityTargetData_LocationInfo* LocationInfo = static_cast<const
+		FGameplayAbilityTargetData_LocationInfo*>(Raw);
+
+	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
+
 	if (!Weapon->ServerCanFire())
 	{
-		EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
- 
-	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+
+	Weapon->ServerConsumeAmmo(1);
+	ApplyFireCooldownToOwner(Weapon);
+	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
+}
+
+void UGA_Fire::StartFireNow()
+{
+	UAbilitySystemComponent* ASC = nullptr;
+	APDPawnBase* OwnerPawn = nullptr;
+	APDWeaponBase* Weapon = nullptr;
+	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	FireOneShot();
+
+	if (Weapon->GetCurrentFireMode() == EPDWeaponFireMode::FullAuto)
+	{
+		ScheduleNextShot(Weapon->WeaponData->FireInterval);
+	}
+	else
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	}
+}
+
+void UGA_Fire::ScheduleNextShot(float Interval)
+{
+	if (!bKeepFiring)
+	{
+		return;
+	}
+
+	if (WaitDelayTask)
+	{
+		WaitDelayTask->EndTask();
+		WaitDelayTask = nullptr;
+	}
+
+	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, FMath::Max(0.01f, Interval));
+	if (WaitDelayTask)
+	{
+		WaitDelayTask->OnFinish.AddDynamic(this, &UGA_Fire::OnWaitDelayFinished);
+		WaitDelayTask->ReadyForActivation();
+	}
+}
+
+void UGA_Fire::OnWaitDelayFinished()
+{
+	if (!bKeepFiring)
+	{
+		return;
+	}
+
+	FireOneShot();
+
+	UAbilitySystemComponent* ASC = nullptr;
+	APDPawnBase* OwnerPawn = nullptr;
+	APDWeaponBase* Weapon = nullptr;
+	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+
+	if (Weapon->GetCurrentFireMode() == EPDWeaponFireMode::FullAuto)
+	{
+		ScheduleNextShot(Weapon->WeaponData->FireInterval);
+	}
+	else
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	}
+}
+
+void UGA_Fire::FireOneShot()
+{
+	if (!IsLocallyControlled() || !bKeepFiring)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = nullptr;
+	APDPawnBase* OwnerPawn = nullptr;
+	APDWeaponBase* Weapon = nullptr;
+	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
 	
-	Weapon->ServerConsumeAmmo(1);
-	ApplyFireCooldownToOwner(Weapon);
+	if (!Weapon->ClientCanFire())
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
+
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	if (!WeaponDA)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
 	
-    const FVector AimPoint = LocInfo->TargetLocation.GetTargetingTransform().GetLocation();
-	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
-	
-    EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, false);
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
+
+	UAbilityTask_PlayMontageAndWait* PlayTask =
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this,
+			TEXT("FireMontageTask"),
+			Entry.Montage,
+			1.f,
+			NAME_None,
+			Entry.bStopWhenAbilityEnds
+		);
+	if (IsValid(PlayTask))
+	{
+		PlayTask->ReadyForActivation();
+	}
+
+	{
+		FScopedPredictionWindow PW(ASC, true);
+		const FPredictionKey PredictKey = ASC->ScopedPredictionKey;
+
+		UWeaponStateComponent* WSC = OwnerPawn->GetWeaponStateComponent();
+		if (WSC)
+		{
+			WSC->ServerRPC_RegisterFireShotKey(CurrentSpecHandle, PredictKey);
+		}
+
+		const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
+		const FVector AimPoint = CalcLocalAimPoint(OwnerPawn, Weapon);
+		const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
+
+		ASC->CallServerSetReplicatedTargetData(
+			CurrentSpecHandle,
+			PredictKey,
+			TargetData,
+			FGameplayTag(),
+			ASC->ScopedPredictionKey
+		);
+	}
+}
+
+bool UGA_Fire::GetOwnerPawnWeapon(
+	UAbilitySystemComponent*& OutASC,
+	APDPawnBase*& OutPawn,
+	APDWeaponBase*& OutWeapon
+) const
+{
+	OutASC = GetAbilitySystemComponentFromActorInfo();
+	if (!OutASC)
+	{
+		return false;
+	}
+
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
+	{
+		return false;
+	}
+
+	OutPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
+	if (!OutPawn)
+	{
+		return false;
+	}
+
+	UWeaponManageComponent* WMC = OutPawn->GetWeaponManageComponent();
+	if (!WMC)
+	{
+		return false;
+	}
+
+	OutWeapon = WMC->GetEquippedWeapon();
+	if (!IsValid(OutWeapon) || !OutWeapon->WeaponData)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon) const
+{
+	UWorld* World = GetWorld();
+	if (!World || !OwnerPawn || !Weapon || !Weapon->WeaponData)
+	{
+		return FVector::ZeroVector;
+	}
+
+	const float MaxRange = Weapon->WeaponData->MaxRange;
+
+	const FVector ViewLocation = OwnerPawn->GetPawnViewLocation();
+	FRotator ViewRot = OwnerPawn->GetBaseAimRotation();
+	if (AController* Controller = OwnerPawn->GetController())
+	{
+		ViewRot = Controller->GetControlRotation();
+	}
+
+	const FVector Start = ViewLocation;
+	const FVector End = Start + ViewRot.Vector() * MaxRange;
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
+	Params.AddIgnoredActor(Weapon);
+
+	FHitResult Hit;
+	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_GameTraceChannel1, Params);
+
+	DrawDebugLine(World, Start, bHit ? Hit.ImpactPoint : End, FColor::Cyan, false, 1.f, 0, 1.f);
+
+	return bHit ? Hit.ImpactPoint : End;
 }
 
 void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
@@ -231,8 +364,8 @@ void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weap
 	);
 
 	ApplyWeaponDamageGE(Hit, Weapon);
-	
-	OwnerPawn->ClientDrawFireDebug(MuzzleStart, bHit? Hit.ImpactPoint : MuzzleEnd, bHit, Hit.ImpactPoint);
+
+	OwnerPawn->ClientDrawFireDebug(MuzzleStart, bHit ? Hit.ImpactPoint : MuzzleEnd, bHit, Hit.ImpactPoint);
 }
 
 void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon)
@@ -241,7 +374,7 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 	{
 		return;
 	}
-	
+
 	AActor* TargetActor = Hit.GetActor();
 	if (!IsValid(TargetActor))
 	{
@@ -266,7 +399,11 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddHitResult(Hit);
 
-	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(Weapon->WeaponData->WeaponDamageGE, Level, Context);
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
+		Weapon->WeaponData->WeaponDamageGE,
+		Level,
+		Context
+	);
 	if (!SpecHandle.IsValid())
 	{
 		return;
@@ -285,7 +422,10 @@ void UGA_Fire::ApplyFireCooldownToOwner(const APDWeaponBase* Weapon)
 
 	const float Interval = FMath::Max(0.01f, Weapon->WeaponData->FireInterval);
 
-	FGameplayEffectSpecHandle CooldownEffect = MakeOutgoingGameplayEffectSpec(Weapon->WeaponData->FireCooldownGE, GetAbilityLevel());
+	FGameplayEffectSpecHandle CooldownEffect = MakeOutgoingGameplayEffectSpec(
+		Weapon->WeaponData->FireCooldownGE,
+		GetAbilityLevel()
+	);
 	if (!CooldownEffect.IsValid())
 	{
 		return;
@@ -313,6 +453,6 @@ FGameplayAbilityTargetDataHandle UGA_Fire::MakeAimPointTargetData(const FVector&
 	Loc->TargetLocation.LiteralTransform = FTransform(AimPoint);
 
 	Handle.Add(Loc);
-	
+
 	return Handle;
 }

@@ -5,6 +5,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/Input/PDEnhancedInputComponent.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Components/Combat/WeaponStateComponent.h"
 #include "Components/Combat/SkillManageComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
@@ -23,10 +24,11 @@
 
 APDPawnBase::APDPawnBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
+	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
@@ -58,16 +60,6 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 	if (bHit)
 	{
 		DrawDebugPoint(GetWorld(), HitPoint, 8.f, FColor::Yellow, false, 1.f);
-	}
-}
-
-void APDPawnBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	
-	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
-	{
-		ASC->ProcessAbilityInput(DeltaTime);
 	}
 }
 
