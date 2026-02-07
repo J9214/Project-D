@@ -33,7 +33,7 @@ struct PROJECTD_API FMassPerceptionTuning
 
 	// Max Limits (For Proxy Pool)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception|Perf")
-	int32 MaxDesiredEntities = 0;
+	int32 MaxDesiredEntities = 300;
 
 	// Max Request Limits (For MassPerceptionType)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Perception|Perf")
