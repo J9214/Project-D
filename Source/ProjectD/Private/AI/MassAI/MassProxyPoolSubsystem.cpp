@@ -223,6 +223,27 @@ int64 UMassProxyPoolSubsystem::MakeEntityKey(const FMassEntityHandle& E) const
 	return (static_cast<int64>(E.Index) << 32) | static_cast<int64>(E.SerialNumber);
 }
 
+void UMassProxyPoolSubsystem::ForEachActiveProxy(TFunctionRef<void(ACollisionProxyActor* Proxy)> Func) const
+{
+	for (const TPair<int64, int32>& Pair : EntityToProxyId)
+	{
+		const int32 ProxyId = Pair.Value;
+
+		if (Proxies.IsValidIndex(ProxyId) == false)
+		{
+			continue;
+		}
+
+		ACollisionProxyActor* Proxy = Proxies[ProxyId].Get();
+		if (IsValid(Proxy) == false)
+		{
+			continue;
+		}
+
+		Func(Proxy);
+	}
+}
+
 ACollisionProxyActor* UMassProxyPoolSubsystem::SpawnOneProxyActor()
 {
 	UWorld* World = GetWorld();

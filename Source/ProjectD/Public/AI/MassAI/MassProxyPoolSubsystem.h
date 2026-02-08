@@ -10,7 +10,7 @@
 class ACollisionProxyActor;
 
 /**
- * 
+ *
  */
 UCLASS()
 class PROJECTD_API UMassProxyPoolSubsystem : public UWorldSubsystem
@@ -38,7 +38,11 @@ public:
 	bool IsServerWorld() const;
 
 	int64 MakeEntityKey(const FMassEntityHandle& E) const;
+
+	void ForEachActiveProxy(TFunctionRef<void(ACollisionProxyActor* Proxy)> Func) const;
+
 public:
+	FORCEINLINE int32 GetActiveProxyCount() const { return EntityToProxyId.Num(); };
 	FORCEINLINE int32 GetFreeCount() const { return FreeList.Num(); }
 	FORCEINLINE int32 GetTotalCount() const { return Proxies.Num(); }
 
