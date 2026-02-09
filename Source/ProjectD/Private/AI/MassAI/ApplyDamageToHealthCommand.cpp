@@ -9,31 +9,49 @@ FApplyDamageToHealthCommand::FApplyDamageToHealthCommand()
 {
 }
 
-FApplyDamageToHealthCommand::FApplyDamageToHealthCommand(const FMassEntityHandle InEntity, const float InDamage)
-	: FMassBatchedCommand(EMassCommandOperationType::Set, FName(TEXT("ApplyDamageToHealth")))
-	, Entity(InEntity)
-	, Damage(InDamage)
+void FApplyDamageToHealthCommand::Add(const FMassEntityHandle InEntity, const float InDamage)
 {
-}
-
-void FApplyDamageToHealthCommand::Run(FMassEntityManager& EntityManager)
-{
-	if (!EntityManager.IsEntityValid(Entity))
+	if (InEntity.IsValid() == false ||
+		InDamage <= 0.0f)
 	{
 		return;
 	}
 
-	if (FMassEntityView View = FMassEntityView::TryMakeView(EntityManager, Entity); View.IsValid())
+	Entities.Add(InEntity);
+	Damages.Add(InDamage);
+}
+
+void FApplyDamageToHealthCommand::Run(FMassEntityManager& EntityManager)
+{
+	const int32 Count = Entities.Num();
+	for (int32 i = 0; i < Count; ++i)
 	{
-		if (FMassBoidsHealthFragment* HealthFrag = View.GetFragmentDataPtr<FMassBoidsHealthFragment>())
+		const FMassEntityHandle Entity = Entities[i];
+		const float Damage = Damages[i];
+
+		if (EntityManager.IsEntityValid(Entity) == false)
 		{
-			HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Damage, 0.f, HealthFrag->MaxHealth);
+			continue;
 		}
+
+		FMassEntityView View = FMassEntityView::TryMakeView(EntityManager, Entity);
+		if (View.IsValid() == false)
+		{
+			continue;
+		}
+
+		FMassBoidsHealthFragment* HealthFrag = View.GetFragmentDataPtr<FMassBoidsHealthFragment>();
+		if (HealthFrag == nullptr)
+		{
+			continue;
+		}
+
+		HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Damage, 0.0f, HealthFrag->MaxHealth);
 	}
 }
 
 void FApplyDamageToHealthCommand::Reset()
 {
-	Entity = FMassEntityHandle();
-	Damage = 0.f;
+	Entities.Reset();
+	Damages.Reset();
 }

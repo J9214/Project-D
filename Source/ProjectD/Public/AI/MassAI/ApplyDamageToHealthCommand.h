@@ -8,12 +8,17 @@ struct PROJECTD_API FApplyDamageToHealthCommand : public FMassBatchedCommand
 {
 public:
 	FApplyDamageToHealthCommand();
-	FApplyDamageToHealthCommand(const FMassEntityHandle InEntity, const float InDamage);
+
+	void Add(const FMassEntityHandle InEntity, const float InDamage);
 
 	virtual void Run(FMassEntityManager& EntityManager) override;
 	virtual void Reset() override;
 
+protected:
+	virtual SIZE_T GetAllocatedSize() const override { return sizeof(*this); }
+	virtual int32 GetNumOperationsStat() const override { return Entities.Num(); }
+
 private:
-	FMassEntityHandle Entity;
-	float Damage = 0.f;
+	TArray<FMassEntityHandle> Entities;
+	TArray<float> Damages;
 };
