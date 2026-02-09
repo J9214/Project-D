@@ -1,6 +1,7 @@
-#include "PlayerState/PDPlayerState.h"
+﻿#include "PlayerState/PDPlayerState.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "Net/UnrealNetwork.h"
 
 APDPlayerState::APDPlayerState()
 {
@@ -28,5 +29,16 @@ void APDPlayerState::InitAbilityActorInfo(AActor* AvatarActor)
 	}
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, AvatarActor);
+}
+
+void APDPlayerState::OnRep_TeamId()
+{
+	UE_LOG(LogTemp, Warning, TEXT("팀 번호 갱신됨: %d"), TeamId);
+}
+
+void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APDPlayerState, TeamId);
 }
 

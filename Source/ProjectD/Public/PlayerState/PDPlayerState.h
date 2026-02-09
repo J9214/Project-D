@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
@@ -22,6 +22,14 @@ public:
 	UPDAttributeSetBase* GetPDAttributeSetBase() const { return AttributeSetBase; }
 
 	void InitAbilityActorInfo(AActor* AvatarActor);
+
+	UPROPERTY(ReplicatedUsing = OnRep_TeamId, BlueprintReadOnly, Category = "Team")
+	int32 TeamId = -1;
+
+	UFUNCTION()
+	void OnRep_TeamId();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
