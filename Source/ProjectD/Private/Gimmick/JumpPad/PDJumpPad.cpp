@@ -7,6 +7,8 @@
 
 #include "MoverComponent.h"
 
+#include "ProjectD/ProjectD.h"
+
 TSet<FName> APDJumpPad::PDANameSet;
 
 APDJumpPad::APDJumpPad()
@@ -40,7 +42,7 @@ void APDJumpPad::OnInteract_Implementation(AActor* Interactor)
 	UMoverComponent* Mover = Interactor->GetComponentByClass<UMoverComponent>();
 	if (!IsValid(Mover))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APDJumpPad::OnInteract - Interactor has Invalid Mover!"));
+		UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::OnInteract - Interactor has Invalid Mover!"));
 		return;
 	}
 
@@ -49,34 +51,34 @@ void APDJumpPad::OnInteract_Implementation(AActor* Interactor)
 		UAssetManager* AssetManager = UAssetManager::GetIfValid();
 		if (!IsValid(AssetManager))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("APDJumpPad::OnInteract - Invalid Asset Manager!"));
+			UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::OnInteract - Invalid Asset Manager!"));
 			return;
 		}
 
 		UObject* Data = AssetManager->GetPrimaryAssetObject(FPrimaryAssetId(PDAType, PDAName));
 		if (!IsValid(Data))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("APDJumpPad::OnInteract - No %s / %s Data!"), *PDAType.ToString(), *PDAName.ToString());
+			UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::OnInteract - No %s / %s Data!"), *PDAType.ToString(), *PDAName.ToString());
 			return;
 		}
 
-		UPDJumpPadDataAsset* JumpData = Cast<UPDJumpPadDataAsset>(Data);
-		if (!IsValid(JumpData))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("APDJumpPad::OnInteract - Data is not PDJumpPadDataAsset!"));
-			return;
-		}
-
+		JumpData = Cast<UPDJumpPadDataAsset>(Data);
 		SPJump = MakeShared<FLayeredMove_JumpTo>();
-
-		SPJump->bUseActorRotation = JumpData->JumpInfo.bUseActorRotation;
-
-		SPJump->JumpHeight = JumpData->JumpInfo.JumpHeight;
-		FVector Velocity = Mover->GetVelocity();
-		Velocity.Z = 0.0f;
-		SPJump->JumpDistance = (SPJump->bUseActorRotation ? JumpData->JumpInfo.JumpDistance + Velocity.Length() : JumpData->JumpInfo.JumpDistance);
-		SPJump->JumpRotation = (SPJump->bUseActorRotation ? JumpData->JumpInfo.JumpRotation : GetActorRotation());
 	}
+
+	if (!IsValid(JumpData))
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::OnInteract - Data is not PDJumpPadDataAsset!"));
+		return;
+	}
+
+	SPJump->bUseActorRotation = JumpData->JumpInfo.bUseActorRotation;
+
+	SPJump->JumpHeight = JumpData->JumpInfo.JumpHeight;
+	FVector Velocity = Mover->GetVelocity();
+	Velocity.Z = 0.0f;
+	SPJump->JumpDistance = (SPJump->bUseActorRotation ? JumpData->JumpInfo.JumpDistance + Velocity.Length() : JumpData->JumpInfo.JumpDistance);
+	SPJump->JumpRotation = (SPJump->bUseActorRotation ? JumpData->JumpInfo.JumpRotation : GetActorRotation());
 
 	Mover->QueueLayeredMove(SPJump);
 }
@@ -90,7 +92,7 @@ void APDJumpPad::LoadPDA()
 	UAssetManager* AssetManager = UAssetManager::GetIfValid();
 	if (!IsValid(AssetManager))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APDJumpPad::LoadPDA - Invalid Asset Manager!"));
+		UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::LoadPDA - Invalid Asset Manager!"));
 		return;
 	}
 	

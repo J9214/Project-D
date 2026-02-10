@@ -6,6 +6,7 @@
 #include "PDJumpPad.generated.h"
 
 class USphereComponent;
+class UPDJumpPadDataAsset;
 
 UCLASS()
 class PROJECTD_API APDJumpPad : public APDOverlapGimmickBase
@@ -38,6 +39,7 @@ protected:
 
 protected:
 	TSharedPtr<FLayeredMove_JumpTo> SPJump;
+	UPDJumpPadDataAsset* JumpData;
 
 private:
 	static TSet<FName> PDANameSet;

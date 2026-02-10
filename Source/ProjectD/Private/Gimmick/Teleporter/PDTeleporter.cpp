@@ -4,6 +4,8 @@
 
 #include "MoverComponent.h"
 
+#include "ProjectD/ProjectD.h"
+
 APDTeleporter::APDTeleporter()
 {
 	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
@@ -20,21 +22,21 @@ void APDTeleporter::OnInteract_Implementation(AActor* Interactor)
 {
 	if (!TeleportDest.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APDTeleporter::OnInteract - Invalid Destination!"));
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Invalid Destination!"));
 		return;
 	}
 
 	UMoverComponent* Mover = Interactor->GetComponentByClass<UMoverComponent>();
 	if (!IsValid(Mover))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APDTeleporter::OnInteract - Interactor has Invalid Mover!"));
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Interactor has Invalid Mover!"));
 		return;
 	}
 
 	USceneComponent* UpdatedComp = Mover->GetUpdatedComponent();
 	if (!IsValid(UpdatedComp))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APDTeleporter::OnInteract - Mover has Invalid Updated Component!"));
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Mover has Invalid Updated Component!"));
 		return;
 	}
 
