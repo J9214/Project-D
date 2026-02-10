@@ -17,7 +17,10 @@ APDPlayerController* UPDPlayerGameplayAbility::GetPlayerControllerFromActorInfo(
 {
 	if (!CachedPlayerController.IsValid())
 	{
-		CachedPlayerController = Cast<APDPlayerController>(GetPlayerPawnFromActorInfo()->GetController());
+		if (APDPawnBase* Pawn = GetPlayerPawnFromActorInfo())
+		{
+			CachedPlayerController = Cast<APDPlayerController>(Pawn->GetController());
+		}
 	}
 	
 	return CachedPlayerController.IsValid() ? CachedPlayerController.Get() : nullptr;
@@ -25,5 +28,10 @@ APDPlayerController* UPDPlayerGameplayAbility::GetPlayerControllerFromActorInfo(
 
 UWeaponManageComponent* UPDPlayerGameplayAbility::GetWeaponManageComponentFromActorInfo()
 {
-	return GetPlayerPawnFromActorInfo()->GetWeaponManageComponent();
+	if (APDPawnBase* Pawn = GetPlayerPawnFromActorInfo())
+	{
+		return Pawn->GetWeaponManageComponent();
+	}
+	
+	return nullptr;
 }

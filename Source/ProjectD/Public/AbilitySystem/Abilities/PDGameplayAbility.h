@@ -33,10 +33,19 @@ protected:
 		bool bWasCancelled
 	) override;
 	
-	UFUNCTION(BlueprintPure, Category = "ASC")
+	UFUNCTION()
+	void OnMontageCompleted();
+
+	UFUNCTION()
+	void OnMontageInterrupted();
+
+	UFUNCTION()
+	void OnMontageCancelled();
+	
+	UFUNCTION(BlueprintPure, Category = "Ability")
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponentFromActorInfo() const;
 	
 public:
-	UPROPERTY(EditDefaultsOnly, Category = "PD|Ability")
+	UPROPERTY(EditDefaultsOnly, Category = "Ability")
 	EPDAbilityActivationPolicy ActivationPolicy = EPDAbilityActivationPolicy::OnInputTriggered;
 };

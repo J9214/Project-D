@@ -35,7 +35,7 @@ void UGA_SpawnWeapon::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		return;
 	}
 	
-	if (APDPawnBase* Pawn = Cast<APDPawnBase>(GetPlayerPawnFromActorInfo()))
+	if (APDPawnBase* Pawn = GetPlayerPawnFromActorInfo())
 	{
 		if (UWeaponManageComponent* WMC = Pawn->GetWeaponManageComponent())
 		{

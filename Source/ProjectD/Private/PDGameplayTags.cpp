@@ -14,6 +14,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ChangeFireMode, "InputTag.Weapon.ChangeFireMode");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Skill1, "InputTag.Ability.Skill1");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Skill2, "InputTag.Ability.Skill2");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Dash, "InputTag.Ability.Dash");
 
 	/** Player Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Equip, "Player.Ability.Weapon.Equip");
@@ -22,10 +23,18 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Reload, "Player.Ability.Weapon.Reload");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ADS, "Player.Ability.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ChangeFireMode, "Player.Ability.Weapon.ChangeFireMode");
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Dash, "Player.Ability.Dash");
 
+	/** Player State Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Equipping, "Player.State.Equipping");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Unequipping, "Player.State.Unequipping");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Reloading, "Player.State.Reloading");
+	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");
-	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipConfirm, "Event.Weapon.EquipConfirm");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_ReloadRequest, "Event.Weapon.ReloadRequest");
 
 	/** SetByCaller Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_Damage, "Data.Weapon.Damage");

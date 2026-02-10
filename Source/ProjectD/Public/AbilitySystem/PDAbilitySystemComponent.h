@@ -15,16 +15,4 @@ class PROJECTD_API UPDAbilitySystemComponent : public UAbilitySystemComponent
 public:
 	void OnAbilityInputPressed(const FGameplayTag& InInputTag);
 	void OnAbilityInputReleased(const FGameplayTag& InInputTag);
-	
-	void ProcessAbilityInput(float DeltaTime);
-
-private:
-	void TryActivateByInputTag(const FGameplayTag& InputTag);
-	
-	APDWeaponBase* GetEquippedWeaponFromASC(const UAbilitySystemComponent* ASC) const;
-	bool IsEquippedWeaponFullAuto(const UAbilitySystemComponent* ASC) const;
-	
-private:
-	TSet<FGameplayTag> HoldInputTags;
-	TMap<FGameplayTag, float> NextTryTimeByTag;
 };
