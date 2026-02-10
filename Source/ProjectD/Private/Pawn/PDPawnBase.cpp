@@ -7,6 +7,7 @@
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Components/Combat/WeaponStateComponent.h"
 #include "Components/Combat/SkillManageComponent.h"
+#include "Components/Input/MovementBridgeComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
 #include "GameplayTagContainer.h"
@@ -30,6 +31,7 @@ APDPawnBase::APDPawnBase()
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
 	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
+	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }

@@ -9,6 +9,7 @@
 class UWeaponManageComponent;
 class UWeaponStateComponent;
 class USkillManageComponent;
+class UMovementBridgeComponent;
 class UDataAsset_InputConfig;
 class UDataAsset_StartUpBase;
 class USkeletalMeshComponent;
@@ -32,6 +33,7 @@ public:
 	FORCEINLINE UWeaponManageComponent* GetWeaponManageComponent() const { return WeaponManageComponent; }
 	FORCEINLINE UWeaponStateComponent* GetWeaponStateComponent() const { return WeaponStateComponent; }
 	FORCEINLINE USkillManageComponent* GetSkillManageComponent() const { return SkillManageComponent; }
+	FORCEINLINE UMovementBridgeComponent* GetMovementBridgeComponent() const { return MovementBridgeComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 	
@@ -64,6 +66,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<USkillManageComponent> SkillManageComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UMovementBridgeComponent> MovementBridgeComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CharacterData")
 	TObjectPtr<UDataAsset_InputConfig> InputConfigDataAsset;

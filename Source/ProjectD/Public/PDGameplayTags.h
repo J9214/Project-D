@@ -16,6 +16,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Weapon_ChangeFireMode);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Skill1);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Skill2);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Dash);
 
 	/** Player Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_Equip);
@@ -24,6 +25,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_Reload);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_ADS);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_ChangeFireMode);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Dash);
 
 	/** Player State Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Firinig);
