@@ -49,6 +49,7 @@ public class ProjectD : ModuleRules
             "StructUtils",
             "MassNavigation",
             "MassAIBehavior",
+            "MassReplication",
 
 			//Niagara
 			"Niagara",
