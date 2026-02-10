@@ -18,4 +18,8 @@ public:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData
 	) override;
+	
+private:
+	UFUNCTION()
+	void OnEventTagReceived(const FGameplayEventData Payload);
 };

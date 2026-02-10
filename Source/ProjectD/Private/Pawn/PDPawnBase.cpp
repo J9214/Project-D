@@ -5,7 +5,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/Input/PDEnhancedInputComponent.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Components/Combat/WeaponStateComponent.h"
 #include "Components/Combat/SkillManageComponent.h"
+#include "Components/Input/MovementBridgeComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
 #include "GameplayTagContainer.h"
@@ -25,11 +27,13 @@
 
 APDPawnBase::APDPawnBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
+	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
+	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -60,16 +64,6 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 	if (bHit)
 	{
 		DrawDebugPoint(GetWorld(), HitPoint, 8.f, FColor::Yellow, false, 1.f);
-	}
-}
-
-void APDPawnBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	
-	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
-	{
-		ASC->ProcessAbilityInput(DeltaTime);
 	}
 }
 
@@ -115,8 +109,13 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		}
 	}
 
-	UPDEnhancedInputComponent* PDInputComponent = CastChecked<UPDEnhancedInputComponent>(PlayerInputComponent);
-	PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+	if (UPDEnhancedInputComponent* PDInputComponent = Cast<UPDEnhancedInputComponent>(PlayerInputComponent))
+	{
+		if (IsValid(InputConfigDataAsset))
+		{
+			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+		}
+	}
 }
 
 void APDPawnBase::InitAbilityActorInfo()

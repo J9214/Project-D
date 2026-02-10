@@ -7,7 +7,9 @@
 #include "PDPawnBase.generated.h"
 
 class UWeaponManageComponent;
+class UWeaponStateComponent;
 class USkillManageComponent;
+class UMovementBridgeComponent;
 class UDataAsset_InputConfig;
 class UDataAsset_StartUpBase;
 class USkeletalMeshComponent;
@@ -29,7 +31,9 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	FORCEINLINE UWeaponManageComponent* GetWeaponManageComponent() const { return WeaponManageComponent; }
+	FORCEINLINE UWeaponStateComponent* GetWeaponStateComponent() const { return WeaponStateComponent; }
 	FORCEINLINE USkillManageComponent* GetSkillManageComponent() const { return SkillManageComponent; }
+	FORCEINLINE UMovementBridgeComponent* GetMovementBridgeComponent() const { return MovementBridgeComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 	
@@ -37,7 +41,6 @@ public:
 	void ClientDrawFireDebug(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
 	
 protected:
-	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 	virtual void OnRep_PlayerState() override;
 	virtual void PossessedBy(AController* NewController) override;
@@ -57,9 +60,15 @@ private:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UWeaponManageComponent> WeaponManageComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UWeaponStateComponent> WeaponStateComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<USkillManageComponent> SkillManageComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UMovementBridgeComponent> MovementBridgeComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CharacterData")
 	TObjectPtr<UDataAsset_InputConfig> InputConfigDataAsset;

@@ -19,6 +19,8 @@ void APDWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(APDWeaponBase, CurrentFireMode);
+	DOREPLIFETIME(APDWeaponBase, MaxAmmo);
+	DOREPLIFETIME(APDWeaponBase, CurrentAmmo);
 }
 
 FVector APDWeaponBase::GetMuzzlePoint() const
@@ -26,7 +28,7 @@ FVector APDWeaponBase::GetMuzzlePoint() const
 	return Muzzle ? Muzzle->GetComponentLocation() : FVector::ZeroVector;
 }
 
-bool APDWeaponBase::ServerCanFire(float Interval)
+bool APDWeaponBase::ClientCanFire() const
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -34,16 +36,56 @@ bool APDWeaponBase::ServerCanFire(float Interval)
 		return false;
 	}
 	
-	// check remaining bullet and other conditions here if needed
+	if (CurrentAmmo <= 0)
+	{
+		return false;
+	}
 	
 	return true;
 }
 
-void APDWeaponBase::InitFireMode()
+bool APDWeaponBase::ServerCanFire() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	
+	if (CurrentAmmo <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No Ammo"));
+		return false;
+	}
+	
+	return true;
+}
+
+void APDWeaponBase::ServerConsumeAmmo(int32 Amount)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	Amount = FMath::Max(1, Amount);
+
+	if (CurrentAmmo < Amount)
+	{
+		return;
+	}
+
+	CurrentAmmo -= Amount;
+	CurrentAmmo = FMath::Clamp(CurrentAmmo, 0, MaxAmmo);
+}
+
+void APDWeaponBase::InitWeaponData()
 {
 	if (WeaponData)
 	{
 		CurrentFireMode = WeaponData->DefaultFireMode;
+		MaxAmmo = WeaponData->MaxAmmo;
+		CurrentAmmo = MaxAmmo;
 	}
 }
 
@@ -56,6 +98,16 @@ void APDWeaponBase::ChangeFireMode()
 	}
 	
 	CurrentFireMode = GetNextFireMode();
+}
+
+void APDWeaponBase::ReloadAmmo()
+{
+	CurrentAmmo = MaxAmmo;
+}
+
+void APDWeaponBase::OnRep_AmmoChanged()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Ammo Changed: %d / %d"), CurrentAmmo, MaxAmmo);
 }
 
 EPDWeaponFireMode APDWeaponBase::GetNextFireMode() const
