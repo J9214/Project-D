@@ -6,6 +6,7 @@
 #include "MassExecutionContext.h"
 
 UMassProxySyncProcessor::UMassProxySyncProcessor()
+	:EntityQuery(*this)
 {
 	ExecutionFlags = (int32)EProcessorExecutionFlags::Server;
 	bAutoRegisterWithProcessingPhases = true;
@@ -24,6 +25,13 @@ void UMassProxySyncProcessor::InitializeInternal(UObject& Owner, const TSharedRe
 	{
 		ProxyPoolSubsystem = World->GetSubsystem<UMassProxyPoolSubsystem>();
 	}
+}
+
+void UMassProxySyncProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
+{
+	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
+
+	EntityQuery.RegisterWithProcessor(*this);
 }
 
 void UMassProxySyncProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)

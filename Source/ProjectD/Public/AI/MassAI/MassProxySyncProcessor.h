@@ -15,9 +15,12 @@ public:
 
 protected:
 	virtual void InitializeInternal(UObject& Owner, const TSharedRef<FMassEntityManager>& EntityManager) override;
+	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
 
 private:
+	FMassEntityQuery EntityQuery;
+
 	UMassProxyPoolSubsystem* ProxyPoolSubsystem = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Proxy|Sync")
