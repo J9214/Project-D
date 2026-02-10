@@ -38,10 +38,10 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_RemainingTime, BlueprintReadOnly);
     int32 RemainingTimeSec;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Winner")
+    UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Winner")
     int32 WinnerTeamId;
 
-    UPROPERTY(Replicated, BlueprintReadOnly)
+    UPROPERTY(Replicated, VIsibleAnyWhere, BlueprintReadOnly)
 	bool bOvertime;
   
 private:

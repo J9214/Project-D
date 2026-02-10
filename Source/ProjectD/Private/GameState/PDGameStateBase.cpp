@@ -21,6 +21,9 @@ void APDGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
     DOREPLIFETIME(APDGameStateBase, TeamScores);
     DOREPLIFETIME(APDGameStateBase, CurrentBallHolder);
     DOREPLIFETIME(APDGameStateBase, GoalInstigator);
+    DOREPLIFETIME(APDGameStateBase, bOvertime);
+    DOREPLIFETIME(APDGameStateBase, RemainingTimeSec);
+    DOREPLIFETIME(APDGameStateBase, WinnerTeamId);
 }
 
 void APDGameStateBase::InitScores()

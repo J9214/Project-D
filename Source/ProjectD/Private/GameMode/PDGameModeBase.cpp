@@ -5,6 +5,7 @@
 #include "GameplayEffectTypes.h"
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "GameState/PDGameStateBase.h"
+#include "Controller/PDPlayerController.h"
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -20,7 +21,7 @@ void APDGameModeBase::BeginPlay()
 		*GetNameSafe(GetClass()),
 		*GetNameSafe(DefaultPawnClass));
 
-	RoundDurationSec = 300;
+	RoundDurationSec = 10;
 
 
 	StartRound();
@@ -82,6 +83,15 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
     
     GS->WinnerTeamId = WinnerTeamId;
     GS->bOvertime = false;
+
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        APDPlayerController* PC = Cast<APDPlayerController>(It->Get());
+        if (PC)
+        {
+            PC->ClientShowGameOver(WinnerTeamId);
+        }
+    }
 }
 
 void APDGameModeBase::PlayerRespawn(AController* Controller)
