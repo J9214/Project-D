@@ -19,6 +19,11 @@ void APDGameModeBase::BeginPlay()
 		World ? *World->GetMapName() : TEXT("None"),
 		*GetNameSafe(GetClass()),
 		*GetNameSafe(DefaultPawnClass));
+
+	RoundDurationSec = 300;
+
+
+	StartRound();
 }
 
 void APDGameModeBase::PlayerDied(AController* Controller)
@@ -48,6 +53,35 @@ void APDGameModeBase::PlayerDied(AController* Controller)
     {
         World->GetTimerManager().SetTimer(TimerHandle, TimerDel, 5.0f, false);
     }
+}
+
+void APDGameModeBase::StartOvertime()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (!GS) 
+    {
+        return;
+    }
+
+    GS->bOvertime = true;
+}
+
+void APDGameModeBase::FinishGame(int32 WinnerTeamId)
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+
+    if(!GS) 
+    {
+        return;
+	}
+
+    if (GS->WinnerTeamId != INDEX_NONE)
+    {
+        return;
+    }
+    
+    GS->WinnerTeamId = WinnerTeamId;
+    GS->bOvertime = false;
 }
 
 void APDGameModeBase::PlayerRespawn(AController* Controller)
@@ -103,4 +137,79 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
 {
     PlayerDied(VictimController);
+}
+
+void APDGameModeBase::StartRound()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (!GS) 
+    {
+        return;
+    }
+
+    GS->RemainingTimeSec = RoundDurationSec;
+
+    GetWorldTimerManager().SetTimer(
+        RoundTimerHandle,
+        this,
+        &APDGameModeBase::OnRoundTick,
+        1.0f,
+        true
+    );
+}
+
+void APDGameModeBase::OnRoundTick()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (!GS) 
+    {
+        return;
+    }
+
+    GS->RemainingTimeSec = FMath::Max(0, GS->RemainingTimeSec - 1);
+
+    if (GS->RemainingTimeSec <= 0)
+    {
+        GetWorldTimerManager().ClearTimer(RoundTimerHandle);
+        HandleRoundEnd();
+    }
+}
+
+void APDGameModeBase::HandleRoundEnd()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (!GS) 
+    {
+        return;
+    }
+
+    int32 BestTeamId = INDEX_NONE;
+    int32 BestScore = MIN_int32;
+    bool bTie = false;
+
+    const int32 TeamCount = static_cast<int32>(ETeamType::MAX);
+
+    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    {
+        const int32 Score = GS->TeamScores[TeamId];
+        if (Score > BestScore)
+        {
+            BestScore = Score;
+            BestTeamId = TeamId;
+            bTie = false;
+        }
+        else if (Score == BestScore)
+        {
+            bTie = true;
+        }
+    }
+
+    if (bTie)
+    {
+        StartOvertime();
+    }
+    else
+    {
+        FinishGame(BestTeamId);
+    }
 }

@@ -1,46 +1,79 @@
 ﻿#include "GameState/PDGameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/PDPlayerState.h"
+#include "GameMode/PDGameModeBase.h"
 
 APDGameStateBase::APDGameStateBase()
 {
-    TeamOneScore = 0;
-    TeamTwoScore = 0;
-    TeamThreeScore = 0;
+	TeamCount = static_cast<int32>(ETeamType::MAX);
+    InitScores();
     CurrentBallHolder = nullptr;
     GoalInstigator = nullptr;
     BallHoldScore = 50;
 	GoalHoldScore = 500;
+    WinnerTeamId = INDEX_NONE;
 }
 
 void APDGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(APDGameStateBase, TeamOneScore);
-    DOREPLIFETIME(APDGameStateBase, TeamTwoScore);
-    DOREPLIFETIME(APDGameStateBase, TeamThreeScore);
+    DOREPLIFETIME(APDGameStateBase, TeamScores);
     DOREPLIFETIME(APDGameStateBase, CurrentBallHolder);
     DOREPLIFETIME(APDGameStateBase, GoalInstigator);
 }
 
-void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
+void APDGameStateBase::InitScores()
 {
-    if (GetLocalRole() != ROLE_Authority)
+    if (!HasAuthority())
     {
         return;
     }
 
-    if (Team == ETeamType::TeamOne) TeamOneScore += Points;
-    else if (Team == ETeamType::TeamTwo) TeamTwoScore += Points;
-    else if (Team == ETeamType::TeamThree) TeamThreeScore += Points;
+    TeamScores.Init(0, TeamCount);
+    
+    for(int32 &TeamScore : TeamScores)
+    {
+        TeamScore = 0;
+	}
+}
 
-    // UE_LOG(LogTemp, Warning, TEXT("Team1: %d  |  Team2: %d  |  Team3: %d"), TeamOneScore, TeamTwoScore, TeamThreeScore);
+void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (WinnerTeamId != INDEX_NONE)
+    {
+        return; 
+    }
+
+	const int32 TeamId = static_cast<int32>(Team);
+
+    if (TeamScores.IsValidIndex(static_cast<int32>(TeamId)))
+    {
+        TeamScores[TeamId] += Points;
+    }
+
+    if (bOvertime && Points > 0)
+    {
+        if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+        {
+            GM->FinishGame(TeamId);
+        }
+    }
+
+    /*for(auto Score : TeamScores)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Score: %d"), Score);
+	}*/
 }
 
 void APDGameStateBase::SetBallHolder(APDPlayerState* NewHolder)
 {
-    if (GetLocalRole() != ROLE_Authority)
+    if (!HasAuthority())
     {
         return;
     }
@@ -63,7 +96,7 @@ void APDGameStateBase::SetBallHolder(APDPlayerState* NewHolder)
 
 void APDGameStateBase::SetGoalInstigator(APDPlayerState* NewInstigator)
 {
-    if (GetLocalRole() != ROLE_Authority)
+    if (!HasAuthority())
     {
         return;
     }
@@ -73,7 +106,7 @@ void APDGameStateBase::SetGoalInstigator(APDPlayerState* NewInstigator)
 
 void APDGameStateBase::GoalScored()
 {
-    if (GetLocalRole() != ROLE_Authority)
+    if (!HasAuthority())
     {
         return;
     }
@@ -81,5 +114,10 @@ void APDGameStateBase::GoalScored()
 	ETeamType Team = CurrentBallHolder->GetTeamID();
 
 	AddScore(Team, GoalHoldScore);
+}
+
+void APDGameStateBase::OnRep_RemainingTime()
+{
+    //UE_LOG(LogTemp, Log, TEXT("Remaining Time: %d"), RemainingTimeSec);
 }
 

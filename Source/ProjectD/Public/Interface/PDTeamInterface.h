@@ -12,8 +12,8 @@ enum class ETeamType : uint8
 	None UMETA(DisplayName = "None"),
 	TeamOne  UMETA(DisplayName = "TeamOne"),
 	TeamTwo UMETA(DisplayName = "TeamTwo"),
-	TeamThree UMETA(DisplayName = "TeamThree")
-
+	TeamThree UMETA(DisplayName = "TeamThree"),
+	MAX UMETA(DisplayName = "MAX")
 };
 
 UINTERFACE(MinimalAPI)
