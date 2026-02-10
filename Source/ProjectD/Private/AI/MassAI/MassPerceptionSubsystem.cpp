@@ -95,6 +95,13 @@ void UMassPerceptionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
+	UWorld* World = GetWorld();
+	if (IsValid(World) == false ||
+		World->IsGameWorld() == false)
+	{
+		return;
+	}
+
 	if (IsServerWorld() == false)
 	{
 		return;
@@ -107,6 +114,7 @@ void UMassPerceptionSubsystem::Deinitialize()
 {
 	ActiveAimTubes.Reset();
 	Settings = nullptr;
+	bTriedLoadSettings = false;
 	Super::Deinitialize();
 }
 
@@ -125,7 +133,7 @@ void UMassPerceptionSubsystem::LoadSettingsSync()
 
 	Settings = SettingsAsset.LoadSynchronous();
 
-	if (IsValid(Settings) == true)
+	if (IsValid(Settings) == false)
 	{
 		UE_LOG(LogProjectD, Warning,
 			TEXT("UMassPerceptionSubsystem::LoadSettingsSync - Failed to load SettingsAsset: %s"), *SettingsAsset.ToSoftObjectPath().ToString());

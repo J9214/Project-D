@@ -44,6 +44,8 @@ private:
 
 	TArray<FMassAimTubeRequest> ActiveAimTubes;
 
+	bool bTriedLoadSettings = false;
+
 private:
 	void LoadSettingsSync();
 
