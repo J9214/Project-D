@@ -18,6 +18,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
+	UFUNCTION(Blueprintable)
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UPDAttributeSetBase* GetPDAttributeSetBase() const { return AttributeSetBase; }
 

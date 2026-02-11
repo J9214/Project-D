@@ -1,4 +1,7 @@
 #include "AbilitySystem/Abilities/Player/GA_Dash.h"
+
+#include "MoverComponent.h"
+#include "MoverSimulationTypes.h"
 #include "Components/Input/MovementBridgeComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Pawn/PDPawnBase.h"
@@ -21,13 +24,17 @@ void UGA_Dash::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	
 	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!IsValid(OwnerPawn))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	UMoverComponent* Mover = OwnerPawn ? OwnerPawn->GetMoverComponent() : nullptr;
+
+	
 
 	UMovementBridgeComponent* Bridge = OwnerPawn->FindComponentByClass<UMovementBridgeComponent>();
 	if (!Bridge)
@@ -37,8 +44,9 @@ void UGA_Dash::ActivateAbility(
 	}
 
 	const FVector Start = OwnerPawn->GetActorLocation();
-	const FVector Forward = OwnerPawn->GetActorForwardVector();
-	FVector Target = Start + Forward * DashDistance;
+	const FVector DashDir = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
+	FVector Target = Start + DashDir * DashDistance;
+	
 	
 	FHitResult Hit;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(DashSweep), false, OwnerPawn);
@@ -86,3 +94,6 @@ void UGA_Dash::EndAbility(
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
+
+
+
