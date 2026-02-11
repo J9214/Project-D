@@ -6,6 +6,10 @@ FDroneClientBubbleSerializer::FDroneClientBubbleSerializer()
 	, Agents()
 	, Bubble()
 {
+}
+
+void FDroneClientBubbleSerializer::Bind()
+{
 	Bubble.Initialize(Agents, *this);
 	SetClientHandler(Bubble);
 }

@@ -5,7 +5,19 @@ ADroneClientBubbleInfo::ADroneClientBubbleInfo(const FObjectInitializer& ObjectI
 	: Super(ObjectInitializer)
 	, DroneSerializer()
 {
-	Serializers.Add(&DroneSerializer);
+}
+
+void ADroneClientBubbleInfo::PostInitProperties()
+{
+	if (HasAnyFlags(RF_ClassDefaultObject) == false)
+	{
+		Serializers.Reset();
+		Serializers.Add(&DroneSerializer);
+
+		DroneSerializer.Bind();
+	}
+
+	Super::PostInitProperties();
 }
 
 void ADroneClientBubbleInfo::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

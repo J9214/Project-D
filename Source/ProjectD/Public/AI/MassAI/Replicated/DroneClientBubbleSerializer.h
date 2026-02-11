@@ -15,6 +15,8 @@ public:
 	FDroneClientBubbleSerializer();
 
 public:
+	void Bind();
+	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams);
 
 public:

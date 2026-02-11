@@ -18,6 +18,7 @@ public:
 	FORCEINLINE const FDroneClientBubbleSerializer& GetSerializer() const { return DroneSerializer; }
 
 protected:
+	virtual void PostInitProperties() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
