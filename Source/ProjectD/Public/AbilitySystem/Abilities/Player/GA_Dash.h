@@ -4,7 +4,6 @@
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
 #include "GA_Dash.generated.h"
 
-class UMoverComponent;
 class UAnimMontage;
 
 UCLASS()

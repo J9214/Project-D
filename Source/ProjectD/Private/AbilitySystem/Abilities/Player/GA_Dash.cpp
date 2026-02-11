@@ -1,7 +1,4 @@
 #include "AbilitySystem/Abilities/Player/GA_Dash.h"
-
-#include "MoverComponent.h"
-#include "MoverSimulationTypes.h"
 #include "Components/Input/MovementBridgeComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Pawn/PDPawnBase.h"
@@ -32,9 +29,6 @@ void UGA_Dash::ActivateAbility(
 		return;
 	}
 
-	UMoverComponent* Mover = OwnerPawn ? OwnerPawn->GetMoverComponent() : nullptr;
-
-	
 
 	UMovementBridgeComponent* Bridge = OwnerPawn->FindComponentByClass<UMovementBridgeComponent>();
 	if (!Bridge)
