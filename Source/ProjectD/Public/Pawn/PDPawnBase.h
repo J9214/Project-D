@@ -17,6 +17,7 @@ class ABallCore;
 class AGoalPost;
 class UGameplayEffect;
 class UCapsuleComponent;
+class UMoverComponent;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -34,12 +35,13 @@ public:
 	FORCEINLINE UWeaponStateComponent* GetWeaponStateComponent() const { return WeaponStateComponent; }
 	FORCEINLINE USkillManageComponent* GetSkillManageComponent() const { return SkillManageComponent; }
 	FORCEINLINE UMovementBridgeComponent* GetMovementBridgeComponent() const { return MovementBridgeComponent; }
+	FORCEINLINE UMoverComponent* GetMoverComponent() const { return MoverComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 	
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawFireDebug(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
-	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnRep_PlayerState() override;
@@ -76,6 +78,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "CharacterData")
 	TSoftObjectPtr<UDataAsset_StartUpBase> CharacterStartUpData;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
+	TObjectPtr<UMoverComponent> MoverComponent;
+	
 #pragma region Ball
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out) const override;
@@ -112,4 +117,15 @@ protected:
 	AActor* FindInteractTarget() const;
 
 #pragma endregion Ball
+
+#pragma region mover
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Mover")
+	FVector GetDirectionByMoveInput(const FVector& FallbackForward) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Mover")
+	void CancelMovementGA();
+	
+#pragma endregion mover
 };

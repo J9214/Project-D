@@ -22,6 +22,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
+#include "MoverComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -68,6 +69,8 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 void APDPawnBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	MoverComponent = FindComponentByClass<UMoverComponent>();
 }
 
 void APDPawnBase::PossessedBy(AController* NewController)
@@ -217,6 +220,31 @@ AActor* APDPawnBase::FindInteractTarget() const
 	return Hit.GetActor();
 }
 
+FVector APDPawnBase::GetDirectionByMoveInput(const FVector& FallbackForward) const
+{
+	if (!MoverComponent)
+	{
+		return FallbackForward;
+	}
+	
+	const FMoverInputCmdContext& Cmd = MoverComponent->GetLastInputCmd();
+	
+	const FCharacterDefaultInputs* Inputs = Cmd.InputCollection.FindDataByType<FCharacterDefaultInputs>();
+	if (!Inputs)
+	{
+		return FallbackForward;
+	}
+	
+	const FVector MoveInput= Inputs->GetMoveInput();
+	if (MoveInput.IsNearlyZero())
+	{
+		return FallbackForward;
+	}
+
+	return MoveInput.GetSafeNormal();
+}
+
+
 void APDPawnBase::TryInteract()
 {
 	AActor* Target = FindInteractTarget();
@@ -305,5 +333,34 @@ void APDPawnBase::RemoveHoldingBallEffect()
 		FGameplayTagContainer TagContainer;
 		TagContainer.AddTag(FGameplayTag::RequestGameplayTag(TEXT("State.HoldingBall")));
 		ASC->RemoveActiveEffectsWithGrantedTags(TagContainer);
+	}
+}
+
+void APDPawnBase::CancelMovementGA()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::InitAttributeSet - ASC is not valid"));
+		return;
+	}
+	
+
+	FGameplayTag RootTag  = PDGameplayTags::Player_Ability_Movement;
+	
+	const TArray<FGameplayAbilitySpec>& ActiveSpecs = ASC->GetActivatableAbilities();
+	
+	FGameplayTagContainer TargetContainer;
+	TargetContainer.AddTag(RootTag);
+	
+	for (const FGameplayAbilitySpec& Spec : ActiveSpecs)
+	{
+		if (Spec.IsActive())
+		{
+			if (Spec.Ability->AbilityTags.HasTag(RootTag))
+			{
+				ASC->CancelAbilityHandle(Spec.Handle);
+			}
+		}
 	}
 }
