@@ -29,6 +29,7 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled
 	) override;
+
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Dash")
