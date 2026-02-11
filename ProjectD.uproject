@@ -178,6 +178,10 @@
 		{
 			"Name": "GameplayBehaviorSmartObjects",
 			"Enabled": true
+		},
+		{
+			"Name": "ConsoleVariables",
+			"Enabled": true
 		}
 	]
 }
