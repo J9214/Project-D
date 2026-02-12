@@ -127,7 +127,6 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Mover")
 	void CancelMovementGA();
-
 	
 #pragma endregion mover
 };

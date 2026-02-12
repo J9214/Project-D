@@ -8,6 +8,7 @@
 #include "DataAsset_Weapon.generated.h"
 
 class UGameplayEffect;
+class UUserWidget;
 
 UCLASS()
 class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
@@ -47,4 +48,7 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float MaxRange = 10000.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI|Crosshair")
+	TSubclassOf<UUserWidget> AimCrosshairWidgetClass;
 };

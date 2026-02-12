@@ -9,6 +9,8 @@ class APDWeaponBase;
 class UDataAsset_Weapon;
 class UPDAbilitySystemComponent;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquippedWeaponDataChanged, APDWeaponBase*);
+
 USTRUCT(BlueprintType)
 struct FPTWeaponSlot
 {
@@ -61,11 +63,17 @@ private:
 
     UFUNCTION()
     void OnRep_EquippedSlotIndex();
+	
+    UFUNCTION()
+	void OnRep_EquippedWeapon();
 
     void RefreshAttachments();
 
+public:
+	FOnEquippedWeaponDataChanged OnEquippedWeaponDataChanged;
+	
 protected:
-    UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly)
+    UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon, VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<APDWeaponBase> EquippedWeapon = nullptr;
 
 private:

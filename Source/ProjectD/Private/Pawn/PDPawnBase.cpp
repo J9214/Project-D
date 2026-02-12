@@ -22,7 +22,6 @@
 #include "DrawDebugHelpers.h"
 #include "MoverComponent.h"
 
-
 APDPawnBase::APDPawnBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -243,7 +242,6 @@ FVector APDPawnBase::GetDirectionByMoveInput(const FVector& FallbackForward) con
 	return MoveInput.GetSafeNormal();
 }
 
-
 void APDPawnBase::TryInteract()
 {
 	AActor* Target = FindInteractTarget();
@@ -362,4 +360,3 @@ void APDPawnBase::CancelMovementGA()
 		}
 	}
 }
-
