@@ -55,6 +55,9 @@ public class ProjectD : ModuleRules
 
 			//Niagara
 			"Niagara",
+
+			// Geometry Collection
+			"GeometryCollectionEngine",
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

@@ -52,7 +52,7 @@ protected:
 	void InitAbilityActorInfo();
 	void InitAttributeSet();
 	void BindAttributeChangeDelegates();
-
+	
 private:
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
@@ -86,7 +86,6 @@ protected:
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out) const override;
 
-	// 입력(F)
 	UFUNCTION(BlueprintCallable)
 	void TryInteract();
 
@@ -119,6 +118,15 @@ protected:
 
 #pragma endregion Ball
 
+#pragma region Respawn
+
+protected:
+	virtual void OnDeathTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	virtual void HandleDeathState(bool bIsDead);
+
+#pragma endregion Respawn
+
 #pragma region mover
 
 public:
@@ -129,4 +137,19 @@ public:
 	void CancelMovementGA();
 	
 #pragma endregion mover
+	
+#pragma region Animation
+	
+protected:
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Anim")
+	bool bIsAiming = false;
+	
+	UFUNCTION(BlueprintCallable , Category = "Anim")
+	void SetIsAiming(bool bNewAiming);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsAiming(bool bNewAiming);
+
+#pragma endregion Animation
+
 };
