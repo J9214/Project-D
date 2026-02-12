@@ -25,16 +25,16 @@ struct FMoveRequest
 	FVector Start = FVector::ZeroVector;
 
 	UPROPERTY(BlueprintReadWrite)
-	FVector Target = FVector::ZeroVector; // MoveTo 용
+	FVector Target = FVector::ZeroVector;  
 
 	UPROPERTY(BlueprintReadWrite)
-	FVector LaunchVelocity = FVector::ZeroVector; // Launch 용
+	FVector LaunchVelocity = FVector::ZeroVector;  
 	
 	UPROPERTY(BlueprintReadWrite)
 	FName ForceMovementMode = EName::None;
 
 	UPROPERTY(BlueprintReadWrite)
-	float DurationMs = 0.f; // MoveTo 용
+	float DurationMs = 0.f;  
 	
 	UPROPERTY(BlueprintReadWrite)
 	uint8 Priority = 10;
@@ -50,7 +50,6 @@ class PROJECTD_API UMovementBridgeComponent : public UPawnExtensionComponentBase
 	GENERATED_BODY()
 	
 public:
-	
 	UFUNCTION(BlueprintCallable)
 	void EnqueueMoveRequest(const FMoveRequest& MoveRequest);
 	
@@ -59,7 +58,6 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void ClearMoveRequests();
-
 	
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

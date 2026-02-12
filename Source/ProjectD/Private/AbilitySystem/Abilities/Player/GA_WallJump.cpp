@@ -14,7 +14,6 @@ UGA_WallJump::UGA_WallJump()
 void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -38,7 +37,6 @@ void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	const FVector Start = OwnerPawn->GetActorLocation();
 	const FVector DashDir = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
 	FVector End = Start + (DashDir * JumpDistance);
-	
 	
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(OwnerPawn);
@@ -64,15 +62,12 @@ void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	{
 		FVector ImpactNormal = HitResult.ImpactNormal;
 		FVector MoveInput = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
-
 		FVector ReflectionSide = ImpactNormal * WallReflectionIntensity;
 		FVector InputSide = MoveInput * AirControlInfluence;
-
 		FVector LaunchDirection = (ReflectionSide + InputSide).GetSafeNormal();
 
 		FMoveRequest Req;
 		Req.Type = EMoveRequestType::MoveLaunch;
-
 		Req.Start = Start;
 		Req.LaunchVelocity.X = LaunchDirection.X * WallJumpPushForce;
 		Req.LaunchVelocity.Y = LaunchDirection.Y * WallJumpPushForce;
@@ -86,20 +81,16 @@ void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 				this, TEXT("WallJumpMontageTask"), JumpMontage, 1.0f);
 		if (IsValid(PlayTask))
 		{
-			
 			PlayTask->OnCompleted.AddDynamic(this, &UGA_WallJump::OnMontageCompleted);
 			PlayTask->OnInterrupted.AddDynamic(this, &UGA_WallJump::OnMontageInterrupted);
 			PlayTask->OnCancelled.AddDynamic(this, &UGA_WallJump::OnMontageCancelled);
 			PlayTask->ReadyForActivation();
 		}
-		
-
 	}
 	else
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 	}
-	
 }
 
 void UGA_WallJump::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

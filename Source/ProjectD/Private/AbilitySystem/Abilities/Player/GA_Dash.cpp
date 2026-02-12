@@ -64,7 +64,6 @@ void UGA_Dash::ActivateAbility(
 	Req.Priority = Priority;
 	Bridge->EnqueueMoveRequest(Req);
 	
-	
 	UAbilityTask_PlayMontageAndWait* PlayTask =
 		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 			this, TEXT("DashMontageTask"), DashMontage, 1.0f);
