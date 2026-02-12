@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
@@ -7,6 +7,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAttributeDataChanged, float, OldValue, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOutOfHealthChanged, AActor*, Instigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOutOfHealthDelegate, AController*, VictimController, AActor*, Instigator);
 
 UCLASS()
 class PROJECTD_API UPDAttributeSetBase : public UAttributeSet
@@ -37,7 +38,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
 	mutable FOutOfHealthChanged OutOfHealthChanged;
-	
+
+	UPROPERTY(BlueprintAssignable, Category = "Attribute")
+	mutable FOutOfHealthDelegate OnOutOfHealth;
 private:
 	UFUNCTION()
 	void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth);
