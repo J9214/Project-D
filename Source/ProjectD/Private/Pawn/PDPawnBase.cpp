@@ -204,6 +204,7 @@ void APDPawnBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(APDPawnBase, CarriedBall);
+	DOREPLIFETIME(APDPawnBase, bIsAiming);
 }
 
 AActor* APDPawnBase::FindInteractTarget() const
@@ -397,3 +398,19 @@ void APDPawnBase::CancelMovementGA()
 		}
 	}
 }
+
+void APDPawnBase::SetIsAiming(bool bNewAiming)
+{
+	bIsAiming = bNewAiming;
+    
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		Server_SetIsAiming(bNewAiming);
+	}
+}
+
+void APDPawnBase::Server_SetIsAiming_Implementation(bool bNewAiming)
+{
+	bIsAiming = bNewAiming;
+}
+
