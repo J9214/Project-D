@@ -20,7 +20,8 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual ETeamType GetTeamID() const override { return TeamID; }
-
+	
+	UFUNCTION(BlueprintPure)
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UPDAttributeSetBase* GetPDAttributeSetBase() const { return AttributeSetBase; }
 

@@ -29,13 +29,14 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled
 	) override;
+
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Dash")
 	float DashDistance = 600.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Dash")
-	float DashDuration = 0.2f;
+	float DashDurationMs = 200.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category="Dash")
 	int32 Priority = 10;

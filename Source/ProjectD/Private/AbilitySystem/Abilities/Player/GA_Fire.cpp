@@ -271,21 +271,15 @@ bool UGA_Fire::GetOwnerPawnWeapon(
 	UAbilitySystemComponent*& OutASC,
 	APDPawnBase*& OutPawn,
 	APDWeaponBase*& OutWeapon
-) const
+)
 {
 	OutASC = GetAbilitySystemComponentFromActorInfo();
 	if (!OutASC)
 	{
 		return false;
 	}
-
-	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
-	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
-	{
-		return false;
-	}
-
-	OutPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
+	
+	OutPawn = GetPlayerPawnFromActorInfo();
 	if (!OutPawn)
 	{
 		return false;
@@ -316,23 +310,49 @@ FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 
 	const float MaxRange = Weapon->WeaponData->MaxRange;
 
-	const FVector ViewLocation = OwnerPawn->GetPawnViewLocation();
-	FRotator ViewRot = OwnerPawn->GetBaseAimRotation();
-	if (AController* Controller = OwnerPawn->GetController())
+	APlayerController* PC = Cast<APlayerController>(OwnerPawn->GetController());
+	if (!PC)
 	{
-		ViewRot = Controller->GetControlRotation();
+		const FVector ViewLocation = OwnerPawn->GetPawnViewLocation();
+		const FRotator ViewRotation = OwnerPawn->GetBaseAimRotation();
+		return ViewLocation + ViewRotation.Vector() * MaxRange;
 	}
 
-	const FVector Start = ViewLocation;
-	const FVector End = Start + ViewRot.Vector() * MaxRange;
+	int32 SizeX = 0;
+	int32 SizeY = 0;
+	PC->GetViewportSize(SizeX, SizeY);
 
+	if (SizeX <= 0 || SizeY <= 0)
+	{
+		FVector CamLocation;
+		FRotator CamRotation;
+		PC->GetPlayerViewPoint(CamLocation, CamRotation);
+		return CamLocation + CamRotation.Vector() * MaxRange;
+	}
+
+	const float ScreenX = SizeX * 0.5f;
+	const float ScreenY = SizeY * 0.5f;
+
+	FVector WorldOrigin;
+	FVector WorldDirection;
+	if (!PC->DeprojectScreenPositionToWorld(ScreenX, ScreenY, WorldOrigin, WorldDirection))
+	{
+		FVector CamLocation;
+		FRotator CamRotation;
+		PC->GetPlayerViewPoint(CamLocation, CamRotation);
+		return CamLocation + CamRotation.Vector() * MaxRange;
+	}
+
+	const FVector Start = WorldOrigin;
+	const FVector End   = Start + WorldDirection.GetSafeNormal() * MaxRange;
+	
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
 	Params.AddIgnoredActor(Weapon);
 
 	FHitResult Hit;
 	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_GameTraceChannel1, Params);
 
-	DrawDebugLine(World, Start, bHit ? Hit.ImpactPoint : End, FColor::Cyan, false, 1.f, 0, 1.f);
+	//DrawDebugLine(World, Start, bHit ? Hit.ImpactPoint : End, FColor::Cyan, false, 1.f, 0, 1.f);
 
 	return bHit ? Hit.ImpactPoint : End;
 }
@@ -340,9 +360,14 @@ FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
 {
 	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	
 	const float MaxRange = Weapon->WeaponData->MaxRange;
 
-	const FVector MuzzleStart = Weapon->GetMuzzlePoint();
+	const FVector MuzzleStart = GetChestShotStart(OwnerPawn);
 	FVector FireDir = (AimPoint - MuzzleStart).GetSafeNormal();
 	if (FireDir.IsNearlyZero())
 	{
@@ -355,7 +380,7 @@ void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weap
 	Params.AddIgnoredActor(Weapon);
 
 	FHitResult Hit;
-	const bool bHit = World && World->LineTraceSingleByChannel(
+	const bool bHit = World->LineTraceSingleByChannel(
 		Hit,
 		MuzzleStart,
 		MuzzleEnd,
@@ -439,6 +464,24 @@ void UGA_Fire::ApplyFireCooldownToOwner(const APDWeaponBase* Weapon)
 		GetCurrentActivationInfo(),
 		CooldownEffect
 	);
+}
+
+FVector UGA_Fire::GetChestShotStart(APDPawnBase* OwnerPawn) const
+{
+	if (USkeletalMeshComponent* Mesh = OwnerPawn->GetSkeletalMeshComponent())
+	{
+		const FName ChestSocketName = TEXT("spine_04");
+		if (Mesh->DoesSocketExist(ChestSocketName))
+		{
+			const FVector ChestLocation = Mesh->GetSocketLocation(ChestSocketName);
+			return ChestLocation + OwnerPawn->GetActorForwardVector() * 30.f;
+		}
+	}
+	
+	const float HalfHeight = OwnerPawn->GetSimpleCollisionHalfHeight();
+	const FVector Base = OwnerPawn->GetActorLocation();
+	const FVector Chest = Base + FVector::UpVector * (HalfHeight * 0.7f);
+	return Chest + OwnerPawn->GetActorForwardVector() * 30.f;
 }
 
 FGameplayAbilityTargetDataHandle UGA_Fire::MakeAimPointTargetData(const FVector& CameraStart, const FVector& AimPoint)

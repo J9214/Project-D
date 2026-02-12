@@ -1,6 +1,7 @@
 #include "AbilitySystem/Abilities/Player/GA_Dash.h"
 #include "Components/Input/MovementBridgeComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "DefaultMovementSet/LayeredMoves/BasicLayeredMoves.h"
 #include "Pawn/PDPawnBase.h"
 
 UGA_Dash::UGA_Dash()
@@ -21,14 +22,14 @@ void UGA_Dash::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	
 	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!IsValid(OwnerPawn))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	
 	UMovementBridgeComponent* Bridge = OwnerPawn->FindComponentByClass<UMovementBridgeComponent>();
 	if (!Bridge)
 	{
@@ -37,8 +38,8 @@ void UGA_Dash::ActivateAbility(
 	}
 
 	const FVector Start = OwnerPawn->GetActorLocation();
-	const FVector Forward = OwnerPawn->GetActorForwardVector();
-	FVector Target = Start + Forward * DashDistance;
+	const FVector DashDir = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
+	FVector Target = Start + DashDir * DashDistance;
 	
 	FHitResult Hit;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(DashSweep), false, OwnerPawn);
@@ -56,12 +57,11 @@ void UGA_Dash::ActivateAbility(
 	}
 	
 	FMoveRequest Req;
-	Req.Type = EMoveRequestType::MoveToDash;
+	Req.Type = EMoveRequestType::MoveTo;
 	Req.Start = Start;
 	Req.Target = Target;
-	Req.DurationSec = DashDuration;
+	Req.DurationMs = DashDurationMs; 
 	Req.Priority = Priority;
-
 	Bridge->EnqueueMoveRequest(Req);
 	
 	UAbilityTask_PlayMontageAndWait* PlayTask =
@@ -86,3 +86,6 @@ void UGA_Dash::EndAbility(
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
+
+
+

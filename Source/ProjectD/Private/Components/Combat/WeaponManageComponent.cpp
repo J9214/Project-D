@@ -261,6 +261,11 @@ void UWeaponManageComponent::OnRep_EquippedSlotIndex()
     RefreshAttachments();
 }
 
+void UWeaponManageComponent::OnRep_EquippedWeapon()
+{
+    OnEquippedWeaponDataChanged.Broadcast(EquippedWeapon);
+}
+
 void UWeaponManageComponent::RefreshAttachments()
 {
     for (int32 i = 0; i < Slots.Num(); ++i)
