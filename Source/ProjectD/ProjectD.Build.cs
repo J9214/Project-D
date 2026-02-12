@@ -38,6 +38,9 @@ public class ProjectD : ModuleRules
 
 			// Mover
 			"Mover",
+
+			// Geometry Collection
+			"GeometryCollectionEngine",
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
