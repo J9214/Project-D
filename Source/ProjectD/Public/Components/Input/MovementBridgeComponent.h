@@ -4,11 +4,13 @@
 #include "Components/PawnExtensionComponentBase.h"
 #include "MovementBridgeComponent.generated.h"
 
+
 UENUM(BlueprintType)
 enum class EMoveRequestType : uint8
 {
-	MoveToDash,
-	LinearVelocityDash
+	MoveTo,
+	LinearVelocityDash,
+	MoveLaunch,
 };
 
 USTRUCT(BlueprintType)
@@ -17,25 +19,29 @@ struct FMoveRequest
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite)
-	EMoveRequestType Type = EMoveRequestType::MoveToDash;
+	EMoveRequestType Type = EMoveRequestType::MoveTo;
 	
 	UPROPERTY(BlueprintReadWrite)
 	FVector Start = FVector::ZeroVector;
-	
-	UPROPERTY(BlueprintReadWrite)
-	FVector Target = FVector::ZeroVector;
-	
-	UPROPERTY(BlueprintReadWrite)
-	FVector Velocity = FVector::ZeroVector;
 
 	UPROPERTY(BlueprintReadWrite)
-	float DurationSec = 0.5f;
+	FVector Target = FVector::ZeroVector;  
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector LaunchVelocity = FVector::ZeroVector;  
 	
 	UPROPERTY(BlueprintReadWrite)
-	int32 Priority = 10;
+	FName ForceMovementMode = EName::None;
+
+	UPROPERTY(BlueprintReadWrite)
+	float DurationMs = 0.f;  
+	
+	UPROPERTY(BlueprintReadWrite)
+	uint8 Priority = 10;
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bCancelExisting = false; // if true cancel existing move request
+	
 };
 
 UCLASS()
@@ -56,4 +62,5 @@ public:
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FMoveRequest> PendingMoveRequests;
+
 };

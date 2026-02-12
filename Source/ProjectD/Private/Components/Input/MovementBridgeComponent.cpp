@@ -26,3 +26,5 @@ void UMovementBridgeComponent::ClearMoveRequests()
 {
 	PendingMoveRequests.Reset();
 }
+
+
