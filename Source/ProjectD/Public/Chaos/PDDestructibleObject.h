@@ -1,13 +1,5 @@
 #pragma once
 
-#include "NativeGameplayTags.h"
-
-namespace PDGameplayTags
-{
-	/** SetByCaller Tags **/
-	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_DestructDamage);
-}
-
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "AbilitySystemInterface.h"

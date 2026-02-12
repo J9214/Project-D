@@ -10,12 +10,6 @@
 
 #include "AbilitySystemComponent.h"
 
-namespace PDGameplayTags
-{
-	/** SetByCaller Tags **/
-	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_DestructDamage, "Data.Weapon.DestructDamage");
-}
-
 APDDestructibleObject::APDDestructibleObject()
 {
 	PrimaryActorTick.bCanEverTick = false;
