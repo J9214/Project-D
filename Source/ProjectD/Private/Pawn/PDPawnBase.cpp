@@ -16,13 +16,12 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
 #include "MoverComponent.h"
+
 
 APDPawnBase::APDPawnBase()
 {
@@ -344,7 +343,6 @@ void APDPawnBase::CancelMovementGA()
 		UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::InitAttributeSet - ASC is not valid"));
 		return;
 	}
-	
 
 	FGameplayTag RootTag  = PDGameplayTags::Player_Ability_Movement;
 	
@@ -364,3 +362,4 @@ void APDPawnBase::CancelMovementGA()
 		}
 	}
 }
+
