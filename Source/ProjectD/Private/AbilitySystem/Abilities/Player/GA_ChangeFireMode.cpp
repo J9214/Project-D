@@ -16,30 +16,31 @@ void UGA_ChangeFireMode::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	APDPawnBase* OwnerPawn = ActorInfo ? Cast<APDPawnBase>(ActorInfo->AvatarActor.Get()) : nullptr;
+	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!OwnerPawn)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	UWeaponManageComponent* WMC = OwnerPawn->FindComponentByClass<UWeaponManageComponent>();
+	UWeaponManageComponent* WMC = OwnerPawn->GetWeaponManageComponent();
 	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
 	if (!Weapon || !Weapon->WeaponData)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	if (HasAuthority(&ActivationInfo))
+	
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		Weapon->ChangeFireMode();
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (IsLocallyControlled())
+	{
+		const EPDWeaponFireMode NewMode = Weapon->GetNextFireMode();
+		Weapon->Server_SetFireMode(NewMode);
 	}
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);

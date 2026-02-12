@@ -2,7 +2,6 @@
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Pawn/PDPawnBase.h"
 #include "Weapon/PDWeaponBase.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
 
@@ -20,12 +19,6 @@ void UGA_Equip::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
@@ -78,14 +71,7 @@ void UGA_Equip::ActivateAbility(
 
 void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
 {
-	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar)
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	if (!Avatar->HasAuthority())
+	if (!HasAuthority(&CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
@@ -97,8 +83,14 @@ void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
+	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
 
 	WMC->EquipSlot(EquipSlotIndex);
 	
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

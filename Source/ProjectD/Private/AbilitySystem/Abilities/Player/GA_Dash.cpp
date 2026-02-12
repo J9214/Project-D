@@ -17,12 +17,6 @@ void UGA_Dash::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!IsValid(OwnerPawn))
 	{
@@ -32,6 +26,12 @@ void UGA_Dash::ActivateAbility(
 	
 	UMovementBridgeComponent* Bridge = OwnerPawn->FindComponentByClass<UMovementBridgeComponent>();
 	if (!Bridge)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;

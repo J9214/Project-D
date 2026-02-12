@@ -23,28 +23,17 @@ void APDWeaponBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(APDWeaponBase, CurrentAmmo);
 }
 
+void APDWeaponBase::Server_SetFireMode_Implementation(EPDWeaponFireMode NewMode)
+{
+	CurrentFireMode = NewMode;
+}
+
 FVector APDWeaponBase::GetMuzzlePoint() const
 {
 	return Muzzle ? Muzzle->GetComponentLocation() : FVector::ZeroVector;
 }
 
-bool APDWeaponBase::ClientCanFire() const
-{
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return false;
-	}
-	
-	if (CurrentAmmo <= 0)
-	{
-		return false;
-	}
-	
-	return true;
-}
-
-bool APDWeaponBase::ServerCanFire() const
+bool APDWeaponBase::CanFire() const
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -61,7 +50,7 @@ bool APDWeaponBase::ServerCanFire() const
 	return true;
 }
 
-void APDWeaponBase::ServerConsumeAmmo(int32 Amount)
+void APDWeaponBase::ConsumeAmmo(int32 Amount)
 {
 	if (!HasAuthority())
 	{
@@ -89,17 +78,6 @@ void APDWeaponBase::InitWeaponData()
 	}
 }
 
-void APDWeaponBase::ChangeFireMode()
-{
-	const TArray<EPDWeaponFireMode>& Modes = WeaponData->SupportedFireModes;
-	if (Modes.Num() <= 1)
-	{
-		return;
-	}
-	
-	CurrentFireMode = GetNextFireMode();
-}
-
 void APDWeaponBase::ReloadAmmo()
 {
 	CurrentAmmo = MaxAmmo;
@@ -108,6 +86,11 @@ void APDWeaponBase::ReloadAmmo()
 void APDWeaponBase::OnRep_AmmoChanged()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Ammo Changed: %d / %d"), CurrentAmmo, MaxAmmo);
+}
+
+void APDWeaponBase::OnRep_FireModeChanged()
+{
+	// Update HUD, Sound, Anim
 }
 
 EPDWeaponFireMode APDWeaponBase::GetNextFireMode() const

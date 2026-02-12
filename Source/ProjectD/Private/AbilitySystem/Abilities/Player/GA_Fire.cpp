@@ -29,12 +29,6 @@ void UGA_Fire::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	bKeepFiring = true;
 
 	if (IsLocallyControlled())
@@ -111,7 +105,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 
 	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
 
-	if (!Weapon->ServerCanFire())
+	if (!Weapon->CanFire())
 	{
 		return;
 	}
@@ -126,7 +120,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
 	}
 
-	Weapon->ServerConsumeAmmo(1);
+	Weapon->ConsumeAmmo(1);
 	ApplyFireCooldownToOwner(Weapon);
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 }
@@ -219,7 +213,7 @@ void UGA_Fire::FireOneShot()
 		return;
 	}
 	
-	if (!Weapon->ClientCanFire())
+	if (!Weapon->CanFire())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;

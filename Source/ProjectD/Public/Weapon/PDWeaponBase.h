@@ -17,28 +17,32 @@ public:
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(Server, Reliable)
+	void Server_SetFireMode(EPDWeaponFireMode NewMode);
+	
 	FORCEINLINE EPDWeaponFireMode GetCurrentFireMode() const { return CurrentFireMode; }
 	FORCEINLINE bool IsFullAuto() const { return CurrentFireMode == EPDWeaponFireMode::FullAuto; }
 	
 	FORCEINLINE USceneComponent* GetMuzzleComponent() const { return Muzzle; }
 	FVector GetMuzzlePoint() const;
 	
-	bool ClientCanFire() const;
-	bool ServerCanFire() const;
-	void ServerConsumeAmmo(int32 Amount);
+	bool CanFire() const;
+	void ConsumeAmmo(int32 Amount);
 	
 	void InitWeaponData();
-	void ChangeFireMode();
 	
 	int32 GetMaxAmmo() const { return MaxAmmo; }
 	int32 GetCurrentAmmo() const { return CurrentAmmo; }
 	void ReloadAmmo();
 
+	EPDWeaponFireMode GetNextFireMode() const;
+	
 protected:
 	UFUNCTION()
 	void OnRep_AmmoChanged();
 	
-	EPDWeaponFireMode GetNextFireMode() const;
+	UFUNCTION()
+	void OnRep_FireModeChanged();
 	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -51,10 +55,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USceneComponent> Muzzle;
 	
-	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
+	UPROPERTY(ReplicatedUsing=OnRep_FireModeChanged, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
 	EPDWeaponFireMode CurrentFireMode = EPDWeaponFireMode::SemiAuto;
 	
-	UPROPERTY(ReplicatedUsing=OnRep_AmmoChanged, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
 	int32 MaxAmmo = 0;
 
 	UPROPERTY(ReplicatedUsing=OnRep_AmmoChanged, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
