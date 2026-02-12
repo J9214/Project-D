@@ -436,6 +436,24 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 
 	SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_Damage, Damage);
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+
+	if (IsValid(Weapon->WeaponData->DestructDamageGE))
+	{
+		const float DestructDamage = Weapon->WeaponData->DestructDamage;
+
+		SpecHandle = SourceASC->MakeOutgoingSpec(
+			Weapon->WeaponData->DestructDamageGE,
+			Level,
+			Context
+		);
+		if (!SpecHandle.IsValid())
+		{
+			return;
+		}
+
+		SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_DestructDamage, DestructDamage);
+		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	}
 }
 
 void UGA_Fire::ApplyFireCooldownToOwner(const APDWeaponBase* Weapon)
