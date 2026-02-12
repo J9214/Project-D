@@ -3,6 +3,7 @@
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+#include "GameState/PDGameStateBase.h"
 
 AGoalPost::AGoalPost()
 {
@@ -48,7 +49,7 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 
 	PlacedBall = Ball;
 
-	Ball->Server_ClearCarrier();
+	Ball->ClearCarrier();
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Pawn))
 	{
@@ -89,5 +90,12 @@ void AGoalPost::OnHoldComplete()
 	{
 		PlacedBall->Destroy();
 		PlacedBall = nullptr;
+	}
+
+	APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>();
+
+	if (GS)
+	{
+		GS->GoalScored();
 	}
 }
