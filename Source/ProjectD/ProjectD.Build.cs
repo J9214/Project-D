@@ -50,6 +50,8 @@ public class ProjectD : ModuleRules
             "MassNavigation",
             "MassAIBehavior",
             "MassReplication",
+            "MassLOD",
+            "MassSimulation",
 
 			//Niagara
 			"Niagara",
