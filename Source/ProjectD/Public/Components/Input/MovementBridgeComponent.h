@@ -4,7 +4,6 @@
 #include "Components/PawnExtensionComponentBase.h"
 #include "MovementBridgeComponent.generated.h"
 
-
 UENUM(BlueprintType)
 enum class EMoveRequestType : uint8
 {
@@ -41,7 +40,6 @@ struct FMoveRequest
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bCancelExisting = false; // if true cancel existing move request
-	
 };
 
 UCLASS()
@@ -62,5 +60,4 @@ public:
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<FMoveRequest> PendingMoveRequests;
-
 };

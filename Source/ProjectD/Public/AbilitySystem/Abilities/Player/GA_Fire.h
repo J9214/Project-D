@@ -55,8 +55,9 @@ protected:
 	void StartFireNow();
 	void ScheduleNextShot(float Interval);
 
-	bool GetOwnerPawnWeapon(UAbilitySystemComponent*& OutASC, APDPawnBase*& OutPawn, APDWeaponBase*& OutWeapon) const;
+	bool GetOwnerPawnWeapon(UAbilitySystemComponent*& OutASC, APDPawnBase*& OutPawn, APDWeaponBase*& OutWeapon);
 	FVector CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon) const;
+	FVector GetChestShotStart(APDPawnBase* OwnerPawn) const;
 	FGameplayAbilityTargetDataHandle MakeAimPointTargetData(const FVector& CameraStart, const FVector& AimPoint);
 	
 	void MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint);
