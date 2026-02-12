@@ -10,8 +10,7 @@ class PROJECTD_API APDPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 public:
-	UFUNCTION(Client, Reliable)
-	void ClientShowGameOver(int32 WinningTeam);
+	void ShowGameOver();
 protected:
 	virtual void BeginPlay() override;
 

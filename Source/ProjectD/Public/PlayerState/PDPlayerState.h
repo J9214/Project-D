@@ -8,6 +8,7 @@
 
 class UPDAbilitySystemComponent;
 class UPDAttributeSetBase;
+class UGameplayEffect;
 
 UCLASS()
 class PROJECTD_API APDPlayerState : public APlayerState, public IAbilitySystemInterface, public IPDTeamInterface
@@ -25,6 +26,10 @@ public:
 
 	void InitAbilityActorInfo(AActor* AvatarActor);
 
+	void SetDeadState();
+
+	void SetReviveState();
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Team")
 	ETeamType TeamID;
@@ -34,4 +39,10 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AbilitySystem")
 	TObjectPtr<UPDAttributeSetBase> AttributeSetBase;
+
+	UPROPERTY(EditDefaultsOnly, Category = "GAS")
+	TSubclassOf<UGameplayEffect> GE_DeathClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "GAS")
+	TSubclassOf<UGameplayEffect> GE_ReviveClass;
 };

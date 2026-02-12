@@ -2,6 +2,7 @@
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/PDPlayerState.h"
 #include "GameMode/PDGameModeBase.h"
+#include "Controller/PDPlayerController.h"
 
 APDGameStateBase::APDGameStateBase()
 {
@@ -122,5 +123,20 @@ void APDGameStateBase::GoalScored()
 void APDGameStateBase::OnRep_RemainingTime()
 {
     //UE_LOG(LogTemp, Log, TEXT("Remaining Time: %d"), RemainingTimeSec);
+}
+
+void APDGameStateBase::OnRep_ChangeWinnerTeamId()
+{
+    if (WinnerTeamId != INDEX_NONE)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Winner Team Id: %d"), WinnerTeamId);
+	}
+
+    APDPlayerController* PC = GetWorld()->GetFirstPlayerController<APDPlayerController>();
+
+    if (PC)
+    {
+        PC->ShowGameOver();
+	}
 }
 

@@ -36,15 +36,7 @@ void APDGameModeBase::PlayerDied(AController* Controller)
 
     if (APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>())
     {
-        UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-
-        if (ASC && GE_DeathClass)
-        {
-            FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-            Context.AddSourceObject(this); 
-
-            ASC->ApplyGameplayEffectToSelf(GetDefault<UGameplayEffect>(GE_DeathClass),1.0f,Context);
-        }
+        PS->SetDeadState();
     }
 
     FTimerHandle TimerHandle;
@@ -83,15 +75,6 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
     
     GS->WinnerTeamId = WinnerTeamId;
     GS->bOvertime = false;
-
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-    {
-        APDPlayerController* PC = Cast<APDPlayerController>(It->Get());
-        if (PC)
-        {
-            PC->ClientShowGameOver(WinnerTeamId);
-        }
-    }
 }
 
 void APDGameModeBase::PlayerRespawn(AController* Controller)
@@ -115,19 +98,7 @@ void APDGameModeBase::PlayerRespawn(AController* Controller)
 
     if (APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>())
     {
-        UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-        if (ASC && GE_DeathClass && GE_ReviveClass)
-        {
-            ASC->RemoveActiveGameplayEffectBySourceEffect(GE_DeathClass, ASC);
-
-            FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
-
-            const UGameplayEffect* ReviveGE = GE_ReviveClass->GetDefaultObject<UGameplayEffect>();
-            if (ReviveGE)
-            {
-                ASC->ApplyGameplayEffectToSelf(ReviveGE, 1.0f, Context);
-            }
-        }
+		PS->SetReviveState();
     }
 }
 
@@ -139,7 +110,7 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
     {
         if (UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase())
         {
-            AS->OnOutOfHealth.AddDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
+            AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
         }
     }
 }

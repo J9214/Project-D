@@ -4,7 +4,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "PDGameModeBase.generated.h"
 
-class UGameplayEffect;
+
 
 UCLASS()
 class PROJECTD_API APDGameModeBase : public AGameModeBase
@@ -37,12 +37,6 @@ protected:
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 
 	FTimerHandle RoundTimerHandle;
-
-	UPROPERTY(EditDefaultsOnly, Category = "GAS")
-	TSubclassOf<UGameplayEffect> GE_DeathClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "GAS")
-	TSubclassOf<UGameplayEffect> GE_ReviveClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 RoundDurationSec;
