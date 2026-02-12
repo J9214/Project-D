@@ -3,6 +3,8 @@
 #include "GameFramework/Pawn.h"
 #include "Components/StaticMeshComponent.h"
 #include "Pawn/PDPawnBase.h" 
+#include "GameState/PDGameStateBase.h"
+#include "PlayerState/PDPlayerState.h"
 
 ABallCore::ABallCore()
 {
@@ -33,7 +35,7 @@ void ABallCore::OnInteract_Implementation(AActor* Interactor)
 	}
 }
 
-void ABallCore::Server_SetCarrier(APawn* NewCarrier)
+void ABallCore::SetCarrier(APawn* NewCarrier)
 {
 	if (!HasAuthority()) 
 	{
@@ -42,19 +44,35 @@ void ABallCore::Server_SetCarrier(APawn* NewCarrier)
 
 	CarrierPawn = NewCarrier;
 	HandleCarrierChanged();
+	if (NewCarrier)
+	{
+		APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>();
+		if (GS)
+		{
+			APlayerState* PS = NewCarrier->GetPlayerState();
+			if (PS)
+			{
+				APDPlayerState* MyPS = Cast<APDPlayerState>(PS);
+				if (MyPS)
+				{
+					GS->SetBallHolder(MyPS);
+				}
+			}
+		}
+	}
 }
 
-void ABallCore::Server_ClearCarrier()
+void ABallCore::ClearCarrier()
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
-	Server_SetCarrier(nullptr);
+	SetCarrier(nullptr);
 }
 
-void ABallCore::Server_DropPhysics(const FVector& DropLocation, const FVector& Impulse)
+void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
 {
 	if (!HasAuthority()) 
 	{

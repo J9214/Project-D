@@ -39,6 +39,9 @@ public class ProjectD : ModuleRules
 
 			// Mover
 			"Mover",
+
+			// Geometry Collection
+			"GeometryCollectionEngine",
         });
 
 		// Uncomment if you are using Slate UI

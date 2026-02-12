@@ -20,6 +20,8 @@
 #include "Camera/CameraComponent.h"
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
+#include "Components/PrimitiveComponent.h" 
+#include "GameFramework/PawnMovementComponent.h"
 #include "MoverComponent.h"
 
 APDPawnBase::APDPawnBase()
@@ -126,6 +128,16 @@ void APDPawnBase::InitAbilityActorInfo()
 	}
 
 	PDPlayerState->InitAbilityActorInfo(this);
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+
+	if (ASC)
+	{
+		FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+		FDelegateHandle TagEventHandle = ASC->RegisterGameplayTagEvent(Tag, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &ThisClass::OnDeathTagChanged);
+	}
+	
 }
 
 void APDPawnBase::InitAttributeSet()
@@ -218,6 +230,31 @@ AActor* APDPawnBase::FindInteractTarget() const
 	return Hit.GetActor();
 }
 
+void APDPawnBase::OnDeathTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	const bool bIsDead = NewCount > 0;
+	HandleDeathState(bIsDead);
+}
+
+void APDPawnBase::HandleDeathState(bool bIsDead)
+{
+	if (RootComponent)
+	{
+		if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(RootComponent))
+		{
+			Primitive->SetCollisionEnabled(bIsDead ? ECollisionEnabled::QueryOnly : ECollisionEnabled::QueryAndPhysics);
+		}
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (bIsDead)
+			DisableInput(PC);
+		else
+			EnableInput(PC);
+	}
+}
+
 FVector APDPawnBase::GetDirectionByMoveInput(const FVector& FallbackForward) const
 {
 	if (!MoverComponent)
@@ -287,7 +324,7 @@ void APDPawnBase::Server_PickUpBall_Implementation(ABallCore* Ball)
 
 	CarriedBall = Ball;
 
-	Ball->Server_SetCarrier(this);
+	Ball->SetCarrier(this);
 
 	ApplyHoldingBallEffect();
 }
@@ -306,7 +343,7 @@ void APDPawnBase::Server_DropBall_Implementation()
 
 	const FVector Impulse = (Forward * 300.f) + (FVector::UpVector * 200.f);
 
-	CarriedBall->Server_DropPhysics(DropLoc, Impulse);
+	CarriedBall->DropPhysics(DropLoc, Impulse);
 
 	CarriedBall = nullptr;
 }

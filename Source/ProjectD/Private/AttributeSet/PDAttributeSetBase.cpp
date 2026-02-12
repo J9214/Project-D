@@ -1,4 +1,4 @@
-#include "AttributeSet/PDAttributeSetBase.h"
+﻿#include "AttributeSet/PDAttributeSetBase.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 
@@ -57,11 +57,21 @@ void UPDAttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEffect
 
 			if (NewHealth <= 0.0f && OldHealth > 0.0f)
 			{
+				AActor* TargetActor = Data.Target.GetAvatarActor();
 				AActor* Instigator = Data.EffectSpec.GetContext().GetInstigator();
+				AController* TargetController = nullptr;
 
-				if (OutOfHealthChanged.IsBound())
+				if (APawn* TargetPawn = Cast<APawn>(TargetActor))
 				{
-					OutOfHealthChanged.Broadcast(Instigator);
+					TargetController = TargetPawn->GetController();
+				}
+
+				if (TargetController && TargetController->HasAuthority())
+				{
+					if (OnOutOfHealth.IsBound())
+					{
+						OnOutOfHealth.Broadcast(TargetController, Instigator);
+					}
 				}
 			}
 		}
