@@ -28,7 +28,8 @@ class PROJECTD_API APDPawnBase : public APawn, public IAbilitySystemInterface
 
 public:
 	APDPawnBase();
-
+	
+	UFUNCTION(BlueprintPure)
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	FORCEINLINE UWeaponManageComponent* GetWeaponManageComponent() const { return WeaponManageComponent; }
