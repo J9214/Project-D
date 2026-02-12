@@ -200,6 +200,10 @@
 		{
 			"Name": "MoverTests",
 			"Enabled": true
+		},
+		{
+			"Name": "ConsoleVariables",
+			"Enabled": true
 		}
 	]
 }
