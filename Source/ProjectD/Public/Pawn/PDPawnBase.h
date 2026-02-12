@@ -52,7 +52,7 @@ protected:
 	void InitAbilityActorInfo();
 	void InitAttributeSet();
 	void BindAttributeChangeDelegates();
-
+	
 private:
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
@@ -137,5 +137,19 @@ public:
 	void CancelMovementGA();
 	
 #pragma endregion mover
+	
+#pragma region Animation
+	
+protected:
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "Anim")
+	bool bIsAiming = false;
+	
+	UFUNCTION(BlueprintCallable , Category = "Anim")
+	void SetIsAiming(bool bNewAiming);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsAiming(bool bNewAiming);
+
+#pragma endregion Animation
 
 };

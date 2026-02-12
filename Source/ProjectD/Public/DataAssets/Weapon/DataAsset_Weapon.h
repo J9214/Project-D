@@ -30,18 +30,24 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (TitleProperty = "InputTag"))
 	TArray<FPDPlayerAbilitySet> GrantedAbilitySets = {};
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> WeaponDamageGE = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> DestructDamageGE = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> FireCooldownGE = nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
 	FPDWeaponMontageSet WeaponMontages;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float WeaponDamage = 30.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float DestructDamage = 2.f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float FireInterval = 0.2f;

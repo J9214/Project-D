@@ -37,6 +37,7 @@ void UPDDestructibleAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 		{
 			float OldDurability = GetDurability();
 			float NewDurability = FMath::Clamp<float>(OldDurability - LocalDamage, 0.0f, GetMaxDurability());
+			SetDurability(NewDurability);
 
 			if (NewDurability <= 0.0f && OldDurability > 0.0f)
 			{
@@ -46,7 +47,6 @@ void UPDDestructibleAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 				{
 					HitLocation = Data.EffectSpec.GetContext().GetHitResult()->Location;
 				}
-				SetDurability(MIN_DURABILITY);
 
 				if (OutOfDurabilityChanged.IsBound())
 				{
