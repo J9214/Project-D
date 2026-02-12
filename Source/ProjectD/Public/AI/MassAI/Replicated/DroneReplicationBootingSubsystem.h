@@ -4,6 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "DroneReplicationBootingSubsystem.generated.h"
 
+
 UCLASS()
 class PROJECTD_API UDroneReplicationBootingSubsystem : public UWorldSubsystem
 {
@@ -13,9 +14,13 @@ public:
 	virtual void Deinitialize() override;
 
 private:
-	bool ShouldRunForThisWorld() const;
+	bool ShouldRunForServer() const;
+	bool ShouldRunForClient() const;
+
+	void RegisterBubbleInfoClassIfNeeded();
+	void EnsureMassVisualizerActorIfNeeded();
 
 private:
-	UPROPERTY()
 	bool bRegisteredBubbleClass = false;
+	bool bSpawnedMassVisualizer = false;
 };
