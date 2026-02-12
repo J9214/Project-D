@@ -20,6 +20,7 @@ public:
 	FORCEINLINE EPDWeaponFireMode GetCurrentFireMode() const { return CurrentFireMode; }
 	FORCEINLINE bool IsFullAuto() const { return CurrentFireMode == EPDWeaponFireMode::FullAuto; }
 	
+	FORCEINLINE USceneComponent* GetMuzzleComponent() const { return Muzzle; }
 	FVector GetMuzzlePoint() const;
 	
 	bool ClientCanFire() const;
