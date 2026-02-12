@@ -20,6 +20,10 @@ public:
 	) override;
 
 private:
+	UFUNCTION()
+	void OnEventTagReceived(const FGameplayEventData Payload);
+	
+private:
 	UPROPERTY(EditDefaultsOnly, Category = "Equip", meta = (PrivateAccess = "true"))
 	int32 EquipSlotIndex = INDEX_NONE;
 };

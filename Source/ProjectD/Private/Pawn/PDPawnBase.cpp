@@ -5,7 +5,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/Input/PDEnhancedInputComponent.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Components/Combat/WeaponStateComponent.h"
 #include "Components/Combat/SkillManageComponent.h"
+#include "Components/Input/MovementBridgeComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
 #include "GameplayTagContainer.h"
@@ -14,20 +16,21 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
+#include "MoverComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
+	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
+	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -61,19 +64,11 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 	}
 }
 
-void APDPawnBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	
-	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
-	{
-		ASC->ProcessAbilityInput(DeltaTime);
-	}
-}
-
 void APDPawnBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	MoverComponent = FindComponentByClass<UMoverComponent>();
 }
 
 void APDPawnBase::PossessedBy(AController* NewController)
@@ -113,8 +108,13 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		}
 	}
 
-	UPDEnhancedInputComponent* PDInputComponent = CastChecked<UPDEnhancedInputComponent>(PlayerInputComponent);
-	PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+	if (UPDEnhancedInputComponent* PDInputComponent = Cast<UPDEnhancedInputComponent>(PlayerInputComponent))
+	{
+		if (IsValid(InputConfigDataAsset))
+		{
+			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
+		}
+	}
 }
 
 void APDPawnBase::InitAbilityActorInfo()
@@ -218,6 +218,30 @@ AActor* APDPawnBase::FindInteractTarget() const
 	return Hit.GetActor();
 }
 
+FVector APDPawnBase::GetDirectionByMoveInput(const FVector& FallbackForward) const
+{
+	if (!MoverComponent)
+	{
+		return FallbackForward;
+	}
+	
+	const FMoverInputCmdContext& Cmd = MoverComponent->GetLastInputCmd();
+	
+	const FCharacterDefaultInputs* Inputs = Cmd.InputCollection.FindDataByType<FCharacterDefaultInputs>();
+	if (!Inputs)
+	{
+		return FallbackForward;
+	}
+	
+	const FVector MoveInput= Inputs->GetMoveInput();
+	if (MoveInput.IsNearlyZero())
+	{
+		return FallbackForward;
+	}
+
+	return MoveInput.GetSafeNormal();
+}
+
 void APDPawnBase::TryInteract()
 {
 	AActor* Target = FindInteractTarget();
@@ -306,5 +330,33 @@ void APDPawnBase::RemoveHoldingBallEffect()
 		FGameplayTagContainer TagContainer;
 		TagContainer.AddTag(FGameplayTag::RequestGameplayTag(TEXT("State.HoldingBall")));
 		ASC->RemoveActiveEffectsWithGrantedTags(TagContainer);
+	}
+}
+
+void APDPawnBase::CancelMovementGA()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::InitAttributeSet - ASC is not valid"));
+		return;
+	}
+
+	FGameplayTag RootTag  = PDGameplayTags::Player_Ability_Movement;
+	
+	const TArray<FGameplayAbilitySpec>& ActiveSpecs = ASC->GetActivatableAbilities();
+	
+	FGameplayTagContainer TargetContainer;
+	TargetContainer.AddTag(RootTag);
+	
+	for (const FGameplayAbilitySpec& Spec : ActiveSpecs)
+	{
+		if (Spec.IsActive())
+		{
+			if (Spec.Ability->AbilityTags.HasTag(RootTag))
+			{
+				ASC->CancelAbilityHandle(Spec.Handle);
+			}
+		}
 	}
 }

@@ -11,8 +11,7 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"GameplayAbilities",
-				"EnhancedInput",
-				"AdvancedSessions"
+				"EnhancedInput"
 			]
 		}
 	],
@@ -183,7 +182,23 @@
 			"Enabled": true
 		},
 		{
-			"Name": "SteamSockets",
+			"Name": "NetworkPredictionExtras",
+			"Enabled": true
+		},
+		{
+			"Name": "NetworkPredictionInsights",
+			"Enabled": true
+		},
+		{
+			"Name": "MoverIntegrations",
+			"Enabled": true
+		},
+		{
+			"Name": "MoverAnimNext",
+			"Enabled": true
+		},
+		{
+			"Name": "MoverTests",
 			"Enabled": true
 		}
 	]

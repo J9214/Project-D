@@ -4,9 +4,11 @@
 #include "Engine/DataAsset.h"
 #include "Structs/PDPlayerAbilitySet.h"
 #include "Weapon/PDWeaponTypes.h"
+#include "Weapon/PDWeaponMontages.h"
 #include "DataAsset_Weapon.generated.h"
 
 class UGameplayEffect;
+class UUserWidget;
 
 UCLASS()
 class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
@@ -32,6 +34,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> FireCooldownGE = nullptr;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	FPDWeaponMontageSet WeaponMontages;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float WeaponDamage = 30.f;
 	
@@ -39,5 +44,11 @@ public:
 	float FireInterval = 0.2f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 MaxAmmo = 30;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float MaxRange = 10000.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI|Crosshair")
+	TSubclassOf<UUserWidget> AimCrosshairWidgetClass;
 };

@@ -42,7 +42,7 @@ bool UWeaponManageComponent::AddWeaponToInventory(TSubclassOf<APDWeaponBase> Wea
         return false;
     }
 
-    NewWeapon->InitFireMode();
+    NewWeapon->InitWeaponData();
     Slots[EmptySlotIndex].WeaponActor = NewWeapon;
     AttachToBack(NewWeapon, EmptySlotIndex);
 
@@ -259,6 +259,11 @@ void UWeaponManageComponent::OnRep_Slots()
 void UWeaponManageComponent::OnRep_EquippedSlotIndex()
 {
     RefreshAttachments();
+}
+
+void UWeaponManageComponent::OnRep_EquippedWeapon()
+{
+    OnEquippedWeaponDataChanged.Broadcast(EquippedWeapon);
 }
 
 void UWeaponManageComponent::RefreshAttachments()

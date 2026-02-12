@@ -33,6 +33,21 @@ void UPDGameplayAbility::EndAbility(
 	}
 }
 
+void UPDGameplayAbility::OnMontageCompleted()
+{
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+}
+
+void UPDGameplayAbility::OnMontageInterrupted()
+{
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+}
+
+void UPDGameplayAbility::OnMontageCancelled()
+{
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+}
+
 UPDAbilitySystemComponent* UPDGameplayAbility::GetPDAbilitySystemComponentFromActorInfo() const
 {
 	return Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo());
