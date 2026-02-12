@@ -8,10 +8,13 @@
 #include "OnlineSessionSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "PlayerState/PDPlayerState.h"
+#include "Engine/NetDriver.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 APDLobbyGameMode::APDLobbyGameMode()
 {
-    for (int32 i = 0; i < 3; i++) 
+    for (int32 i = 0; i < 3; i++)
     {
         TeamCounts[i] = 0;
     }
@@ -94,44 +97,37 @@ void APDLobbyGameMode::Logout(AController* Exiting)
 void APDLobbyGameMode::CreateDedicatedSession()
 {
     IOnlineSubsystem* OSS = IOnlineSubsystem::Get(FName("Steam"));
-    if(!OSS)
+    if (OSS)
     {
-        UE_LOG(LogTemp, Error, TEXT("OnlineSubsystem Steam을 찾을 수 없습니다."));
-        return;
-	}
+        IOnlineSessionPtr SessionInterface = OSS->GetSessionInterface();
+        if (SessionInterface.IsValid())
+        {
+            FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+            if (ExistingSession)
+            {
+                SessionInterface->DestroySession(NAME_GameSession);
+            }
+            CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &APDLobbyGameMode::OnCreateSessionComplete);
+            CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
 
-    IOnlineSessionPtr SessionInterface = OSS->GetSessionInterface();
-    if (!SessionInterface.IsValid())
-    {
-        UE_LOG(LogTemp, Error, TEXT("세션 인터페이스를 가져올 수 없습니다."));
-		return;
+            FOnlineSessionSettings Settings;
+            Settings.bIsDedicated = true;
+            Settings.bShouldAdvertise = true;
+            Settings.bIsLANMatch = false;
+            Settings.NumPublicConnections = 10;
+            Settings.bAllowJoinInProgress = true;
+            Settings.bUsesPresence = false;
+            Settings.bAllowJoinViaPresence = false;
+
+            int32 QueryPort = 27015;
+            FParse::Value(FCommandLine::Get(), TEXT("QueryPort="), QueryPort);
+
+            Settings.Set(FName(TEXT("EEEUTTR")), FString("UnrealSteamTestLobbyEEEUTTR"), EOnlineDataAdvertisementType::ViaOnlineService);
+            Settings.Set(FName(TEXT("MAX_FIT")), 3, EOnlineDataAdvertisementType::ViaOnlineService);
+
+            SessionInterface->CreateSession(0, NAME_GameSession, Settings);
+        }
     }
-
-    FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-    if (ExistingSession)
-    {
-        SessionInterface->DestroySession(NAME_GameSession);
-    }
-
-    CreateSessionCompleteDelegate = FOnCreateSessionCompleteDelegate::CreateUObject(this, &APDLobbyGameMode::OnCreateSessionComplete);
-    CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
-
-    FOnlineSessionSettings Settings;
-    Settings.bIsDedicated = true;
-    Settings.bShouldAdvertise = true;
-    Settings.bIsLANMatch = false;
-    Settings.NumPublicConnections = 10;
-    Settings.bAllowJoinInProgress = true;
-    Settings.bUsesPresence = false;
-    Settings.bAllowJoinViaPresence = false;
-
-    int32 QueryPort = 27015;
-    FParse::Value(FCommandLine::Get(), TEXT("QueryPort="), QueryPort);
-
-    Settings.Set(FName(TEXT("MAX_FIT")), 3, EOnlineDataAdvertisementType::ViaOnlineService);
-    Settings.Set(FName(TEXT("GameFilter")), FString("UnrealSteamTestLobbyEEEUTTR"), EOnlineDataAdvertisementType::ViaOnlineService);
-
-    SessionInterface->CreateSession(0, NAME_GameSession, Settings);
 }
 
 void APDLobbyGameMode::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -157,10 +153,10 @@ void APDLobbyGameMode::UpdateSessionMetadata()
     }
 
     FOnlineSessionSettings* Settings = SessionInterface->GetSessionSettings(NAME_GameSession);
-    if(!Settings)
+    if (!Settings)
     {
         return;
-	}
+    }
 
     int32 MaxFit = 0;
     for (int32 i = 0; i < 3; i++)

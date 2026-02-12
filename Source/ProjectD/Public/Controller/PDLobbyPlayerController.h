@@ -11,38 +11,39 @@ class UUserWidget;
 /**
  * 
  */
+
 UCLASS()
 class PROJECTD_API APDLobbyPlayerController : public APlayerController
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable)
-	void ConnectToDedicatedServer();
-
-	UFUNCTION(Client, Reliable)
-	void Client_TravelToTargetServer(const FString& ConnectString);
+    UFUNCTION(BlueprintCallable)
+    void ConnectToDedicatedServer();
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, Meta = (AllowPrivateAccess))
-	TSubclassOf<UUserWidget> UIWidgetClass;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
+    TSubclassOf<UUserWidget> UIWidgetClass;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UI, Meta = (AllowPrivateAccess))
-	TObjectPtr<UUserWidget> UIWidgetInstance;
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
+    TObjectPtr<UUserWidget> UIWidgetInstance;
 
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+    TSharedPtr<FOnlineSessionSearch> SessionSearch;
+    int32 CurrentSessionIndex = 0;
+    int32 MyTeamSize = 1;
+    FString PendingDediUrl;
+    FDelegateHandle DestroyHandleForDedi;
 
-	int32 CurrentSessionIndex = 0;
-	int32 MyTeamSize = 1;
+    UFUNCTION(Client, Reliable)
+    void Client_BeginTravelToDedi(const FString& DediUrl);
 
-	FString PendingSteamAddress;
+    UFUNCTION()
+    void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 
-	void TryJoinNextAvailableSession();
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+    void TryJoinNextAvailableSession();
 
-	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
+    void OnFindSessionsComplete(bool bWasSuccessful);
 
-	void OnFindSessionsComplete(bool bWasSuccessful);
 };

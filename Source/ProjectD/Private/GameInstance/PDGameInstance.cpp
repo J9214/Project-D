@@ -50,12 +50,12 @@ void UPDGameInstance::BindSessionDelegates()
         )
     );
 
-    DestroyCompleteHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
-        FOnDestroySessionCompleteDelegate::CreateUObject(
-            this,
-            &UPDGameInstance::HandleDestroySessionComplete
-        )
-    );
+    //DestroyCompleteHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+    //    FOnDestroySessionCompleteDelegate::CreateUObject(
+    //        this,
+    //        &UPDGameInstance::HandleDestroySessionComplete
+    //    )
+    //);
 }
 
 void UPDGameInstance::HandleInviteAccepted(const bool bWasSuccessful, int32 ControllerId, TSharedPtr<const FUniqueNetId>, const FOnlineSessionSearchResult& InviteResult)
@@ -83,14 +83,6 @@ void UPDGameInstance::HandleJoinSessionComplete(FName SessionName, EOnJoinSessio
         return;
     }
 
-    FString ConnectString;
-
-    if (!SessionInterface->GetResolvedConnectString(SessionName, ConnectString))
-    {
-        UE_LOG(LogTemp, Error, TEXT("GetResolvedConnectString Failed"));
-        return;
-    }
-
     APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
     if (!PlayerController)
     {
@@ -98,47 +90,51 @@ void UPDGameInstance::HandleJoinSessionComplete(FName SessionName, EOnJoinSessio
         return;
     }
 
-    int32 ColonIndex;
-    if (ConnectString.FindLastChar(':', ColonIndex))
-    {
-        ConnectString = ConnectString.Left(ColonIndex);
-    }
+    FString ConnectString;
 
-    ConnectString = ConnectString.Replace(TEXT("steam:"), TEXT("steam."));
-    if (!ConnectString.StartsWith(TEXT("steam.")))
+    if (SessionInterface->GetResolvedConnectString(SessionName, ConnectString))
     {
-        ConnectString = FString::Printf(TEXT("steam.%s"), *ConnectString);
-    }
+        int32 ColonIndex;
+        if (ConnectString.FindChar(':', ColonIndex))
+        {
+            ConnectString = ConnectString.Left(ColonIndex);
+        }
 
-    PlayerController->ClientTravel(ConnectString, ETravelType::TRAVEL_Absolute);
-}
+        if (!ConnectString.StartsWith(TEXT("steam.")))
+        {
+            ConnectString = FString::Printf(TEXT("steam.%s"), *ConnectString);
+        }
 
-void UPDGameInstance::HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful)
-{
-    if (SessionName != NAME_GameSession)
-    {
-        return;
-    }
-
-    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ClientTravelTo GetPlayerController Failed"));
-        return;
-    }
-
-    if (SessionInterface.IsValid() && DestroyCompleteHandle.IsValid())
-    {
-        SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyCompleteHandle);
-        DestroyCompleteHandle.Reset();
-    }
-
-    if (bPendingTravelToDedi)
-    {
-        bPendingTravelToDedi = false;
-        PlayerController->ClientTravel(PendingTravelURL, TRAVEL_Absolute);
+        PlayerController->ClientTravel(ConnectString, ETravelType::TRAVEL_Absolute);
     }
 }
+
+//void UPDGameInstance::HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful)
+//{
+//    if (SessionName != NAME_GameSession)
+//    {
+//        return;
+//    }
+//
+//    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+//    if (!PlayerController)
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("ClientTravelTo GetPlayerController Failed"));
+//        return;
+//    }
+//
+//    if (SessionInterface.IsValid() && DestroyCompleteHandle.IsValid())
+//    {
+//        SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyCompleteHandle);
+//        DestroyCompleteHandle.Reset();
+//    }
+//
+//    if (bPendingTravelToDedi)
+//    {
+//        bPendingTravelToDedi = false;
+//        PlayerController->ClientTravel(PendingTravelURL, TRAVEL_Absolute);
+//    }
+//}
 
 void UPDGameInstance::HostPartySessionCreate()
 {
@@ -178,7 +174,7 @@ void UPDGameInstance::HostPartySessionCreate()
 
 void UPDGameInstance::OnCreateHostSessionSuccess()
 {
-    FString Options = TEXT("listen?bIsLanMatch=0?NetDriverClassName=SteamNetDriver");
+    FString Options = TEXT("listen");
     UE_LOG(LogTemp, Warning, TEXT("Lobby Move Start with Options: %s"), *Options);
     UGameplayStatics::OpenLevel(GetWorld(), FName("/Game/ProjectD/Maps/FriendsLobbyLevel"), true, Options);
 }
@@ -186,20 +182,4 @@ void UPDGameInstance::OnCreateHostSessionSuccess()
 void UPDGameInstance::OnCreateHostSessionFailure()
 {
     UE_LOG(LogTemp, Warning, TEXT("SessionCreateFail"));
-}
-
-void UPDGameInstance::TravelToDedicated(const FString& DediAddress)
-{
-
-    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ClientTravelTo GetPlayerController Failed"));
-        return;
-    }
-
-    PendingTravelURL = DediAddress;
-    bPendingTravelToDedi = true;
-
-    PlayerController->ClientTravel(PendingTravelURL, TRAVEL_Absolute);
 }

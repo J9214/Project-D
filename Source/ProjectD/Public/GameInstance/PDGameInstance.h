@@ -24,9 +24,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void HostPartySessionCreate();
 
-	UFUNCTION(BlueprintCallable)
-	void TravelToDedicated(const FString& DediAddress);
-
 private:
 
 	UPROPERTY()
@@ -52,7 +49,5 @@ private:
 	void HandleInviteAccepted(const bool bWasSuccessful, int32 ControllerId, TSharedPtr<const FUniqueNetId> UserId, const FOnlineSessionSearchResult& InviteResult);
 
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-
-	void HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 
 };

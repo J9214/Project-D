@@ -50,7 +50,10 @@ void APDLobbyPlayerController::ConnectToDedicatedServer()
     SessionSearch->bIsLanQuery = false;
 
     IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("n.VerifyPeerBuildUnitTests"));
-    if (CVar) CVar->Set(0);
+    if (CVar)
+    {
+        CVar->Set(0);
+    }
 
     SessionSearch->QuerySettings.Set(FName("GameFilter"), FString("UnrealSteamTestLobbyEEEUTTR"), EOnlineComparisonOp::Equals);
 
@@ -62,10 +65,17 @@ void APDLobbyPlayerController::ConnectToDedicatedServer()
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
-void APDLobbyPlayerController::Client_TravelToTargetServer_Implementation(const FString& ConnectString)
+void APDLobbyPlayerController::OnFindSessionsComplete(bool bWasSuccessful)
 {
-    FString FinalURL = ConnectString + TEXT("?NetDriverClassName=OnlineSubsystemUtils.IpNetDriver");
-    ClientTravel(FinalURL, TRAVEL_Absolute);
+    if (bWasSuccessful && SessionSearch.IsValid() && SessionSearch->SearchResults.Num() > 0)
+    {
+        CurrentSessionIndex = 0;
+        TryJoinNextAvailableSession();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("검색된 서버가 없습니다."));
+    }
 }
 
 void APDLobbyPlayerController::TryJoinNextAvailableSession()
@@ -86,96 +96,79 @@ void APDLobbyPlayerController::TryJoinNextAvailableSession()
     }
 
     auto& SelectedSession = SessionSearch->SearchResults[CurrentSessionIndex];
-    IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
-    IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
 
     int32 MaxFitSize = 0;
     SelectedSession.Session.SessionSettings.Get(FName("MAX_FIT"), MaxFitSize);
 
-    if (MyTeamSize <= MaxFitSize)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("%d번 서버 접속 시도... (자리 여유 있음)"), CurrentSessionIndex);
-
-        SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
-            FOnJoinSessionCompleteDelegate::CreateUObject(this, &APDLobbyPlayerController::OnJoinSessionComplete)
-        );
-
-        SessionInterface->JoinSession(0, NAME_GameSession, SelectedSession);
-    }
-    else
-    {
-        CurrentSessionIndex++;
-        TryJoinNextAvailableSession();
-    }
-}
-
-void APDLobbyPlayerController::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
-{
-    if (Result != EOnJoinSessionCompleteResult::Success)
+    if (MyTeamSize > MaxFitSize)
     {
         CurrentSessionIndex++;
         TryJoinNextAvailableSession();
         return;
     }
 
-    IOnlineSessionPtr SessionInterface = IOnlineSubsystem::Get()->GetSessionInterface();
-    FString ConnectString;
-
-    if (SessionInterface->GetResolvedConnectString(SessionName, ConnectString))
+    IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
+    if (Subsystem)
     {
-        PendingSteamAddress = ConnectString + FString::Printf(TEXT("?TeamSize=%d"), MyTeamSize);
-
-        if (GetNetMode() < NM_Client)
+        IOnlineSessionPtr SessionInterface = Subsystem->GetSessionInterface();
+        if (SessionInterface.IsValid())
         {
-            for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+            FString ConnectString;
+            if (SessionInterface->GetResolvedConnectString(SelectedSession, NAME_GamePort, ConnectString))
             {
-                APDLobbyPlayerController* PlayerController = Cast<APDLobbyPlayerController>(It->Get());
-                if (PlayerController && PlayerController != this)
-                {
-                    PlayerController->Client_TravelToTargetServer(PendingSteamAddress);
-                }
+                PendingDediUrl = FString::Printf(TEXT("%s?TeamSize=%d"), *ConnectString, MyTeamSize);
+
+                UE_LOG(LogTemp, Log, TEXT("Steam Connect String: %s"), *PendingDediUrl);
             }
         }
+    }
 
-        if (SessionInterface->GetNamedSession(NAME_GameSession))
+    if (GetNetMode() < NM_Client)
+    {
+        for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
         {
-            SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
-                FOnDestroySessionCompleteDelegate::CreateUObject(this, &APDLobbyPlayerController::OnDestroySessionComplete)
-            );
-            SessionInterface->DestroySession(NAME_GameSession);
-        }
-        else
-        {
-            OnDestroySessionComplete(NAME_GameSession, true);
+            APDLobbyPlayerController* PlayerController = Cast<APDLobbyPlayerController>(It->Get());
+            if (PlayerController && PlayerController != this)
+            {
+                PlayerController->Client_BeginTravelToDedi(PendingDediUrl);
+            }
         }
     }
+
+    Client_BeginTravelToDedi(PendingDediUrl);
 }
 
-void APDLobbyPlayerController::OnFindSessionsComplete(bool bWasSuccessful)
+void APDLobbyPlayerController::Client_BeginTravelToDedi_Implementation(const FString& DediUrl)
 {
-    if (bWasSuccessful && SessionSearch.IsValid() && SessionSearch->SearchResults.Num() > 0)
+    PendingDediUrl = DediUrl;
+
+    IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
+    IOnlineSessionPtr SessionInterface = Subsystem ? Subsystem->GetSessionInterface() : nullptr;
+
+    if (SessionInterface.IsValid() && SessionInterface->GetNamedSession(NAME_GameSession))
     {
-        CurrentSessionIndex = 0;
-        TryJoinNextAvailableSession();
+        DestroyHandleForDedi = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+            FOnDestroySessionCompleteDelegate::CreateUObject(this, &APDLobbyPlayerController::OnDestroySessionComplete)
+        );
+
+        UE_LOG(LogTemp, Warning, TEXT("로컬 세션(GameSession) 파괴 후 데디 이동 시작"));
+        SessionInterface->DestroySession(NAME_GameSession);
+        return;
     }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("검색된 서버가 없습니다."));
-    }
+
+    ClientTravel(PendingDediUrl, TRAVEL_Absolute);
 }
 
 void APDLobbyPlayerController::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 {
-    UE_LOG(LogTemp, Warning, TEXT("리슨 서버 세션 파괴 완료. 데디 서버로 이동 시도..."));
+    IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
+    IOnlineSessionPtr SessionInterface = Subsystem ? Subsystem->GetSessionInterface() : nullptr;
 
-    if (!PendingSteamAddress.IsEmpty())
+    if (SessionInterface.IsValid() && DestroyHandleForDedi.IsValid())
     {
-        FString FinalURL = PendingSteamAddress;
-        FinalURL += TEXT("?NetDriverClassName=OnlineSubsystemUtils.IpNetDriver");
-
-        UE_LOG(LogTemp, Error, TEXT("최종 이동 URL: %s"), *FinalURL);
-        ClientTravel(FinalURL, TRAVEL_Absolute);
-
-        PendingSteamAddress = TEXT("");
+        SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandleForDedi);
+        DestroyHandleForDedi.Reset();
     }
+
+    ClientTravel(PendingDediUrl, TRAVEL_Absolute);
 }
