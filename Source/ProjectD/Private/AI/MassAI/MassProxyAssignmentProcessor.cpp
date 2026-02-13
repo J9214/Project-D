@@ -13,6 +13,7 @@
 #include "Subsystem/PlayerLocSubsystem.h"
 #include "Engine/World.h"
 #include "Math/UnrealMathUtility.h"
+#include "ProjectD/ProjectD.h"
 
 UMassProxyAssignmentProcessor::UMassProxyAssignmentProcessor()
 	:EntityQuery(*this)
@@ -85,13 +86,15 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 	PlayerLocSubsystem->GetPlayerLocations(PlayerLocs);
 	PlayerLocSubsystem->GetPlayerViewpoints(ViewOrigins, ViewDirs);
 
-	if (PlayerLocs.Num() == 0 && ViewOrigins.Num() == 0)
+	const TArray<FMassAimTubeRequest>& AimTubes = PerceptionSubsystem->GetActiveAimTubes();
+
+	if (PlayerLocs.Num() == 0 &&
+		ViewOrigins.Num() == 0 &&
+		AimTubes.Num() == 0)
 	{
 		ReleaseAllAssigned();
 		return;
 	}
-
-	const TArray<FMassAimTubeRequest>& AimTubes = PerceptionSubsystem->GetActiveAimTubes();
 
 	const float NearRadiusSq = Tuning->NearRadius * Tuning->NearRadius;
 	const float SightMaxDistSq = Tuning->SightMaxDist * Tuning->SightMaxDist;
@@ -114,6 +117,7 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 			const TConstArrayView<FMassBoidsHealthFragment> Healths = ExecContext.GetFragmentView<FMassBoidsHealthFragment>();
 
 			const int32 Num = ExecContext.GetNumEntities();
+
 			for (int32 i = 0; i < Num; ++i)
 			{
 				if (Healths[i].Health <= 0.0f)
@@ -127,19 +131,18 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 				const bool bCone = IsInAnySightCone(Pos, ViewOrigins, ViewDirs, SightMaxDistSq, SightCosHalfAngle);
 
 				bool bAim = false;
-				if (AimTubes.Num() > 0)
+				for (const FMassAimTubeRequest& Tube : AimTubes)
 				{
-					for (const FMassAimTubeRequest& Tube : AimTubes)
+					if (IsPointInAimTube(Pos, Tube, Tuning->AimTubeRadius) == true)
 					{
-						if (IsPointInAimTube(Pos, Tube, Tuning->AimTubeRadius) == true)
-						{
-							bAim = true;
-							break;
-						}
+						bAim = true;
+						break;
 					}
 				}
 
-				if (bNear == true || bCone == true || bAim == true)
+				if (bNear == true ||
+					bCone == true || 
+					bAim == true)
 				{
 					FCandidate C;
 					C.Entity = ExecContext.GetEntity(i);
@@ -212,6 +215,13 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 		ACollisionProxyActor* ProxyActor = ProxyPoolSubsystem->Acquire(W);
 		if (IsValid(ProxyActor) == true)
 		{
+			const FTransformFragment* TransformFrag = EntityManager.GetFragmentDataPtr<FTransformFragment>(W);
+			if (TransformFrag != nullptr)
+			{
+				const FVector Loc = TransformFrag->GetTransform().GetLocation();
+				ProxyActor->SetActorLocation(Loc, false, nullptr, ETeleportType::TeleportPhysics);
+			}
+
 			NewAssigned.Add(W);
 		}
 	}
@@ -234,7 +244,6 @@ float UMassProxyAssignmentProcessor::GetMinDistSqToPlayers(const FVector& Pos, c
 
 	return MinDistSq;
 }
-
 
 bool UMassProxyAssignmentProcessor::IsNearAnyPlayer(const FVector& Pos, const TArray<FVector>& PlayerLocs, float NearRadiusSq)
 {
