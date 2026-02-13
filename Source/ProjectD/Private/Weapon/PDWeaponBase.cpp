@@ -6,6 +6,9 @@ APDWeaponBase::APDWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
+	
+	bReplicates = true;
+	SetReplicateMovement(true);
 
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
 	SetRootComponent(RootComp);

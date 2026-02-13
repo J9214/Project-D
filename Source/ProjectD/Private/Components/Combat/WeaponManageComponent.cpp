@@ -23,8 +23,27 @@ void UWeaponManageComponent::BeginPlay()
     Super::BeginPlay();
 }
 
+void UWeaponManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(UWeaponManageComponent, Slots);
+    DOREPLIFETIME(UWeaponManageComponent, EquippedWeapon);
+    DOREPLIFETIME(UWeaponManageComponent, EquippedSlotIndex);
+}
+
+void UWeaponManageComponent::Server_BuyWeapon_Implementation(TSubclassOf<APDWeaponBase> WeaponClass)
+{
+    AddWeaponToInventory(WeaponClass);
+}
+
 bool UWeaponManageComponent::AddWeaponToInventory(TSubclassOf<APDWeaponBase> WeaponClass)
 {
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+    
     if (!WeaponClass)
     {
         return false;
@@ -49,6 +68,41 @@ bool UWeaponManageComponent::AddWeaponToInventory(TSubclassOf<APDWeaponBase> Wea
     return true;
 }
 
+void UWeaponManageComponent::Server_RequestMoveOrSwapSlot_Implementation(int32 FromIndex, int32 ToIndex)
+{
+    ApplyMoveOrSwapSlot(FromIndex, ToIndex);
+}
+
+void UWeaponManageComponent::ApplyMoveOrSwapSlot(int32 FromIndex, int32 ToIndex)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return;
+    }
+    
+    if (!Slots.IsValidIndex(FromIndex) || !Slots.IsValidIndex(ToIndex) || FromIndex == ToIndex)
+    {
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Applying MoveOrSwap from %d to %d"), FromIndex, ToIndex);
+
+    APDWeaponBase* FromWeapon = Slots[FromIndex].WeaponActor;
+    if (!IsValid(FromWeapon))
+    {
+        return;
+    }
+
+    APDWeaponBase* ToWeapon = Slots[ToIndex].WeaponActor;
+
+    Slots[FromIndex].WeaponActor = ToWeapon;
+    Slots[ToIndex].WeaponActor   = FromWeapon;
+
+    if (IsValid(EquippedWeapon))
+    {
+        EquippedSlotIndex = FindSlotIndexByWeapon(EquippedWeapon);
+    }
+}
+
 void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
 {
     if (!Slots.IsValidIndex(SlotIndex))
@@ -64,7 +118,7 @@ void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
 
     if (IsValid(EquippedWeapon))
     {
-		UnequipCurrentWeapon();
+        UnequipCurrentWeapon();
     }
 
     EquippedWeapon = NewWeapon;
@@ -90,15 +144,6 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
 
     EquippedWeapon = nullptr;
     EquippedSlotIndex = INDEX_NONE;
-}
-
-void UWeaponManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(UWeaponManageComponent, Slots);
-	DOREPLIFETIME(UWeaponManageComponent, EquippedWeapon);
-	DOREPLIFETIME(UWeaponManageComponent, EquippedSlotIndex);
 }
 
 APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const
@@ -251,19 +296,42 @@ void UWeaponManageComponent::RemoveCurrentWeaponGrantedAbilities()
     CurrentWeaponGrantedAbilityHandles.Reset();
 }
 
+void UWeaponManageComponent::ScheduleRefreshAttachments()
+{
+    if (bPendingRefreshAttachments)
+    {
+        return;
+    }
+    bPendingRefreshAttachments = true;
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+    
+    GetWorld()->GetTimerManager().SetTimerForNextTick(this, &UWeaponManageComponent::DoRefreshAttachments);
+}
+
 void UWeaponManageComponent::OnRep_Slots()
 {
-    RefreshAttachments();
+    ScheduleRefreshAttachments();
 }
 
 void UWeaponManageComponent::OnRep_EquippedSlotIndex()
 {
-    RefreshAttachments();
+    ScheduleRefreshAttachments();
 }
 
 void UWeaponManageComponent::OnRep_EquippedWeapon()
 {
     OnEquippedWeaponDataChanged.Broadcast(EquippedWeapon);
+}
+
+void UWeaponManageComponent::DoRefreshAttachments()
+{
+    bPendingRefreshAttachments = false;
+    RefreshAttachments();
 }
 
 void UWeaponManageComponent::RefreshAttachments()

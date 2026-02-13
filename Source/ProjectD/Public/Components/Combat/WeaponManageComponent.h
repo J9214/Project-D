@@ -28,8 +28,17 @@ class PROJECTD_API UWeaponManageComponent : public UPawnCombatComponent
 public:
     UWeaponManageComponent();
 
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void Server_BuyWeapon(TSubclassOf<APDWeaponBase> WeaponClass);
+	
     UFUNCTION(BlueprintCallable, Category = "Weapon")
     bool AddWeaponToInventory(TSubclassOf<APDWeaponBase> WeaponClass);
+	
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void Server_RequestMoveOrSwapSlot(int32 FromIndex, int32 ToIndex);
+	
+	UFUNCTION(BlueprintCallable, Category="Weapon|Inventory")
+	void ApplyMoveOrSwapSlot(int32 FromIndex, int32 ToIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Weapon")
     void EquipSlot(int32 SlotIndex);
@@ -37,7 +46,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Weapon")
     void UnequipCurrentWeapon();
 
-    APDWeaponBase* GetEquippedWeapon() const { return EquippedWeapon; }
+    FORCEINLINE APDWeaponBase* GetEquippedWeapon() const { return EquippedWeapon; }
 	APDWeaponBase* GetWeaponInSlot(int32 SlotIndex) const;
 
 protected:
@@ -46,6 +55,21 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
+    UFUNCTION()
+    void OnRep_Slots();
+
+    UFUNCTION()
+    void OnRep_EquippedSlotIndex();
+	
+    UFUNCTION()
+	void OnRep_EquippedWeapon();
+	
+    UFUNCTION()
+	void DoRefreshAttachments();
+	
+    void RefreshAttachments();
+	void ScheduleRefreshAttachments();
+	
     int32 FindFirstEmptySlot() const;
     int32 FindSlotIndexByWeapon(APDWeaponBase* Weapon) const;
 
@@ -58,17 +82,6 @@ private:
     void GrantAbilitiesFromWeaponData(UDataAsset_Weapon* WeaponData);
     void RemoveCurrentWeaponGrantedAbilities();
 
-    UFUNCTION()
-    void OnRep_Slots();
-
-    UFUNCTION()
-    void OnRep_EquippedSlotIndex();
-	
-    UFUNCTION()
-	void OnRep_EquippedWeapon();
-
-    void RefreshAttachments();
-
 public:
 	FOnEquippedWeaponDataChanged OnEquippedWeaponDataChanged;
 	
@@ -76,19 +89,21 @@ protected:
     UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon, VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<APDWeaponBase> EquippedWeapon = nullptr;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sockets")
+    TArray<FName> BackSocketNames;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sockets")
+	FName HandSocketName;
+	
 private:
     UPROPERTY(ReplicatedUsing = OnRep_Slots)
     TArray<FPTWeaponSlot> Slots;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sockets", meta = (AllowPrivateAccess = "true"))
-    TArray<FName> BackSocketNames;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sockets", meta = (AllowPrivateAccess = "true"))
-	FName HandSocketName;
 
     UPROPERTY(ReplicatedUsing = OnRep_EquippedSlotIndex)
     int32 EquippedSlotIndex = INDEX_NONE;
 
     UPROPERTY()
     TArray<FGameplayAbilitySpecHandle> CurrentWeaponGrantedAbilityHandles;
+	
+	bool bPendingRefreshAttachments = false;
 };
