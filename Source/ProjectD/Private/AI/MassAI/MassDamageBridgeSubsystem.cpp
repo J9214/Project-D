@@ -32,19 +32,10 @@ bool UMassDamageBridgeSubsystem::TryApplyDamageFromProxyActor(AActor* HitActor, 
 		return true;
 	}
 
-	UWorld* World = GetWorld();
-	if (IsValid(World) == false)
-	{
-		UE_LOG(LogProjectD, Warning, TEXT("UMassDamageBridgeSubsystem::TryApplyDamageFromProxyActor - World Is Weird!"));
-		return true;
-	}
-
-	UMassEntitySubsystem* MassEntitySubsystem = World->GetSubsystem<UMassEntitySubsystem>();
-	if (IsValid(MassEntitySubsystem) == false)
-	{
-		UE_LOG(LogProjectD, Warning, TEXT("UMassDamageBridgeSubsystem::TryApplyDamageFromProxyActor - UMassEntitySubsystem Is Not Valid!"));
-		return true;
-	}
+	FPendingMassDamage Req;
+	Req.Entity = VictimEntity;
+	Req.Damage = Damage;
+	PendingDamages.Add(Req);
 
 	return true;
 }
@@ -53,4 +44,10 @@ bool UMassDamageBridgeSubsystem::TryApplyDamageFromProxyHit(const FHitResult& Hi
 {
 	AActor* HitActor = Hit.GetActor();
 	return TryApplyDamageFromProxyActor(HitActor, Damage);
+}
+
+void UMassDamageBridgeSubsystem::DrainPendingDamages(TArray<FPendingMassDamage>& Out)
+{
+	Out = MoveTemp(PendingDamages);
+	PendingDamages.Reset();
 }

@@ -7,6 +7,16 @@
 
 struct FHitResult;
 
+USTRUCT()
+struct FPendingMassDamage
+{
+	GENERATED_BODY()
+
+public:
+	FMassEntityHandle Entity;
+	float Damage = 0.0f;
+};
+
 UCLASS()
 class PROJECTD_API UMassDamageBridgeSubsystem : public UWorldSubsystem
 {
@@ -15,4 +25,9 @@ class PROJECTD_API UMassDamageBridgeSubsystem : public UWorldSubsystem
 public:
 	bool TryApplyDamageFromProxyActor(AActor* HitActor, float Damage);
 	bool TryApplyDamageFromProxyHit(const FHitResult& Hit, float Damage);
+
+	void DrainPendingDamages(TArray<FPendingMassDamage>& Out);
+
+private:
+	TArray<FPendingMassDamage> PendingDamages;
 };
