@@ -1,5 +1,4 @@
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
-#include "AI/MassAI/ApplyDamageToHealthCommand.h"
 #include "AI/MassAI/CollisionProxyActor.h"
 #include "MassEntitySubsystem.h"
 #include "Engine/World.h"
@@ -46,9 +45,6 @@ bool UMassDamageBridgeSubsystem::TryApplyDamageFromProxyActor(AActor* HitActor, 
 		UE_LOG(LogProjectD, Warning, TEXT("UMassDamageBridgeSubsystem::TryApplyDamageFromProxyActor - UMassEntitySubsystem Is Not Valid!"));
 		return true;
 	}
-
-	FMassEntityManager& EntityManager = MassEntitySubsystem->GetMutableEntityManager();
-	EntityManager.Defer().PushCommand<FApplyDamageToHealthCommand>(VictimEntity, Damage);
 
 	return true;
 }
