@@ -202,6 +202,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "ConsoleVariables",
+			"Enabled": true
+		},
+		{
 			"Name": "MetaHumanCharacter",
 			"Enabled": true
 		}
