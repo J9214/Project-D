@@ -10,6 +10,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
 #include "PDGameplayTags.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -27,12 +29,6 @@ void UGA_Fire::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	bKeepFiring = true;
 
 	if (IsLocallyControlled())
@@ -89,17 +85,10 @@ void UGA_Fire::HandleServerReceivedTargetData(
 		return;
 	}
 
-	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
-	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(ActorInfo->AvatarActor.Get());
-	UWeaponManageComponent* WMC = OwnerPawn ? OwnerPawn->GetWeaponManageComponent() : nullptr;
-	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
-	if (!OwnerPawn || !WMC || !IsValid(Weapon) || !Weapon->WeaponData)
+	UAbilitySystemComponent* OwnerASC = nullptr;
+	APDPawnBase* OwnerPawn = nullptr;
+	APDWeaponBase* Weapon = nullptr;
+	if (!GetOwnerPawnWeapon(OwnerASC, OwnerPawn, Weapon))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
@@ -116,12 +105,22 @@ void UGA_Fire::HandleServerReceivedTargetData(
 
 	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
 
-	if (!Weapon->ServerCanFire())
+	if (!Weapon->CanFire())
 	{
 		return;
 	}
+	
+	if (Weapon->WeaponData->FireCueTag.IsValid())
+	{
+		FGameplayCueParameters Params;
+		Params.SourceObject = Weapon->WeaponData;
+		Params.EffectCauser = Weapon;
+		Params.Instigator   = OwnerPawn;
 
-	Weapon->ServerConsumeAmmo(1);
+		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
+	}
+
+	Weapon->ConsumeAmmo(1);
 	ApplyFireCooldownToOwner(Weapon);
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 }
@@ -214,11 +213,13 @@ void UGA_Fire::FireOneShot()
 		return;
 	}
 	
-	if (!Weapon->ClientCanFire())
+	if (!Weapon->CanFire())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
+	
+	PlayLocalFireFX(OwnerPawn, Weapon);
 
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
 	if (!WeaponDA)
@@ -436,6 +437,24 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 
 	SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_Damage, Damage);
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+
+	if (IsValid(Weapon->WeaponData->DestructDamageGE))
+	{
+		const float DestructDamage = Weapon->WeaponData->DestructDamage;
+
+		SpecHandle = SourceASC->MakeOutgoingSpec(
+			Weapon->WeaponData->DestructDamageGE,
+			Level,
+			Context
+		);
+		if (!SpecHandle.IsValid())
+		{
+			return;
+		}
+
+		SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_DestructDamage, DestructDamage);
+		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	}
 }
 
 void UGA_Fire::ApplyFireCooldownToOwner(const APDWeaponBase* Weapon)
@@ -464,6 +483,43 @@ void UGA_Fire::ApplyFireCooldownToOwner(const APDWeaponBase* Weapon)
 		GetCurrentActivationInfo(),
 		CooldownEffect
 	);
+}
+
+void UGA_Fire::PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon)
+{
+	if (!IsLocallyControlled() || !OwnerPawn || !Weapon || !Weapon->WeaponData)
+	{
+		return;
+	}
+	
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	
+	USceneComponent* MuzzleComp = Weapon->GetMuzzleComponent();
+	if (!MuzzleComp)
+	{
+		return;
+	}
+	
+	if (WeaponDA->FireSound)
+	{
+		UGameplayStatics::SpawnSoundAttached(
+			WeaponDA->FireSound,
+			MuzzleComp
+		);
+	}
+	
+	if (WeaponDA->MuzzleFlashFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			WeaponDA->MuzzleFlashFX,
+			MuzzleComp,
+			NAME_None,
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::SnapToTarget,
+			true
+		);
+	}
 }
 
 FVector UGA_Fire::GetChestShotStart(APDPawnBase* OwnerPawn) const

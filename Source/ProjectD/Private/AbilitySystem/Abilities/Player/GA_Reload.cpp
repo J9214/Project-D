@@ -33,12 +33,6 @@ void UGA_Reload::ActivateAbility(
 		return;
 	}
 	
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
 	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Reload);
 	
@@ -70,14 +64,7 @@ void UGA_Reload::ActivateAbility(
 
 void UGA_Reload::OnEventTagReceived(const FGameplayEventData Payload)
 {
-	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar)
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	if (!Avatar->HasAuthority())
+	if (!HasAuthority(&CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
@@ -92,6 +79,12 @@ void UGA_Reload::OnEventTagReceived(const FGameplayEventData Payload)
 	
 	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
 	if (!Weapon)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;

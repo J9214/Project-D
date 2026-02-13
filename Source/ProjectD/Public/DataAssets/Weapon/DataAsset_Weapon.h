@@ -5,10 +5,13 @@
 #include "Structs/PDPlayerAbilitySet.h"
 #include "Weapon/PDWeaponTypes.h"
 #include "Weapon/PDWeaponMontages.h"
+#include "GameplayTagContainer.h"
 #include "DataAsset_Weapon.generated.h"
 
 class UGameplayEffect;
 class UUserWidget;
+class USoundBase;
+class UNiagaraSystem;
 
 UCLASS()
 class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
@@ -27,18 +30,24 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (TitleProperty = "InputTag"))
 	TArray<FPDPlayerAbilitySet> GrantedAbilitySets = {};
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> WeaponDamageGE = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> DestructDamageGE = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayEffect> FireCooldownGE = nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
 	FPDWeaponMontageSet WeaponMontages;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float WeaponDamage = 30.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float DestructDamage = 2.f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float FireInterval = 0.2f;
@@ -51,4 +60,13 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI|Crosshair")
 	TSubclassOf<UUserWidget> AimCrosshairWidgetClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SFX")
+	TObjectPtr<USoundBase> FireSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="VFX")
+	TObjectPtr<UNiagaraSystem> MuzzleFlashFX = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="GAS|Cue")
+	FGameplayTag FireCueTag;
 };

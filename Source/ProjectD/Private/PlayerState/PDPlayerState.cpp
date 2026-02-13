@@ -1,7 +1,6 @@
 ﻿#include "PlayerState/PDPlayerState.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
 #include "AttributeSet/PDAttributeSetBase.h"
-#include "Net/UnrealNetwork.h"
 
 APDPlayerState::APDPlayerState()
 {
@@ -31,14 +30,76 @@ void APDPlayerState::InitAbilityActorInfo(AActor* AvatarActor)
 	AbilitySystemComponent->InitAbilityActorInfo(this, AvatarActor);
 }
 
-void APDPlayerState::OnRep_TeamId()
+void APDPlayerState::SetDeadState()
 {
-	UE_LOG(LogTemp, Warning, TEXT("팀 번호 갱신됨: %d"), TeamId);
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!AbilitySystemComponent) 
+	{
+		return;
+	}
+
+	static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+
+	if (AbilitySystemComponent->HasMatchingGameplayTag(DeadTag))
+	{
+		return; 
+	}
+
+	if (!GE_DeathClass)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(GE_DeathClass, AbilitySystemComponent);
+	
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	const UGameplayEffect* DeathGE = GE_DeathClass->GetDefaultObject<UGameplayEffect>();
+	if (DeathGE)
+	{
+		AbilitySystemComponent->ApplyGameplayEffectToSelf(DeathGE, 1.0f, Context);
+	}
 }
 
-void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void APDPlayerState::SetReviveState()
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(APDPlayerState, TeamId);
-}
+	if (!HasAuthority())
+	{
+		return;
+	}
 
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(DeadTag))
+	{
+		return; 
+	}
+
+	if (GE_DeathClass)
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(GE_DeathClass, AbilitySystemComponent);
+	}
+
+	if (!GE_ReviveClass)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	const UGameplayEffect* ReviveGE = GE_ReviveClass->GetDefaultObject<UGameplayEffect>();
+	if (ReviveGE)
+	{
+		AbilitySystemComponent->ApplyGameplayEffectToSelf(ReviveGE, 1.0f, Context);
+	}
+}

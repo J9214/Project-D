@@ -1,4 +1,4 @@
-﻿{
+{
 	"FileVersion": 3,
 	"EngineAssociation": "5.7",
 	"Category": "",
@@ -11,9 +11,7 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"GameplayAbilities",
-				"EnhancedInput",
-				"CoreUObject",
-				"AdvancedSessions"
+				"EnhancedInput"
 			]
 		}
 	],
@@ -43,11 +41,11 @@
 		},
 		{
 			"Name": "ScriptableToolsEditorMode",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "ScriptableToolsFramework",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "PCGExternalDataInterop",
@@ -204,16 +202,12 @@
 			"Enabled": true
 		},
 		{
-			"Name": "SteamSockets",
+			"Name": "ConsoleVariables",
 			"Enabled": true
 		},
-{
-	"Name": "OnlineSubsystemSteam",
-	"Enabled": true
-},
-{
-	"Name": "StateTree",
-	"Enabled": true
-}
+		{
+			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		}
 	]
 }
