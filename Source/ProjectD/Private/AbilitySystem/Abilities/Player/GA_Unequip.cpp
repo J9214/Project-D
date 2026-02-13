@@ -19,12 +19,6 @@ void UGA_Unequip::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
@@ -70,14 +64,7 @@ void UGA_Unequip::ActivateAbility(
 
 void UGA_Unequip::OnEventTagReceived(const FGameplayEventData Payload)
 {
-	AActor* Avatar = GetAvatarActorFromActorInfo();
-	if (!Avatar)
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	if (!Avatar->HasAuthority())
+	if (!HasAuthority(&CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
@@ -85,6 +72,12 @@ void UGA_Unequip::OnEventTagReceived(const FGameplayEventData Payload)
 	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;

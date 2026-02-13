@@ -18,6 +18,7 @@ public class ProjectD : ModuleRules
             "UMG",
             "Slate",
             "SlateCore",
+            "Niagara",
 
 			// GAS
 			"GameplayAbilities",
@@ -42,8 +43,6 @@ public class ProjectD : ModuleRules
 			// Geometry Collection
 			"GeometryCollectionEngine",
         });
-
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
