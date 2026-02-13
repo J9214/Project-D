@@ -12,8 +12,8 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_Reload, "InputTag.Weapon.Reload");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ADS, "InputTag.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ChangeFireMode, "InputTag.Weapon.ChangeFireMode");
-	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Skill1, "InputTag.Ability.Skill1");
-	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Skill2, "InputTag.Ability.Skill2");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillQ, "InputTag.Ability.SkillQ");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillE, "InputTag.Ability.SkillE");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_Dash, "InputTag.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_WallJump, "InputTag.Ability.Movement.WallJump");
 
