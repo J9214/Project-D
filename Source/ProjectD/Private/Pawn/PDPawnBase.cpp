@@ -391,7 +391,7 @@ void APDPawnBase::CancelMovementGA()
 	{
 		if (Spec.IsActive())
 		{
-			if (Spec.Ability->AbilityTags.HasTag(RootTag))
+			if (Spec.Ability->GetAssetTags().HasTag(RootTag))
 			{
 				ASC->CancelAbilityHandle(Spec.Handle);
 			}

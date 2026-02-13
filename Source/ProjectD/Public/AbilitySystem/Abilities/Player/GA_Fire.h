@@ -64,6 +64,8 @@ protected:
 	void ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon);
 	void ApplyFireCooldownToOwner(const APDWeaponBase* Weapon);
 	
+	void PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon);
+	
 protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitDelay> WaitDelayTask = nullptr;
