@@ -31,6 +31,8 @@ protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
 
+	virtual bool ShouldAllowQueryBasedPruning(const bool bRuntimeMode) const override { return false; }
+
 private:
 	float GetMinDistSqToPlayers(const FVector& Pos, const TArray<FVector>& PlayerLocs);
 
