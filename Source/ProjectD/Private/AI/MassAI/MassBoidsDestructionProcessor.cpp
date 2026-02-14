@@ -3,6 +3,7 @@
 
 #include "AI/MassAI/MassBoidsDestructionProcessor.h"
 #include "AI/MassAI/MassBoidsHealthFragment.h" 
+#include "AI/MassAI/MassProxyPoolSubsystem.h" 
 #include "MassCommonFragments.h"     
 #include "MassExecutionContext.h"
 #include "NiagaraFunctionLibrary.h"
@@ -97,6 +98,11 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 
 					SpawnDeathFX(DeathLocation);
 
+					UMassProxyPoolSubsystem* Pool = GetWorld()->GetSubsystem<UMassProxyPoolSubsystem>();
+					if (IsValid(Pool) == true)
+					{
+						Pool->Release(Entity);
+					}
 					Context.Defer().DestroyEntity(Entity);
 				}
 			}

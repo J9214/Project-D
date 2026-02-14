@@ -44,4 +44,7 @@ void ACollisionProxyActor::ResetProxy()
 	{
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
+
+	SetActorHiddenInGame(true);
+	SetActorLocation(FVector(0.0f, 0.0f, -1000000.0f), false, nullptr, ETeleportType::TeleportPhysics);
 }

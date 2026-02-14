@@ -135,18 +135,13 @@ void UMassProxyPoolSubsystem::Release(const FMassEntityHandle& Entity)
 		return;
 	}
 
-	int32 ProxyId = INDEX_NONE;
-
+	const int32* FoundId = EntityToProxyId.Find(Key);
+	if (FoundId == nullptr)
 	{
-		const int32* FoundId = EntityToProxyId.Find(Key);
-		if (FoundId == nullptr)
-		{
-			UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Release - Can't Found Entity!!"));
-			return;
-		}
-		ProxyId = *FoundId;
+		UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Release - Can't Found Entity!!"));
+		return;
 	}
-
+	int32	ProxyId = *FoundId;
 	EntityToProxyId.Remove(Key);
 
 	if (Proxies.IsValidIndex(ProxyId) == false)
