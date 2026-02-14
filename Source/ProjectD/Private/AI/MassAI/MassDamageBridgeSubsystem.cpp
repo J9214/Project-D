@@ -46,7 +46,7 @@ bool UMassDamageBridgeSubsystem::TryApplyDamageFromProxyHit(const FHitResult& Hi
 	return TryApplyDamageFromProxyActor(HitActor, Damage);
 }
 
-void UMassDamageBridgeSubsystem::DrainPendingDamages(TArray<FPendingMassDamage>& Out)
+void UMassDamageBridgeSubsystem::MovePendingDamages(TArray<FPendingMassDamage>& Out)
 {
 	Out = MoveTemp(PendingDamages);
 	PendingDamages.Reset();

@@ -51,7 +51,7 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 		if (IsValid(Bridge) == true)
 		{
 			TArray<FPendingMassDamage> Requests;
-			Bridge->DrainPendingDamages(Requests);
+			Bridge->MovePendingDamages(Requests);
 
 			for (const FPendingMassDamage& Req : Requests)
 			{

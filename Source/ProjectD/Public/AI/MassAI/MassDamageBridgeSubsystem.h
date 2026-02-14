@@ -26,7 +26,7 @@ public:
 	bool TryApplyDamageFromProxyActor(AActor* HitActor, float Damage);
 	bool TryApplyDamageFromProxyHit(const FHitResult& Hit, float Damage);
 
-	void DrainPendingDamages(TArray<FPendingMassDamage>& Out);
+	void MovePendingDamages(TArray<FPendingMassDamage>& Out);
 
 private:
 	TArray<FPendingMassDamage> PendingDamages;
