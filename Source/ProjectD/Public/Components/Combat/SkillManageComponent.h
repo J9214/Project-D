@@ -4,6 +4,7 @@
 #include "Components/Combat/PawnCombatComponent.h"
 #include "GameplayTagContainer.h"
 #include "GameplayAbilitySpec.h"
+#include "Abilities/GameplayAbility.h"
 #include "SkillManageComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FOnSkillSlotsChanged);
@@ -58,7 +59,7 @@ public:
 	USkillManageComponent();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category ="Skill")
-	void Server_AddSkillPickup(TSubclassOf<UGameplayAbility> AbilityClass);
+	void Server_BuySkill(TSubclassOf<UGameplayAbility> AbilityClass);
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Skill")
 	void Server_HandleSkillEquip(const FSkillPayload& Payload, FGameplayTag ToSlotTag);

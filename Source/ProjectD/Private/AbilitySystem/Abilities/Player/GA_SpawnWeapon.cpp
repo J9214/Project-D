@@ -39,7 +39,7 @@ void UGA_SpawnWeapon::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	{
 		if (UWeaponManageComponent* WMC = Pawn->GetWeaponManageComponent())
 		{
-			WMC->AddWeaponToInventory(WeaponClass);
+			WMC->Server_BuyWeapon(WeaponClass);
 		}
 	}
 	

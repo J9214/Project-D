@@ -34,57 +34,110 @@ void UWeaponManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void UWeaponManageComponent::Server_BuyWeapon_Implementation(TSubclassOf<APDWeaponBase> WeaponClass)
 {
-    AddWeaponToInventory(WeaponClass);
-}
-
-bool UWeaponManageComponent::AddWeaponToInventory(TSubclassOf<APDWeaponBase> WeaponClass)
-{
     if (!GetOwner() || !GetOwner()->HasAuthority())
     {
-        return false;
+        return;
     }
     
     if (!WeaponClass)
     {
-        return false;
+        return;
     }
 
-    const int32 EmptySlotIndex = FindFirstEmptySlot();
-    if (EmptySlotIndex == INDEX_NONE)
-    {
-        return false;
-    }
-
-    APDWeaponBase* NewWeapon = SpawnWeaponActor(WeaponClass);
-    if (!IsValid(NewWeapon))
-    {
-        return false;
-    }
-
-    NewWeapon->InitWeaponData();
-    Slots[EmptySlotIndex].WeaponActor = NewWeapon;
-    AttachToBack(NewWeapon, EmptySlotIndex);
-
-    return true;
+    ApplyBuy(WeaponClass);
 }
 
-void UWeaponManageComponent::Server_RequestMoveOrSwapSlot_Implementation(int32 FromIndex, int32 ToIndex)
-{
-    ApplyMoveOrSwapSlot(FromIndex, ToIndex);
-}
-
-void UWeaponManageComponent::ApplyMoveOrSwapSlot(int32 FromIndex, int32 ToIndex)
+void UWeaponManageComponent::Server_HandleWeaponEquip_Implementation(const FWeaponPayload& Payload, int32 ToSlotIndex)
 {
     if (!GetOwner() || !GetOwner()->HasAuthority())
     {
         return;
     }
     
+    if (!Slots.IsValidIndex(ToSlotIndex))
+    {
+        return;
+    }
+
+    if (Payload.SourceType == EWeaponDragSourceType::Slot)
+    {
+        const int32 FromIndex = Payload.FromSlotIndex;
+        if (!Slots.IsValidIndex(FromIndex) || FromIndex == ToSlotIndex)
+        {
+            return;
+        }
+
+        ApplyMoveOrSwap(FromIndex, ToSlotIndex);
+    }
+    else
+    {
+        if (!Payload.WeaponClass)
+        {
+            return;
+        }
+
+        ApplyAssign(ToSlotIndex, Payload.WeaponClass);
+    }
+}
+
+void UWeaponManageComponent::Server_RemoveWeaponFromSlot_Implementation(int32 SlotIndex)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return;
+    }
+    
+    if (!Slots.IsValidIndex(SlotIndex))
+    {
+        return;
+    }
+
+    ApplyRemove(SlotIndex, true);
+    
+    ScheduleRefreshAttachments();
+}
+
+void UWeaponManageComponent::ApplyBuy(TSubclassOf<APDWeaponBase> WeaponClass)
+{
+    const int32 EmptyIndex = FindFirstEmptySlot();
+    if (EmptyIndex == INDEX_NONE || !WeaponClass)
+    {
+        return;
+    }
+
+    if (!SpawnAndPlace(EmptyIndex, WeaponClass))
+    {
+        return;
+    }
+
+    ScheduleRefreshAttachments();
+}
+
+void UWeaponManageComponent::ApplyAssign(int32 ToIndex, TSubclassOf<APDWeaponBase> WeaponClass)
+{
+    if (!Slots.IsValidIndex(ToIndex) || !WeaponClass)
+    {
+        return;
+    }
+
+    ApplyRemove(ToIndex, true);
+
+    if (!SpawnAndPlace(ToIndex, WeaponClass))
+    {
+        return;
+    }
+
+    EquipSlot(ToIndex);
+
+    ScheduleRefreshAttachments();
+}
+
+void UWeaponManageComponent::ApplyMoveOrSwap(int32 FromIndex, int32 ToIndex)
+{
     if (!Slots.IsValidIndex(FromIndex) || !Slots.IsValidIndex(ToIndex) || FromIndex == ToIndex)
     {
         return;
     }
-    UE_LOG(LogTemp, Warning, TEXT("Applying MoveOrSwap from %d to %d"), FromIndex, ToIndex);
 
     APDWeaponBase* FromWeapon = Slots[FromIndex].WeaponActor;
     if (!IsValid(FromWeapon))
@@ -95,12 +148,41 @@ void UWeaponManageComponent::ApplyMoveOrSwapSlot(int32 FromIndex, int32 ToIndex)
     APDWeaponBase* ToWeapon = Slots[ToIndex].WeaponActor;
 
     Slots[FromIndex].WeaponActor = ToWeapon;
-    Slots[ToIndex].WeaponActor   = FromWeapon;
+    Slots[ToIndex].WeaponActor = FromWeapon;
 
     if (IsValid(EquippedWeapon))
     {
         EquippedSlotIndex = FindSlotIndexByWeapon(EquippedWeapon);
     }
+
+    ScheduleRefreshAttachments();
+}
+
+void UWeaponManageComponent::ApplyRemove(int32 SlotIndex, bool bDestroyActor)
+{
+    if (!Slots.IsValidIndex(SlotIndex))
+    {
+        return;
+    }
+
+    APDWeaponBase* Old = Slots[SlotIndex].WeaponActor;
+    if (!IsValid(Old))
+    {
+        Slots[SlotIndex].WeaponActor = nullptr;
+        return;
+    }
+
+    if (EquippedWeapon == Old)
+    {
+        UnequipCurrentWeapon();
+    }
+
+    if (bDestroyActor)
+    {
+        Old->Destroy();
+    }
+
+    Slots[SlotIndex].WeaponActor = nullptr;
 }
 
 void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
@@ -124,7 +206,7 @@ void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
     EquippedWeapon = NewWeapon;
     EquippedSlotIndex = SlotIndex;
 
-    AttachToHand(EquippedWeapon);
+    //AttachToHand(EquippedWeapon);
 
     if (UDataAsset_Weapon* NewData = EquippedWeapon->WeaponData)
     {
@@ -140,46 +222,10 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
     }
 
     RemoveCurrentWeaponGrantedAbilities();
-    AttachToBack(EquippedWeapon, EquippedSlotIndex);
+    //AttachToBack(EquippedWeapon, EquippedSlotIndex);
 
     EquippedWeapon = nullptr;
     EquippedSlotIndex = INDEX_NONE;
-}
-
-APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const
-{
-	return Slots.IsValidIndex(SlotIndex) ? Slots[SlotIndex].WeaponActor : nullptr;
-}
-
-int32 UWeaponManageComponent::FindFirstEmptySlot() const
-{
-    for (int32 i = 0; i < Slots.Num(); ++i)
-    {
-        if (!IsValid(Slots[i].WeaponActor))
-        {
-            return i;
-        }
-    }
-
-    return INDEX_NONE;
-}
-
-int32 UWeaponManageComponent::FindSlotIndexByWeapon(APDWeaponBase* Weapon) const
-{
-    if (!IsValid(Weapon))
-    {
-        return INDEX_NONE;
-    }
-
-    for (int32 i = 0; i < Slots.Num(); ++i)
-    {
-        if (Slots[i].WeaponActor == Weapon)
-        {
-            return i;
-        }
-    }
-
-    return INDEX_NONE;
 }
 
 APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBase> WeaponClass)
@@ -199,9 +245,28 @@ APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBas
     Params.Owner = OwnerPawn;
     Params.Instigator = OwnerPawn;
 
-    APDWeaponBase* Weapon = OwnerPawn->GetWorld()->SpawnActor<APDWeaponBase>(WeaponClass, Params);
+    return OwnerPawn->GetWorld()->SpawnActor<APDWeaponBase>(WeaponClass, Params);
+}
 
-    return Weapon;
+bool UWeaponManageComponent::SpawnAndPlace(int32 SlotIndex, TSubclassOf<APDWeaponBase> WeaponClass)
+{
+    if (!Slots.IsValidIndex(SlotIndex) || !WeaponClass)
+    {
+        return false;
+    }
+
+    APDWeaponBase* NewWeapon = SpawnWeaponActor(WeaponClass);
+    if (!IsValid(NewWeapon))
+    {
+        return false;
+    }
+
+    NewWeapon->InitWeaponData();
+    Slots[SlotIndex].WeaponActor = NewWeapon;
+
+    //AttachToBack(NewWeapon, SlotIndex);
+    
+    return true;
 }
 
 void UWeaponManageComponent::AttachToHand(APDWeaponBase* Weapon)
@@ -238,6 +303,42 @@ void UWeaponManageComponent::AttachToBack(APDWeaponBase* Weapon, int32 SlotIndex
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         BackSocket
     );
+}
+
+APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const
+{
+    return Slots.IsValidIndex(SlotIndex) ? Slots[SlotIndex].WeaponActor : nullptr;
+}
+
+int32 UWeaponManageComponent::FindFirstEmptySlot() const
+{
+    for (int32 i = 0; i < Slots.Num(); ++i)
+    {
+        if (!IsValid(Slots[i].WeaponActor))
+        {
+            return i;
+        }
+    }
+
+    return INDEX_NONE;
+}
+
+int32 UWeaponManageComponent::FindSlotIndexByWeapon(APDWeaponBase* Weapon) const
+{
+    if (!IsValid(Weapon))
+    {
+        return INDEX_NONE;
+    }
+
+    for (int32 i = 0; i < Slots.Num(); ++i)
+    {
+        if (Slots[i].WeaponActor == Weapon)
+        {
+            return i;
+        }
+    }
+
+    return INDEX_NONE;
 }
 
 UAbilitySystemComponent* UWeaponManageComponent::GetASC() const

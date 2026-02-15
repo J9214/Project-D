@@ -34,7 +34,7 @@ void USkillManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(USkillManageComponent, Slots);
 }
 
-void USkillManageComponent::Server_AddSkillPickup_Implementation(TSubclassOf<UGameplayAbility> AbilityClass)
+void USkillManageComponent::Server_BuySkill_Implementation(TSubclassOf<UGameplayAbility> AbilityClass)
 {
 	AActor* Owner = GetOwner();
 	if (!Owner || !Owner->HasAuthority())
