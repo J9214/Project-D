@@ -199,10 +199,12 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 	// Release
 	for (const FMassEntityHandle& Prev : CurrentlyAssignedEntities)
 	{
-		const bool bStillWanted = Wanted.Contains(Prev);
-		if (bStillWanted == false)
+		if (Wanted.Contains(Prev) == false)
 		{
-			ProxyPoolSubsystem->Release(Prev);
+			if (EntityManager.IsEntityValid(Prev) == true)
+			{
+				ProxyPoolSubsystem->Release(Prev);
+			}
 		}
 	}
 
