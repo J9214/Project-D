@@ -74,11 +74,6 @@ void UDroneReplicationBootingSubsystem::RegisterBubbleInfoClassIfNeeded()
 		return;
 	}
 
-	if (ShouldRunForServer() == false)
-	{
-		return;
-	}
-
 	UWorld* World = GetWorld();
 	if (World == nullptr)
 	{
