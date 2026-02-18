@@ -18,9 +18,9 @@ public:
 	FORCEINLINE const FDroneClientBubbleSerializer& GetSerializer() const { return DroneSerializer; }
 
 protected:
+	virtual void Tick(float DeltaTime) override;
 	virtual void PostInitProperties() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 private:
 	UPROPERTY(Replicated, Transient)
 	FDroneClientBubbleSerializer DroneSerializer;

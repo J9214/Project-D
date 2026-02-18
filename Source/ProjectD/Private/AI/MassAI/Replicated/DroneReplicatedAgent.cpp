@@ -10,7 +10,7 @@ void FDroneReplicatedAgent::SetFromTransform(const FTransform& Transform)
 
 void FDroneReplicatedAgent::SetDead(const FVector& InDeathLocation, const uint8 InCueId)
 {
-	bDead = 1;
+	bDead = true;
 	DeathLocation = InDeathLocation;
 	DeathCueId = InCueId;
 }

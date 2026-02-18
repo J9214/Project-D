@@ -12,7 +12,6 @@ struct FDroneReplicatedAgent : public FReplicatedAgentBase
 
 public:
 	void SetFromTransform(const FTransform& Transform);
-
 	void SetDead(const FVector& InDeathLocation, const uint8 InCueId);
 
 public:
@@ -30,7 +29,7 @@ private:
 	FReplicatedAgentPositionYawData PositionYaw;
 
 	UPROPERTY()
-	uint8 bDead = 0;
+	bool bDead = 0;
 
 	UPROPERTY()
 	FVector_NetQuantize DeathLocation = FVector::ZeroVector;

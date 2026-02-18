@@ -5,6 +5,14 @@ ADroneClientBubbleInfo::ADroneClientBubbleInfo(const FObjectInitializer& ObjectI
 	: Super(ObjectInitializer)
 	, DroneSerializer()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+}
+
+void ADroneClientBubbleInfo::Tick(float DeltaTime)
+{
+	// For DroneSerializer Tick -> Its Create Only One(Client)
+	Super::Tick(DeltaTime);
 }
 
 void ADroneClientBubbleInfo::PostInitProperties()
