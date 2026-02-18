@@ -4,6 +4,7 @@
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
 #include "AI/MassAI/Replicated/DroneEventQueueSubsystem.h"
+#include "AI/MassAI/MassEntityCueId.h"
 #include "MassCommonFragments.h"
 #include "MassExecutionContext.h"
 #include "MassEntityView.h"
@@ -120,7 +121,7 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 						NetID.IsValid() == true)
 					{
 						// if need CudId Define Enum
-						EventSub->EnqueueDeathEvent(NetID, DeathLocation, 0);
+						EventSub->EnqueueDeathEvent(NetID, DeathLocation, EMassEntityCueId::Drone_Death);
 					}
 
 					ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);

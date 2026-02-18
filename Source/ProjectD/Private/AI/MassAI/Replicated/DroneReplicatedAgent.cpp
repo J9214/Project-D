@@ -8,7 +8,7 @@ void FDroneReplicatedAgent::SetFromTransform(const FTransform& Transform)
 	PositionYaw.SetYaw(YawRad);
 }
 
-void FDroneReplicatedAgent::SetDead(const FVector& InDeathLocation, const uint8 InCueId)
+void FDroneReplicatedAgent::SetDead(const FVector& InDeathLocation, const EMassEntityCueId InCueId)
 {
 	bDead = true;
 	DeathLocation = InDeathLocation;

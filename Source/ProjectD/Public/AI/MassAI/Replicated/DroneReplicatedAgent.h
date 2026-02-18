@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "MassReplicationTypes.h"
 #include "MassReplicationTransformHandlers.h"
+#include "AI/MassAI/MassEntityCueId.h"
 #include "DroneReplicatedAgent.generated.h"
 
 USTRUCT()
@@ -12,7 +13,7 @@ struct FDroneReplicatedAgent : public FReplicatedAgentBase
 
 public:
 	void SetFromTransform(const FTransform& Transform);
-	void SetDead(const FVector& InDeathLocation, const uint8 InCueId);
+	void SetDead(const FVector& InDeathLocation, const EMassEntityCueId InCueId);
 
 public:
 	FORCEINLINE const FReplicatedAgentPositionYawData& GetPositionYaw() const { return PositionYaw; };
@@ -22,18 +23,18 @@ public:
 
 	FORCEINLINE bool GetIsDead() const { return (bDead == 1); }
 	FORCEINLINE FVector GetDeathLocation() const { return DeathLocation; }
-	FORCEINLINE uint8 GetDeathCueId() const { return DeathCueId; }
+	FORCEINLINE EMassEntityCueId  GetDeathCueId() const { return DeathCueId; }
 
 private:
 	UPROPERTY(Transient)
 	FReplicatedAgentPositionYawData PositionYaw;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	bool bDead = 0;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	FVector_NetQuantize DeathLocation = FVector::ZeroVector;
 
-	UPROPERTY()
-	uint8 DeathCueId = 0;
+	UPROPERTY(Transient)
+	EMassEntityCueId DeathCueId = EMassEntityCueId::Drone_Death;
 };

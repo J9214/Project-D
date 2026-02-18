@@ -1,6 +1,6 @@
 #include "AI/MassAI/Replicated/DroneEventQueueSubsystem.h"
 
-void UDroneEventQueueSubsystem::EnqueueDeathEvent(const FMassNetworkID NetID, const FVector& DeathLocation, const uint8 CueId)
+void UDroneEventQueueSubsystem::EnqueueDeathEvent(const FMassNetworkID NetID, const FVector& DeathLocation, const EMassEntityCueId CueId)
 {
 	FDroneDeathEvent E;
 	E.NetID = NetID;

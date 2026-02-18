@@ -1,9 +1,8 @@
 #include "AI/MassAI/Replicated/DroneClientBubbleHandler.h"
 #include "AI/MassAI/Replicated/DroneFastArrayItem.h"
 #include "AI/MassAI/Replicated/DroneReplicatedAgent.h"
+#include "AI/MassAI/MassEntityEffectSubsystem.h"
 #include "MassClientBubbleHandler.h"
-#include "MassEntitySubsystem.h"
-#include "MassReplicationSubsystem.h"
 #include "ProjectD/ProjectD.h"
 
 FDroneClientBubbleHandler::FDroneClientBubbleHandler()
@@ -54,6 +53,15 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 	);
 }
 
+void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
+{
+	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
+
+	Super::InitializeForWorld(World);
+
+	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
+}
+
 void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const
 {
 	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
@@ -63,6 +71,12 @@ void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& 
 	{
 		Transform.SetLocation(ReplicatedAgent.GetDeathLocation());
 		Transform.SetScale3D(FVector::ZeroVector);
+
+		if (EffectSubsystem != nullptr)
+		{
+			const EMassEntityCueId CueId = (EMassEntityCueId)ReplicatedAgent.GetDeathCueId();
+			EffectSubsystem->PlayCueAtLocation(CueId, ReplicatedAgent.GetDeathLocation());
+		}
 		return;
 	}
 
@@ -112,7 +126,7 @@ void FDroneClientBubbleHandler::RegisterNetIdHandle(const FMassNetworkID NetID, 
 	NetIdToHandle.Add(Key, Handle);
 }
 
-bool FDroneClientBubbleHandler::MarkDeadByNetId(const FMassNetworkID NetID, const FVector_NetQuantize& DeathLoc, const uint8 CueId)
+bool FDroneClientBubbleHandler::MarkDeadByNetId(const FMassNetworkID NetID, const FVector_NetQuantize& DeathLoc, const EMassEntityCueId CueId)
 {
 	if ((Agents == nullptr) ||
 		(Serializer == nullptr))
