@@ -7,3 +7,10 @@ void FDroneReplicatedAgent::SetFromTransform(const FTransform& Transform)
 	const float YawRad = FMath::DegreesToRadians(Transform.Rotator().Yaw);
 	PositionYaw.SetYaw(YawRad);
 }
+
+void FDroneReplicatedAgent::SetDead(const FVector& InDeathLocation, const uint8 InCueId)
+{
+	bDead = 1;
+	DeathLocation = InDeathLocation;
+	DeathCueId = InCueId;
+}
