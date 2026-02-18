@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MassProcessor.h"
+#include "MassCommonTypes.h"
 #include "MassBoidsDestructionProcessor.generated.h"
 
 class UNiagaraSystem;
@@ -45,4 +46,7 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "FX")
 	FVector EffectScale = FVector(1.0f);
+
+	TArray<FMassNetworkID> PendingDeathNetIDs;
+	TArray<FMassEntityHandle> PendingDestroyEntities;
 };

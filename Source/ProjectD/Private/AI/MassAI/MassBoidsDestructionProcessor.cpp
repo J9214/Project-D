@@ -10,6 +10,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
 #include "MassEntityView.h"
+#include "MassReplicationFragments.h"
+#include "ProjectD/ProjectD.h"
+#include "MassEntitySubsystem.h"
+#include "MassReplicationSubsystem.h"
+#include "AI/MassAI/Replicated/MassEntityTags.h"
 
 UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
 	:EntityQuery(*this)
@@ -39,12 +44,22 @@ void UMassBoidsDestructionProcessor::ConfigureQueries(const TSharedRef<FMassEnti
 {
 	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
 
 	EntityQuery.RegisterWithProcessor(*this);
 }
 
 void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
+	for (const FMassEntityHandle& E : PendingDestroyEntities)
+	{
+		if (EntityManager.IsEntityValid(E) == true)
+		{
+			Context.Defer().DestroyEntity(E);
+		}
+	}
+	PendingDestroyEntities.Reset();
+
 	UWorld* World = GetWorld();
 	if (IsValid(World) == true)
 	{
@@ -56,7 +71,8 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 
 			for (const FPendingMassDamage& Req : Requests)
 			{
-				if (Req.Entity.IsValid() == false || Req.Damage <= 0.0f)
+				if (Req.Entity.IsValid() == false ||
+					Req.Damage <= 0.0f)
 				{
 					continue;
 				}
@@ -81,6 +97,29 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 				HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Req.Damage, 0.0f, HealthFrag->MaxHealth);
 			}
 		}
+
+		UMassReplicationSubsystem* RepSub = World->GetSubsystem<UMassReplicationSubsystem>();
+		UMassEntitySubsystem* EntSub = World->GetSubsystem<UMassEntitySubsystem>();
+
+		if ((IsValid(RepSub) == true) &&
+			(IsValid(EntSub) == true))
+		{
+			const FMassEntityManager& EM = EntSub->GetEntityManager();
+
+			for (const FMassNetworkID NetID : PendingDeathNetIDs)
+			{
+				const FMassEntityHandle H = RepSub->FindEntity(NetID);
+				const bool bValid = EM.IsEntityValid(H);
+
+				UE_LOG(LogProjectD, Warning, TEXT("[DeathCheck][Server] NetID=%u FindEntity=(%d,%u) valid=%d"),
+					(uint32)NetID.GetValue(),
+					H.Index,
+					H.SerialNumber,
+					(bValid == true) ? 1 : 0);
+			}
+		}
+
+		PendingDeathNetIDs.Reset();
 	}
 
 	EntityQuery.ForEachEntityChunk(Context, [this](FMassExecutionContext& Context)
@@ -94,6 +133,18 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 				if (Healths[i].Health <= 0.0f)
 				{
 					const FMassEntityHandle Entity = Context.GetEntity(i);
+					const FMassEntityView View = FMassEntityView::TryMakeView(Context.GetEntityManagerChecked(), Entity);
+					if (View.IsValid() == true)
+					{
+						const FMassNetworkIDFragment* NetFrag = View.GetFragmentDataPtr<FMassNetworkIDFragment>();
+						if (NetFrag != nullptr)
+						{
+							PendingDeathNetIDs.Add(NetFrag->NetID);
+						}
+					}
+
+					Context.Defer().AddTag<FMassEntityDyingTag>(Entity);
+
 					const FVector DeathLocation = Transforms[i].GetTransform().GetLocation();
 
 					SpawnDeathFX(DeathLocation);
@@ -103,7 +154,7 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 					{
 						Pool->Release(Entity);
 					}
-					Context.Defer().DestroyEntity(Entity);
+					PendingDestroyEntities.Add(Entity);
 				}
 			}
 		});
