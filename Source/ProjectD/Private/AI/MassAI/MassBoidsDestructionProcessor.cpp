@@ -1,20 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "AI/MassAI/MassBoidsDestructionProcessor.h"
-#include "AI/MassAI/MassBoidsHealthFragment.h" 
-#include "AI/MassAI/MassProxyPoolSubsystem.h" 
-#include "MassCommonFragments.h"     
-#include "MassExecutionContext.h"
-#include "NiagaraFunctionLibrary.h"
-#include "Kismet/GameplayStatics.h"
+#include "AI/MassAI/MassBoidsHealthFragment.h"
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
+#include "AI/MassAI/MassProxyPoolSubsystem.h"
+#include "AI/MassAI/Replicated/MassEntityTags.h"
+#include "AI/MassAI/Replicated/DroneEventQueueSubsystem.h"
+#include "MassCommonFragments.h"
+#include "MassExecutionContext.h"
 #include "MassEntityView.h"
 #include "MassReplicationFragments.h"
-#include "ProjectD/ProjectD.h"
-#include "MassEntitySubsystem.h"
-#include "MassReplicationSubsystem.h"
-#include "AI/MassAI/Replicated/MassEntityTags.h"
 
 UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
 	:EntityQuery(*this)
@@ -23,21 +16,6 @@ UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
 	bAutoRegisterWithProcessingPhases = true;
 	bRequiresGameThreadExecution = true;
 	ProcessingPhase = EMassProcessingPhase::PostPhysics;
-}
-
-void UMassBoidsDestructionProcessor::InitializeInternal(UObject& Owner, const TSharedRef<FMassEntityManager>& EntityManager)
-{
-	Super::InitializeInternal(Owner, EntityManager);
-
-	if (ExplosionEffectAsset.IsNull() == false)
-	{
-		ExplosionEffect = ExplosionEffectAsset.LoadSynchronous();
-	}
-
-	if (ExplosionSoundAsset.IsNull() == false)
-	{
-		ExplosionSound = ExplosionSoundAsset.LoadSynchronous();
-	}
 }
 
 void UMassBoidsDestructionProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
@@ -61,129 +39,99 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 	PendingDestroyEntities.Reset();
 
 	UWorld* World = GetWorld();
-	if (IsValid(World) == true)
-	{
-		UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
-		if (IsValid(Bridge) == true)
-		{
-			TArray<FPendingMassDamage> Requests;
-			Bridge->MovePendingDamages(Requests);
-
-			for (const FPendingMassDamage& Req : Requests)
-			{
-				if (Req.Entity.IsValid() == false ||
-					Req.Damage <= 0.0f)
-				{
-					continue;
-				}
-
-				if (EntityManager.IsEntityValid(Req.Entity) == false)
-				{
-					continue;
-				}
-
-				FMassEntityView View = FMassEntityView::TryMakeView(EntityManager, Req.Entity);
-				if (View.IsValid() == false)
-				{
-					continue;
-				}
-
-				FMassBoidsHealthFragment* HealthFrag = View.GetFragmentDataPtr<FMassBoidsHealthFragment>();
-				if (HealthFrag == nullptr)
-				{
-					continue;
-				}
-
-				HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Req.Damage, 0.0f, HealthFrag->MaxHealth);
-			}
-		}
-
-		UMassReplicationSubsystem* RepSub = World->GetSubsystem<UMassReplicationSubsystem>();
-		UMassEntitySubsystem* EntSub = World->GetSubsystem<UMassEntitySubsystem>();
-
-		if ((IsValid(RepSub) == true) &&
-			(IsValid(EntSub) == true))
-		{
-			const FMassEntityManager& EM = EntSub->GetEntityManager();
-
-			for (const FMassNetworkID NetID : PendingDeathNetIDs)
-			{
-				const FMassEntityHandle H = RepSub->FindEntity(NetID);
-				const bool bValid = EM.IsEntityValid(H);
-
-				UE_LOG(LogProjectD, Warning, TEXT("[DeathCheck][Server] NetID=%u FindEntity=(%d,%u) valid=%d"),
-					(uint32)NetID.GetValue(),
-					H.Index,
-					H.SerialNumber,
-					(bValid == true) ? 1 : 0);
-			}
-		}
-
-		PendingDeathNetIDs.Reset();
-	}
-
-	EntityQuery.ForEachEntityChunk(Context, [this](FMassExecutionContext& Context)
-		{
-			const TConstArrayView<FMassBoidsHealthFragment> Healths = Context.GetFragmentView<FMassBoidsHealthFragment>();
-			const TConstArrayView<FTransformFragment> Transforms = Context.GetFragmentView<FTransformFragment>();
-
-			const int32 NumEntities = Context.GetNumEntities();
-			for (int32 i = 0; i < NumEntities; ++i)
-			{
-				if (Healths[i].Health <= 0.0f)
-				{
-					const FMassEntityHandle Entity = Context.GetEntity(i);
-					const FMassEntityView View = FMassEntityView::TryMakeView(Context.GetEntityManagerChecked(), Entity);
-					if (View.IsValid() == true)
-					{
-						const FMassNetworkIDFragment* NetFrag = View.GetFragmentDataPtr<FMassNetworkIDFragment>();
-						if (NetFrag != nullptr)
-						{
-							PendingDeathNetIDs.Add(NetFrag->NetID);
-						}
-					}
-
-					Context.Defer().AddTag<FMassEntityDyingTag>(Entity);
-
-					const FVector DeathLocation = Transforms[i].GetTransform().GetLocation();
-
-					SpawnDeathFX(DeathLocation);
-
-					UMassProxyPoolSubsystem* Pool = GetWorld()->GetSubsystem<UMassProxyPoolSubsystem>();
-					if (IsValid(Pool) == true)
-					{
-						Pool->Release(Entity);
-					}
-					PendingDestroyEntities.Add(Entity);
-				}
-			}
-		});
-}
-
-void UMassBoidsDestructionProcessor::SpawnDeathFX(const FVector& DeathLocation) const
-{
-	UWorld* World = GetWorld();
 	if (IsValid(World) == false)
 	{
 		return;
 	}
 
-	if (IsValid(ExplosionEffect) == true)
+	UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
+
+	if (IsValid(Bridge) == true)
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			World,
-			ExplosionEffect,
-			DeathLocation,
-			FRotator::ZeroRotator,
-			EffectScale,
-			true,  // Auto Destroy
-			true,  // Auto Activate
-			ENCPoolMethod::AutoRelease
-		);
+		TArray<FPendingMassDamage> Requests;
+		Bridge->MovePendingDamages(Requests);
+
+		for (const FPendingMassDamage& Req : Requests)
+		{
+			if (Req.Entity.IsValid() == false ||
+				Req.Damage <= 0.0f)
+			{
+				continue;
+			}
+
+			if (EntityManager.IsEntityValid(Req.Entity) == false)
+			{
+				continue;
+			}
+
+			FMassEntityView View = FMassEntityView::TryMakeView(EntityManager, Req.Entity);
+			if (View.IsValid() == false)
+			{
+				continue;
+			}
+
+			FMassBoidsHealthFragment* HealthFrag = View.GetFragmentDataPtr<FMassBoidsHealthFragment>();
+			if (HealthFrag == nullptr)
+			{
+				continue;
+			}
+
+			HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Req.Damage, 0.0f, HealthFrag->MaxHealth);
+		}
 	}
 
-	if (IsValid(ExplosionSound) == true)
+	UDroneEventQueueSubsystem* EventSub = World->GetSubsystem<UDroneEventQueueSubsystem>();
+	UMassProxyPoolSubsystem* Pool = World->GetSubsystem<UMassProxyPoolSubsystem>();
+
+	if ((IsValid(EventSub) == true) &&
+		(IsValid(Pool) == true))
 	{
-		UGameplayStatics::PlaySoundAtLocation(World, ExplosionSound, DeathLocation);
+		EntityQuery.ForEachEntityChunk(Context, [this, EventSub, Pool](FMassExecutionContext& ExecContext)
+			{
+				const TConstArrayView<FMassBoidsHealthFragment> Healths = ExecContext.GetFragmentView<FMassBoidsHealthFragment>();
+				const TConstArrayView<FTransformFragment> Transforms = ExecContext.GetFragmentView<FTransformFragment>();
+
+				const int32 NumEntities = ExecContext.GetNumEntities();
+				for (int32 i = 0; i < NumEntities; ++i)
+				{
+					if (Healths[i].Health > 0.0f)
+					{
+						continue;
+					}
+
+					const FMassEntityHandle Entity = ExecContext.GetEntity(i);
+
+					FMassNetworkID NetID;
+					{
+						const FMassEntityView View = FMassEntityView::TryMakeView(ExecContext.GetEntityManagerChecked(), Entity);
+						if (View.IsValid() == true)
+						{
+							const FMassNetworkIDFragment* NetFrag = View.GetFragmentDataPtr<FMassNetworkIDFragment>();
+							if (NetFrag != nullptr)
+							{
+								NetID = NetFrag->NetID;
+							}
+						}
+					}
+
+					const FVector DeathLocation = Transforms[i].GetTransform().GetLocation();
+
+					if (IsValid(EventSub) == true &&
+						NetID.IsValid() == true)
+					{
+						// if need CudId Define Enum
+						EventSub->EnqueueDeathEvent(NetID, DeathLocation, 0);
+					}
+
+					ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);
+
+					if (IsValid(Pool) == true)
+					{
+						Pool->Release(Entity);
+					}
+
+					PendingDestroyEntities.Add(Entity);
+				}
+			});
 	}
 }
