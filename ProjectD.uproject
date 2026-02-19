@@ -11,7 +11,9 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"GameplayAbilities",
-				"EnhancedInput"
+				"EnhancedInput",
+				"CableComponent",
+				"Mover"
 			]
 		}
 	],
