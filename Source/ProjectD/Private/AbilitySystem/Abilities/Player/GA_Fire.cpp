@@ -12,6 +12,9 @@
 #include "PDGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AI/MassAI/MassPerceptionSubsystem.h"
+#include "AI/MassAI/MassDamageBridgeSubsystem.h"
+#include "AI/MassAI/MassProxyPoolSubsystem.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -389,6 +392,17 @@ void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weap
 		Params
 	);
 
+	{
+		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
+		if (IsValid(Perception) == true)
+		{
+			const FVector TubeEnd = (bHit == true) ? Hit.ImpactPoint : MuzzleEnd;
+			const float TubeLen = (TubeEnd - MuzzleStart).Size();
+
+			Perception->SubmitAimTubeRequest(MuzzleStart, FireDir, TubeLen);
+		}
+	}
+
 	ApplyWeaponDamageGE(Hit, Weapon);
 
 	OwnerPawn->ClientDrawFireDebug(MuzzleStart, bHit ? Hit.ImpactPoint : MuzzleEnd, bHit, Hit.ImpactPoint);
@@ -405,6 +419,23 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 	if (!IsValid(TargetActor))
 	{
 		return;
+	}
+
+	{
+		UWorld* World = GetWorld();
+		if (IsValid(World) == true)
+		{
+			UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
+			if (IsValid(Bridge) == true)
+			{
+				const float Damage = Weapon->WeaponData->WeaponDamage;
+
+				if (Bridge->TryApplyDamageFromProxyHit(Hit, Damage) == true)
+				{
+					return;
+				}
+			}
+		}
 	}
 
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();

@@ -12,6 +12,8 @@
 				"Engine",
 				"GameplayAbilities",
 				"EnhancedInput",
+				"MassEntity",
+				"MassReplication",
 				"CableComponent",
 				"Mover"
 			]

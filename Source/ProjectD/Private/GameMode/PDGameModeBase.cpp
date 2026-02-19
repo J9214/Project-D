@@ -1,4 +1,4 @@
-﻿#include "GameMode/PDGameModeBase.h"
+#include "GameMode/PDGameModeBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
@@ -6,6 +6,8 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "GameState/PDGameStateBase.h"
 #include "Controller/PDPlayerController.h"
+#include "AI/MassAI/MassProxyPoolSubsystem.h"
+#include "AI/MassAI/MassProxyAssignmentProcessor.h"
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -22,6 +24,16 @@ void APDGameModeBase::BeginPlay()
 		*GetNameSafe(DefaultPawnClass));
 
 	RoundDurationSec = 10;
+
+    UMassProxyPoolSubsystem* Pool = World->GetSubsystem<UMassProxyPoolSubsystem>();
+    if (IsValid(Pool) == true)
+    {
+        const int32 PoolSize = 512;
+        Pool->InitPool(PoolSize);
+    }
+
+    UClass* Cls = UMassProxyAssignmentProcessor::StaticClass();
+    UE_LOG(LogTemp, Warning, TEXT("ProxyAssign Class=%s"), *GetNameSafe(Cls));
 
 
 	StartRound();
