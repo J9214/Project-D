@@ -40,8 +40,28 @@ public class ProjectD : ModuleRules
 			// Mover
 			"Mover",
 
+			// Mass AI
+            "MassEntity",
+            "MassCommon",
+            "MassMovement",
+            "MassSpawner",
+            "MassRepresentation",
+            "MassSignals",
+            "StructUtils",
+            "MassNavigation",
+            "MassAIBehavior",
+            "MassReplication",
+            "MassLOD",
+            "MassSimulation",
+
+			//Niagara
+			"Niagara",
+
 			// Geometry Collection
 			"GeometryCollectionEngine",
+
+			// Cable
+			"CableComponent",
         });
 
 		// Uncomment if you are using Slate UI
