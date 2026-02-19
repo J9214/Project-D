@@ -8,9 +8,6 @@
 AGoalPost::AGoalPost()
 {
 	bReplicates = true;
-
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	SetRootComponent(Mesh);
 }
 
 void AGoalPost::OnInteract_Implementation(AActor* Interactor)
@@ -21,9 +18,10 @@ void AGoalPost::OnInteract_Implementation(AActor* Interactor)
 		return;
 	}
 
-	if (PDPawn->GetCarriedBall())
+	ABallCore* Ball = Cast<ABallCore>(PDPawn->GetCarriedObject());
+	if (IsValid(Ball))
 	{
-		PlaceBall(PDPawn, PDPawn->GetCarriedBall());
+		PlaceBall(PDPawn, Ball);
 	}
 	else if (PlacedBall)
 	{
@@ -56,7 +54,7 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 		PD->Server_ForceClearCarriedBall();
 	}
 
-	Ball->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	Ball->GetStaticMesh()->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	StartHoldTimer();
 }
 
@@ -75,7 +73,7 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Stealer))
 	{
-		PD->Server_PickUpBall(BallToSteal);
+		PD->Server_PickUpObject(BallToSteal);
 	}
 }
 

@@ -42,6 +42,9 @@ public class ProjectD : ModuleRules
 
 			// Geometry Collection
 			"GeometryCollectionEngine",
+
+			// Cable
+			"CableComponent",
         });
 
 		// Uncomment if you are using Slate UI

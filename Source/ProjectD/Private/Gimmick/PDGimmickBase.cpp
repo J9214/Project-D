@@ -1,5 +1,7 @@
 #include "Gimmick/PDGimmickBase.h"
 
+#include "Net/UnrealNetwork.h"
+
 APDGimmickBase::APDGimmickBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -11,5 +13,12 @@ APDGimmickBase::APDGimmickBase()
 
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
 	StaticMesh->SetupAttachment(RootComponent);
+}
+
+void APDGimmickBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APDGimmickBase, bIsCanInteract);
 }
 
