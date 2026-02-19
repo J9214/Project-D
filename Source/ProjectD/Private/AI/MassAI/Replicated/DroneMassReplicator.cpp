@@ -194,44 +194,6 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 	const TArray<FMassClientHandle>& Clients = RepSub->GetClientReplicationHandles();
 
 	{
-		TArray<FDroneDeathEvent> Deaths;
-		EventQ->MoveDeathArray(Deaths);
-
-		if (Deaths.Num() > 0)
-		{
-			for (const FMassClientHandle ClientHandle : Clients)
-			{
-				ADroneClientBubbleInfo& BubbleInfo =
-					RepSharedFrag->GetTypedClientBubbleInfoChecked<ADroneClientBubbleInfo>(ClientHandle);
-
-				FDroneClientBubbleHandler& Bubble =
-					BubbleInfo.GetSerializerMutable().GetBubbleHandlerMutable();
-
-				bool bAnyDirty = false;
-
-				for (const FDroneDeathEvent& E : Deaths)
-				{
-					if (E.NetID.IsValid() == false)
-					{
-						continue;
-					}
-
-					const bool bDirty = Bubble.MarkDeadByNetId(E.NetID, E.DeathLocation, E.CueId);
-					if (bDirty == true)
-					{
-						bAnyDirty = true;
-					}
-				}
-
-				if (bAnyDirty == true)
-				{
-					BubbleInfo.ForceNetUpdate();
-				}
-			}
-		}
-	}
-
-	{
 		TArray<FMassNetworkID> DueRemovals;
 		EventQ->MoveDueRemovals(DueRemovals);
 

@@ -67,20 +67,6 @@ void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& 
 	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
 	FTransform& Transform = TransformFragment.GetMutableTransform();
 
-	if (ReplicatedAgent.GetIsDead() == true)
-	{
-		Transform.SetLocation(ReplicatedAgent.GetDeathLocation());
-		Transform.SetScale3D(FVector::ZeroVector);
-
-		if (EffectSubsystem != nullptr)
-		{
-			const EMassEntityCueId CueId = (EMassEntityCueId)ReplicatedAgent.GetDeathCueId();
-			EffectSubsystem->PlayCueAtLocation(CueId, ReplicatedAgent.GetDeathLocation());
-		}
-		return;
-	}
-
-	Transform.SetScale3D(FVector::OneVector);
 	Transform.SetLocation(ReplicatedAgent.GetPosition());
 
 	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
