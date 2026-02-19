@@ -13,11 +13,11 @@ class UMovementBridgeComponent;
 class UDataAsset_InputConfig;
 class UDataAsset_StartUpBase;
 class USkeletalMeshComponent;
-class ABallCore;
 class AGoalPost;
 class UGameplayEffect;
 class UCapsuleComponent;
 class UMoverComponent;
+class APDCarriableObjectBase;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -90,21 +90,21 @@ public:
 	void TryInteract();
 
 	UFUNCTION(Server, Reliable)
-	void Server_PickUpBall(ABallCore* Ball);
+	void Server_PickUpObject(APDCarriableObjectBase* Object);
 
 	UFUNCTION(Server, Reliable)
-	void Server_DropBall();
+	void Server_DropObject();
 
 	void Server_ForceClearCarriedBall();
 
-	ABallCore* GetCarriedBall() const { return CarriedBall; }
+	APDCarriableObjectBase* GetCarriedObject() const { return CarriedObject.Get(); }
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
 	FName BallSocketName = FName("BallSocket");
 
 protected:
 	UPROPERTY(Replicated)
-	TObjectPtr<ABallCore> CarriedBall = nullptr; 
+	TWeakObjectPtr<APDCarriableObjectBase> CarriedObject = nullptr;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> GE_HoldingBall;

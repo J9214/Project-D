@@ -13,7 +13,9 @@
 				"GameplayAbilities",
 				"EnhancedInput",
 				"MassEntity",
-				"MassReplication"
+				"MassReplication",
+				"CableComponent",
+				"Mover"
 			]
 		}
 	],
