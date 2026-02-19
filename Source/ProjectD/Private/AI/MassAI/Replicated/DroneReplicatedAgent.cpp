@@ -12,5 +12,5 @@ void FDroneReplicatedAgent::SetDead(const FVector& InDeathLocation, const EMassE
 {
 	bDead = true;
 	DeathLocation = InDeathLocation;
-	DeathCueId = InCueId;
+	CueId = InCueId;
 }
