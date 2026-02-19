@@ -4,6 +4,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Weapon/PDWeaponBase.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
+#include "Weapon/PDWeaponMontages.h"
 
 UGA_Equip::UGA_Equip()
 {
@@ -26,46 +27,75 @@ void UGA_Equip::ActivateAbility(
 		return;
 	}
 	
-	APDWeaponBase* Weapon = WMC->GetWeaponInSlot(EquipSlotIndex);
-	if (!IsValid(Weapon) || !Weapon->WeaponData)
+	FPDWeaponMontageEntry EquipEntry;
+	if (!WMC->TryGetEquipEntry(EquipSlotIndex, EquipEntry))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
-	APDWeaponBase* CurrentEquippedWeapon = WMC->GetEquippedWeapon();
-	if (CurrentEquippedWeapon == Weapon)
+	int32 CurrentEquipSlotIndex = WMC->GetEquippedSlotIndex();
+	if (CurrentEquipSlotIndex == EquipSlotIndex)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
-	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Equip);
-	
-	UAnimMontage* MontageToPlay = Entry.Montage;
-	FGameplayTag CommitTag = Entry.CommitEventTag;
-	float PlayRate = Entry.PlayRate;
-	
+	// const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	// const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Equip);
+	//
+	// UAnimMontage* MontageToPlay = Entry.Montage;
+	// FGameplayTag CommitTag = Entry.CommitEventTag;
+	// float PlayRate = Entry.PlayRate;
+	//
 	if (HasAuthority(&ActivationInfo))
 	{
-		UAbilityTask_WaitGameplayEvent* WaitEventTask =
-		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-			this, CommitTag, nullptr, false, false);
+		if (EquipEntry.CommitEventTag.IsValid() && EquipEntry.Montage)
+		{
+			auto* WaitEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+				this,
+				EquipEntry.CommitEventTag,
+				nullptr,
+				true,
+				false
+			);
+			WaitEvent->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
+			WaitEvent->ReadyForActivation();
+		}
+		else
+		{
+			if (CommitAbility(Handle, ActorInfo, ActivationInfo))
+			{
+				WMC->EquipSlot(EquipSlotIndex);
+			}
+			
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		}
 		
-		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
-		WaitEventTask->ReadyForActivation();
+		// UAbilityTask_WaitGameplayEvent* WaitEventTask =
+		// UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		// 	this, CommitTag, nullptr, false, false);
+		//
+		// WaitEventTask->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
+		// WaitEventTask->ReadyForActivation();
 	}
 	
-	UAbilityTask_PlayMontageAndWait* PlayTask =
-		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("EquipMontageTask"), MontageToPlay, PlayRate);
-	if (IsValid(PlayTask))
+	if (EquipEntry.Montage)
 	{
-		PlayTask->OnCompleted.AddDynamic(this, &UGA_Equip::OnMontageCompleted);
-		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Equip::OnMontageInterrupted);
-		PlayTask->OnCancelled.AddDynamic(this, &UGA_Equip::OnMontageCancelled);
-		PlayTask->ReadyForActivation();
+		UAbilityTask_PlayMontageAndWait* PlayTask =
+			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+				this, TEXT("EquipMontageTask"), EquipEntry.Montage, EquipEntry.PlayRate);
+		if (IsValid(PlayTask))
+		{
+			PlayTask->OnCompleted.AddDynamic(this, &UGA_Equip::OnMontageCompleted);
+			PlayTask->OnInterrupted.AddDynamic(this, &UGA_Equip::OnMontageInterrupted);
+			PlayTask->OnCancelled.AddDynamic(this, &UGA_Equip::OnMontageCancelled);
+			PlayTask->ReadyForActivation();
+		}
+	}
+	else
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }
 
@@ -78,7 +108,7 @@ void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
 	}
 	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
-	if (!WMC || !WMC->GetWeaponInSlot(EquipSlotIndex))
+	if (!WMC || !WMC->HasItemInSlot(EquipSlotIndex))
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;

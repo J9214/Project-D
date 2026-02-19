@@ -12,6 +12,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_Reload, "InputTag.Weapon.Reload");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ADS, "InputTag.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ChangeFireMode, "InputTag.Weapon.ChangeFireMode");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Throwable_Throw, "InputTag.Throwable.Throw");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillQ, "InputTag.Ability.SkillQ");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillE, "InputTag.Ability.SkillE");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_Dash, "InputTag.Ability.Movement.Dash");
@@ -24,6 +25,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Reload, "Player.Ability.Weapon.Reload");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ADS, "Player.Ability.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ChangeFireMode, "Player.Ability.Weapon.ChangeFireMode");
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Throwable_Throw, "Player.Ability.Throwable.Throw");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement, "Player.Ability.Movement");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_Dash, "Player.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");
@@ -33,11 +35,13 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Equipping, "Player.State.Equipping");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Unequipping, "Player.State.Unequipping");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Reloading, "Player.State.Reloading");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Throwing, "Player.State.Throwing");
 	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_ReloadRequest, "Event.Weapon.ReloadRequest");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Throwable_ThrowRequest, "Event.Throwable.ThrowRequest");
 	
 	/** GameplayCue Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");

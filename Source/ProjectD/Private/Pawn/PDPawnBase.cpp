@@ -106,7 +106,7 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer))
 		{
-			Subsystem->AddMappingContext(InputConfigDataAsset->AbilityMappingContext, 1);
+			Subsystem->AddMappingContext(InputConfigDataAsset->AbilityIMC, InputConfigDataAsset->IMCPriority);
 		}
 	}
 
