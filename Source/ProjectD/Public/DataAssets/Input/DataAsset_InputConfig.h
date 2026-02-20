@@ -34,8 +34,11 @@ class PROJECTD_API UDataAsset_InputConfig : public UPrimaryDataAsset
 	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TObjectPtr<UInputMappingContext> AbilityMappingContext;
+	TObjectPtr<UInputMappingContext> AbilityIMC;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 IMCPriority = 10;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (TitleProperty = "InputTag"))
 	TArray<FPDInputActionConfig> AbilityInputActions;
 };

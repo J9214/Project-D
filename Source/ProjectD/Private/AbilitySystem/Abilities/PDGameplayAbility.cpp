@@ -40,12 +40,12 @@ void UPDGameplayAbility::OnMontageCompleted()
 
 void UPDGameplayAbility::OnMontageInterrupted()
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
 void UPDGameplayAbility::OnMontageCancelled()
 {
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
 UPDAbilitySystemComponent* UPDGameplayAbility::GetPDAbilitySystemComponentFromActorInfo() const

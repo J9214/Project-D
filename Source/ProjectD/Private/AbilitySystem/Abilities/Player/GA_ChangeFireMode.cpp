@@ -19,7 +19,7 @@ void UGA_ChangeFireMode::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!OwnerPawn)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 
@@ -27,13 +27,13 @@ void UGA_ChangeFireMode::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	APDWeaponBase* Weapon = WMC ? WMC->GetEquippedWeapon() : nullptr;
 	if (!Weapon || !Weapon->WeaponData)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 
