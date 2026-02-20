@@ -33,8 +33,19 @@ void UPDAbilitySystemComponent::OnAbilityInputPressed(const FGameplayTag& InInpu
 			{
 				AbilitySpecInputPressed(Spec);
 			}
-
-			if (!Spec.IsActive())
+		
+			if (PDAbilityCDO->ActivationPolicy == EPDAbilityActivationPolicy::OnInputToggled)
+			{
+				if (Spec.IsActive())
+				{
+					CancelAbilityHandle(Spec.Handle);   
+				}
+				else
+				{
+					HandlesToActivate.Add(Spec.Handle); 
+				}
+			}
+			else if (!Spec.IsActive())
 			{
 				HandlesToActivate.Add(Spec.Handle);
 			}
