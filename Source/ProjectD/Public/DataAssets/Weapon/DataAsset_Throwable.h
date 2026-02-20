@@ -40,6 +40,9 @@ public:
 	float FuseTime = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	float ExplosionDamage = 100.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
 	float ExplosionRadius = 350.f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
@@ -54,6 +57,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Preview")
 	TObjectPtr<UNiagaraSystem> TrajectoryNiagara;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Equip")
-	FPDWeaponMontageEntry EquipEntry;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
+	FPDWeaponMontageSet ThrowableMontages;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CueTag")
+	FGameplayTag ExplosionCueTag;
 };

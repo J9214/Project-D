@@ -2,8 +2,6 @@
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Weapon/PDWeaponBase.h"
-#include "DataAssets/Weapon/DataAsset_Weapon.h"
 #include "Weapon/PDWeaponMontages.h"
 
 UGA_Equip::UGA_Equip()
@@ -23,38 +21,31 @@ void UGA_Equip::ActivateAbility(
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
-	FPDWeaponMontageEntry EquipEntry;
-	if (!WMC->TryGetEquipEntry(EquipSlotIndex, EquipEntry))
+	FPDWeaponMontageEntry Entry;
+	if (!WMC->TryGetEquipEntry(EquipSlotIndex, EPDWeaponMontageAction::Equip, Entry))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
-	int32 CurrentEquipSlotIndex = WMC->GetEquippedSlotIndex();
-	if (CurrentEquipSlotIndex == EquipSlotIndex)
+	int32 CurrentEquippedSlotIndex = WMC->GetEquippedSlotIndex();
+	if (CurrentEquippedSlotIndex == EquipSlotIndex || !WMC->HasItemInSlot(EquipSlotIndex))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
-	// const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	// const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Equip);
-	//
-	// UAnimMontage* MontageToPlay = Entry.Montage;
-	// FGameplayTag CommitTag = Entry.CommitEventTag;
-	// float PlayRate = Entry.PlayRate;
-	//
 	if (HasAuthority(&ActivationInfo))
 	{
-		if (EquipEntry.CommitEventTag.IsValid() && EquipEntry.Montage)
+		if (Entry.CommitEventTag.IsValid() && Entry.Montage)
 		{
 			auto* WaitEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 				this,
-				EquipEntry.CommitEventTag,
+				Entry.CommitEventTag,
 				nullptr,
 				true,
 				false
@@ -71,20 +62,13 @@ void UGA_Equip::ActivateAbility(
 			
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		}
-		
-		// UAbilityTask_WaitGameplayEvent* WaitEventTask =
-		// UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		// 	this, CommitTag, nullptr, false, false);
-		//
-		// WaitEventTask->EventReceived.AddDynamic(this, &UGA_Equip::OnEventTagReceived);
-		// WaitEventTask->ReadyForActivation();
 	}
 	
-	if (EquipEntry.Montage)
+	if (Entry.Montage)
 	{
 		UAbilityTask_PlayMontageAndWait* PlayTask =
 			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-				this, TEXT("EquipMontageTask"), EquipEntry.Montage, EquipEntry.PlayRate);
+				this, TEXT("EquipMontageTask"), Entry.Montage, Entry.PlayRate);
 		if (IsValid(PlayTask))
 		{
 			PlayTask->OnCompleted.AddDynamic(this, &UGA_Equip::OnMontageCompleted);
@@ -103,20 +87,20 @@ void UGA_Equip::OnEventTagReceived(const FGameplayEventData Payload)
 {
 	if (!HasAuthority(&CurrentActivationInfo))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC || !WMC->HasItemInSlot(EquipSlotIndex))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
 	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 

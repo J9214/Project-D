@@ -45,11 +45,13 @@ namespace PDGameplayTags
 	
 	/** GameplayCue Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Grenade, "GameplayCue.Throwable.Explosion.Grenade");
 
 	/** SetByCaller Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_Damage, "Data.Weapon.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_DestructDamage, "Data.Weapon.DestructDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_FireInterval, "Data.Weapon.FireInterval");
+	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Grenade_Damage, "Data.Throwable.Grenade.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Weapon_Fire, "Cooldown.Weapon.Fire");
 
 	/** Gimmick Tags **/

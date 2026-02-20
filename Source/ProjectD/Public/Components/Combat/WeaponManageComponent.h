@@ -103,9 +103,10 @@ public:
     FORCEINLINE APDWeaponBase* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE APDThrowableItemBase* GetEquippedThrowable() const { return EquippedThrowable; }
 	APDWeaponBase* GetWeaponInSlot(int32 SlotIndex) const;
+	APDThrowableItemBase* GetThrowableInSlot(int32 SlotIndex) const;
 	FORCEINLINE int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
 
-	bool TryGetEquipEntry(int32 SlotIndex, FPDWeaponMontageEntry& OutEntry) const;
+	bool TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const;
 	bool HasItemInSlot(int32 SlotIndex) const;
 	
 	UFUNCTION(BlueprintCallable, Category="Input")

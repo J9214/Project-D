@@ -93,7 +93,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(OwnerASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -103,8 +103,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 		return;
 	}
 
-	const FGameplayAbilityTargetData_LocationInfo* LocationInfo = static_cast<const
-		FGameplayAbilityTargetData_LocationInfo*>(Raw);
+	const FGameplayAbilityTargetData_LocationInfo* LocationInfo = static_cast<const FGameplayAbilityTargetData_LocationInfo*>(Raw);
 
 	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
 
@@ -135,7 +134,7 @@ void UGA_Fire::StartFireNow()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -147,7 +146,7 @@ void UGA_Fire::StartFireNow()
 	}
 	else
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }
 
@@ -186,7 +185,7 @@ void UGA_Fire::OnWaitDelayFinished()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -196,7 +195,7 @@ void UGA_Fire::OnWaitDelayFinished()
 	}
 	else
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }
 
@@ -212,7 +211,7 @@ void UGA_Fire::FireOneShot()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
@@ -227,7 +226,7 @@ void UGA_Fire::FireOneShot()
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
 	if (!WeaponDA)
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	

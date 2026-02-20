@@ -582,7 +582,13 @@ APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const
     return Slots.IsValidIndex(SlotIndex) ? Slots[SlotIndex].WeaponActor : nullptr;
 }
 
-bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, FPDWeaponMontageEntry& OutEntry) const
+APDThrowableItemBase* UWeaponManageComponent::GetThrowableInSlot(int32 SlotIndex) const
+{
+    const int32 LocalIndex = ToThrowableLocalIndex(SlotIndex);
+    return ThrowableSlots.IsValidIndex(LocalIndex) ? ThrowableSlots[LocalIndex].ThrowableItemActor : nullptr;
+}
+
+bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const
 {
     OutEntry = FPDWeaponMontageEntry();
     
@@ -595,7 +601,7 @@ bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, FPDWeaponMontageE
         }
         
         const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-        const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Equip);
+        const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(Action);
 
         OutEntry.Montage = Entry.Montage;
         OutEntry.CommitEventTag = Entry.CommitEventTag;
@@ -606,15 +612,18 @@ bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, FPDWeaponMontageE
     
     if (IsThrowableSlotIndex(SlotIndex))
     {
-        const int32 LocalIndex = ToThrowableLocalIndex(SlotIndex);
-        const APDThrowableItemBase* ItemActor = ThrowableSlots.IsValidIndex(LocalIndex) ? ThrowableSlots[LocalIndex].ThrowableItemActor : nullptr;
-        if (!IsValid(ItemActor) || !ItemActor->GetThrowableData())
+        const APDThrowableItemBase* Throwable = GetThrowableInSlot(SlotIndex);
+        if (!IsValid(Throwable) || !Throwable->GetThrowableData())
         {
             return false;
         }
         
-        const UDataAsset_Throwable* DA = ItemActor->GetThrowableData();
-        OutEntry = DA->EquipEntry;
+        const UDataAsset_Throwable* ThrowableDA = Throwable->GetThrowableData();
+        const FPDWeaponMontageEntry& Entry = ThrowableDA->ThrowableMontages.Get(Action);
+        
+        OutEntry.Montage = Entry.Montage;
+        OutEntry.CommitEventTag = Entry.CommitEventTag;
+        OutEntry.PlayRate = Entry.PlayRate;
         
         return true;
     }
@@ -628,7 +637,8 @@ bool UWeaponManageComponent::HasItemInSlot(int32 SlotIndex) const
     {
         return IsValid(GetWeaponInSlot(SlotIndex));
     }
-    else if (IsThrowableSlotIndex(SlotIndex))
+    
+    if (IsThrowableSlotIndex(SlotIndex))
     {
         const int32 LocalIndex = ToThrowableLocalIndex(SlotIndex);
         return ThrowableSlots.IsValidIndex(LocalIndex) && IsValid(ThrowableSlots[LocalIndex].ThrowableItemActor);

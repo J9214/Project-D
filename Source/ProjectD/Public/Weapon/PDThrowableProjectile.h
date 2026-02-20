@@ -24,6 +24,9 @@ protected:
 private:
 	void Explode();
 	
+	void ApplyGE();
+	void SendGameplayCueTag();
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USphereComponent> Collision;

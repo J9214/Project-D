@@ -59,14 +59,14 @@ void UGA_Throw::ActivateAbility(
 	UDataAsset_Throwable* DA = GetEquippedThrowableDA();
 	if (!WMC || !DA)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!ASC)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 
@@ -83,7 +83,7 @@ void UGA_Throw::ActivateAbility(
 	{
 		if (!TargetActorClass)
 		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 			return;
 		}
 	
@@ -95,7 +95,7 @@ void UGA_Throw::ActivateAbility(
 		);
 		if (!WaitTargetDataTask)
 		{
-			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 			return;
 		}
 	
@@ -135,7 +135,8 @@ void UGA_Throw::InputReleased(
 		{
 			WaitTargetDataTask->ExternalCancel();
 		}
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
@@ -146,7 +147,8 @@ void UGA_Throw::InputReleased(
 		{
 			WaitTargetDataTask->ExternalCancel();
 		}
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
@@ -166,17 +168,6 @@ void UGA_Throw::InputReleased(
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
 
-void UGA_Throw::EndAbility(
-	const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo,
-	bool bReplicateEndAbility,
-	bool bWasCancelled
-)
-{
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
 void UGA_Throw::OnTargetDataCancelled()
 {
 	if (CachedTA)
@@ -185,7 +176,7 @@ void UGA_Throw::OnTargetDataCancelled()
 		CachedTA = nullptr;
 	}
 	
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UGA_Throw::OnTargetDataReady(const FGameplayAbilityTargetDataHandle& DataHandle, FGameplayTag ActivationTag)
@@ -201,33 +192,33 @@ void UGA_Throw::OnTargetDataReady(const FGameplayAbilityTargetDataHandle& DataHa
 		UDataAsset_Throwable* DA = GetEquippedThrowableDA();
 		if (!DA || !DA->ProjectileClass)
 		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 			return;
 		}
 
 		if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 			return;
 		}
 
 		if (DataHandle.Num() <= 0)
 		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 			return;
 		}
 
 		const FGameplayAbilityTargetData* Raw = DataHandle.Get(0);
 		if (!Raw || Raw->GetScriptStruct() != FPDTargetData_Throwable::StaticStruct())
 		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 			return;
 		}
 		
 		const FPDTargetData_Throwable* TargetData = (Raw ? static_cast<const FPDTargetData_Throwable*>(Raw) : nullptr);
 		if (!TargetData)
 		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 			return;
 		}
 
@@ -236,7 +227,6 @@ void UGA_Throw::OnTargetDataReady(const FGameplayAbilityTargetDataHandle& DataHa
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
-
 
 void UGA_Throw::SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Throwable* DA)
 {
@@ -270,6 +260,6 @@ void UGA_Throw::SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Th
 	{
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Throw::SpawnProjectile - Spawned Projectile: %s"), *Projectile->GetName());
+	
 	Projectile->InitFromData(DA, TD.StartLocation, TD.InitialVelocity);
 }
