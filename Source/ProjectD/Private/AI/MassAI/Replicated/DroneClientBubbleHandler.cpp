@@ -5,6 +5,8 @@
 #include "MassClientBubbleHandler.h"
 #include "ProjectD/ProjectD.h"
 
+#define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
+
 FDroneClientBubbleHandler::FDroneClientBubbleHandler()
 	: TClientBubbleHandlerBase<FDroneFastArrayItem>()
 {
@@ -62,6 +64,57 @@ void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
 	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
 }
 
+void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
+{
+	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
+
+	UWorld* World = (EffectSubsystem != nullptr) ? EffectSubsystem->GetWorld() : nullptr;
+	const ENetMode NetMode = IsValid(World) ? World->GetNetMode() : NM_MAX;
+
+	if ((NetMode == NM_Client) &&
+		(Agents != nullptr))
+	{
+		for (const int32 Idx : RemovedIndices)
+		{
+			if (Agents->IsValidIndex(Idx) == false)
+			{
+				DLOG("[ClientPreRemove] InvalidIndex idx=%d", Idx);
+				continue;
+			}
+
+			const FDroneFastArrayItem& Item = (*Agents)[Idx];
+			const FDroneReplicatedAgent& Agent = Item.Agent;
+
+			const uint32 NetID = (uint32)Agent.GetNetID().GetValue();
+			const bool bDead = (Agent.GetIsDead() == true);
+			const EMassEntityCueId Cue = Agent.GetCueId();
+
+			const FVector Pos = Agent.GetPosition();
+			const FVector DeathLoc = Agent.GetDeathLocation();
+			const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+
+			DLOG("[ClientPreRemove] idx=%d NetID=%u Dead=%d Cue=%d Pos=%s DeathLoc=%s UseLoc=%s",
+				Idx,
+				NetID,
+				bDead ? 1 : 0,
+				Cue,
+				*Pos.ToString(),
+				*DeathLoc.ToString(),
+				*UseLoc.ToString());
+
+			if ((bDead == true) && 
+				(EffectSubsystem != nullptr) 
+				&& (Cue != EMassEntityCueId::None))
+			{
+				EffectSubsystem->PlayCueAtLocation(Cue, UseLoc);
+				DLOG("[ClientPreRemove] FX Played NetID=%u Cue=%d", NetID, Cue);
+			}
+		}
+	}
+
+	Super::PreReplicatedRemove(RemovedIndices, FinalSize);
+}
+
 void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const
 {
 	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
@@ -101,99 +154,21 @@ void FDroneClientBubbleHandler::MarkItemDirty(FDroneFastArrayItem& Item) const
 	Serializer->MarkItemDirty(Item);
 }
 
-void FDroneClientBubbleHandler::RegisterNetIdHandle(const FMassNetworkID NetID, const FMassReplicatedAgentHandle Handle)
-{
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return;
-	}
-
-	NetIdToHandle.Add(Key, Handle);
-}
-
-bool FDroneClientBubbleHandler::MarkDeadByNetId(const FMassNetworkID NetID, const FVector_NetQuantize& DeathLoc, const EMassEntityCueId CueId)
-{
-	if ((Agents == nullptr) ||
-		(Serializer == nullptr))
-	{
-		return false;
-	}
-
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return false;
-	}
-
-	const FMassReplicatedAgentHandle* HandlePtr = NetIdToHandle.Find(Key);
-	if (HandlePtr == nullptr)
-	{
-		return false;
-	}
-
-	FDroneFastArrayItem* Item = GetMutableItem(*HandlePtr);
-	if (Item == nullptr)
-	{
-		return false;
-	}
-
-	Item->Agent.SetDead(DeathLoc, CueId);
-
-	Serializer->MarkItemDirty(*Item);
-	return true;
-}
-
-bool FDroneClientBubbleHandler::RemoveByNetId(const FMassNetworkID NetID)
-{
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return false;
-	}
-
-	const FMassReplicatedAgentHandle* HandlePtr = NetIdToHandle.Find(Key);
-	if (HandlePtr == nullptr)
-	{
-		return false;
-	}
-
-	return CleanAgent(*HandlePtr);
-}
-
 bool FDroneClientBubbleHandler::CleanAgent(const FMassReplicatedAgentHandle Handle)
 {
 	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
 
-	uint32 NetKey = 0;
-	{
-		FDroneFastArrayItem* Item = GetMutableItem(Handle);
-		if (Item != nullptr)
-		{
-			NetKey = (uint32)Item->Agent.GetNetID().GetValue();
-		}
-	}
-
 	const bool bRemoved = Super::RemoveAgent(Handle);
 
-	UE_LOG(LogProjectD, Warning, TEXT("[DroneBubble] CleanAgent handleIdx=%d removed=%d"),
+	DLOG("[DroneBubble][Server] CleanAgent handleIdx=%d removed=%d",
 		Handle.GetIndex(),
 		(bRemoved == true) ? 1 : 0);
 
-	if (bRemoved == true)
+	if ((bRemoved == true) && (Serializer != nullptr))
 	{
-		if (NetKey != 0)
-		{
-			NetIdToHandle.Remove(NetKey);
-		}
-
-		if (Serializer != nullptr)
-		{
-			Serializer->MarkArrayDirty();
-		}
+		Serializer->MarkArrayDirty();
 	}
 
 	return bRemoved;
 }
-
 #endif // UE_REPLICATION_COMPILE_SERVER_CODE

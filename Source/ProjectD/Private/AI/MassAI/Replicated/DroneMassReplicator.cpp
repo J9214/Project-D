@@ -10,7 +10,6 @@
 #include "ProjectD/ProjectD.h"
 #include "MassCommonFragments.h"
 #include "MassReplicationFragments.h"
-#include "MassReplicationSubsystem.h"
 #include "MassLODTypes.h"
 
 #define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
@@ -68,19 +67,7 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			}
 
 			const FMassEntityHandle EntityHandle = InContext.GetEntity(EntityIdx);
-			const FMassReplicatedAgentHandle Handle = Bubble.AddAgent(EntityHandle, InReplicatedAgent);
-
-			FDroneFastArrayItem* Item = Bubble.GetMutableItem(Handle);
-			if (Item != nullptr)
-			{
-				const FMassNetworkID NetID = Item->Agent.GetNetID();
-				if (NetID.IsValid() == true)
-				{
-					Bubble.RegisterNetIdHandle(NetID, Handle);
-				}
-			}
-
-			return Handle;
+			return Bubble.AddAgent(EntityHandle, InReplicatedAgent);
 		};
 
 	auto ModifyEntityCallback = [&]
@@ -103,14 +90,6 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			if (Item == nullptr)
 			{
 				return;
-			}
-
-			{
-				const FMassNetworkID NetID = Item->Agent.GetNetID();
-				if (NetID.IsValid() == true)
-				{
-					Bubble.RegisterNetIdHandle(NetID, Handle);
-				}
 			}
 
 			bool bMarkItemDirty = false;
