@@ -5,57 +5,30 @@
 #include "AI/MassAI/Replicated/DroneFastArrayItem.h"
 #include "AI/MassAI/Replicated/DroneReplicatedAgent.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
+#include "AI/MassAI/Replicated/DeathScheduleFragment.h"
+#include "AI/MassAI/MassEntityCueID.h"
 #include "ProjectD/ProjectD.h"
 #include "MassCommonFragments.h"
 #include "MassReplicationFragments.h"
 #include "MassReplicationSubsystem.h"
 #include "MassLODTypes.h"
 
+#define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
+
 void UDroneMassReplicator::AddRequirements(FMassEntityQuery& EntityQuery)
 {
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
-	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
+	EntityQuery.AddRequirement<FDeathScheduleFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddTagRequirement<FMassEntityPendingRemovalTag>(EMassFragmentPresence::None);
 }
 
 void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Context, FMassReplicationContext& ReplicationContext)
 {
 #if UE_REPLICATION_COMPILE_SERVER_CODE
 
-	UWorld* World = Context.GetWorld();
-	if (IsValid(World) == false)
-	{
-		return;
-	}
-
-	/*UDroneEventQueueSubsystem* EventQ = World->GetSubsystem<UDroneEventQueueSubsystem>();
-	if (IsValid(EventQ) == false)
-	{
-		return;
-	}
-
-	UMassReplicationSubsystem* RepSub = World->GetSubsystem<UMassReplicationSubsystem>();
-	if (IsValid(RepSub) == false)
-	{
-		return;
-	}
-
-	const TArray<FMassClientHandle>& Clients = RepSub->GetClientReplicationHandles();
-
-	TArray<FDroneDeathEvent> Deaths;
-	EventQ->MoveDeathArray(Deaths);
-
-	TSet<uint32> DeathKeys;
-	DeathKeys.Reserve(Deaths.Num());
-	for (const FDroneDeathEvent& E : Deaths)
-	{
-		if (E.NetID.IsValid() == true)
-		{
-			DeathKeys.Add((uint32)E.NetID.GetValue());
-		}
-	}*/
-
 	FMassReplicationSharedFragment* RepSharedFrag = nullptr;
 	TConstArrayView<FTransformFragment> TransformFragments;
+	TConstArrayView<FDeathScheduleFragment> DeathSchedules;
 
 	auto CacheViewsCallback = [&]
 	(
@@ -63,6 +36,7 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 		)
 		{
 			TransformFragments = InContext.GetFragmentView<FTransformFragment>();
+			DeathSchedules = InContext.GetFragmentView<FDeathScheduleFragment>();
 			RepSharedFrag = &InContext.GetMutableSharedFragment<FMassReplicationSharedFragment>();
 		};
 
@@ -87,10 +61,15 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			InReplicatedAgent.GetPositionYawMutable().SetPosition(Pos);
 			InReplicatedAgent.GetPositionYawMutable().SetYaw(YawRad);
 
+			const FDeathScheduleFragment& Schedule = DeathSchedules[EntityIdx];
+			if (Schedule.RemoveAtFrame != 0)
+			{
+				InReplicatedAgent.SetDead(Schedule.DeathLoc, EMassEntityCueId::Drone_Death);
+			}
+
 			const FMassEntityHandle EntityHandle = InContext.GetEntity(EntityIdx);
 			const FMassReplicatedAgentHandle Handle = Bubble.AddAgent(EntityHandle, InReplicatedAgent);
 
-			// NetID -> Handle 등록 (Add 직후)
 			FDroneFastArrayItem* Item = Bubble.GetMutableItem(Handle);
 			if (Item != nullptr)
 			{
@@ -154,6 +133,20 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 				bMarkItemDirty = true;
 			}
 
+			const FDeathScheduleFragment& Schedule = DeathSchedules[EntityIdx];
+			const bool bShouldBeDead = (Schedule.RemoveAtFrame != 0);
+
+			if ((bShouldBeDead == true) && (Item->Agent.GetIsDead() == false))
+			{
+				Item->Agent.SetDead(Schedule.DeathLoc, EMassEntityCueId::Drone_Death);
+				bMarkItemDirty = true;
+
+				DLOG("[RepModify] Client=%d NetID=%u => SetDead Loc=%s",
+					ClientHandle.GetIndex(),
+					(uint32)Item->Agent.GetNetID().GetValue(),
+					*FVector(Schedule.DeathLoc).ToString());
+			}
+
 			if (bMarkItemDirty == true)
 			{
 				Bubble.MarkItemDirty(*Item);
@@ -181,11 +174,12 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			}
 
 			const uint32 NetID = (uint32)Item->Agent.GetNetID().GetValue();
-			const bool bAlreadyDead = (Item->Agent.GetIsDead() == true);
-			
-
 			const bool bRemoved = Bubble.CleanAgent(Handle);
-			DLOG("[ServerRemoveCB] Client=%d NetID=%u => CleanAgent=%d", ClientHandle.GetIndex(), NetID, bRemoved ? 1 : 0);
+
+			DLOG("[ServerRemoveCB] Client=%d NetID=%u => CleanAgent=%d",
+				ClientHandle.GetIndex(),
+				NetID,
+				(bRemoved == true) ? 1 : 0);
 		};
 
 	CalculateClientReplication<FDroneFastArrayItem>(
@@ -202,118 +196,6 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 		UE_LOG(LogProjectD, Warning, TEXT("[DroneRep] RepSharedFrag NULL - skip event flush"));
 		return;
 	}
-
-	/*for (const FMassClientHandle ClientHandle : Clients)
-	{
-		ADroneClientBubbleInfo& BubbleInfo =
-			RepSharedFrag->GetTypedClientBubbleInfoChecked<ADroneClientBubbleInfo>(ClientHandle);
-
-		FDroneClientBubbleHandler& Bubble =
-			BubbleInfo.GetSerializerMutable().GetBubbleHandlerMutable();
-
-		const bool bFlushed = (Bubble.FlushPendingRemovals() == true);
-		if (bFlushed == true)
-		{
-			BubbleInfo.ForceNetUpdate();
-			DLOG("[PendingRemove] Client=%d flushed", ClientHandle.GetIndex());
-		}
-	}
-
-	if (Deaths.Num() > 0)
-	{
-		for (const FMassClientHandle ClientHandle : Clients)
-		{
-			ADroneClientBubbleInfo& BubbleInfo =
-				RepSharedFrag->GetTypedClientBubbleInfoChecked<ADroneClientBubbleInfo>(ClientHandle);
-
-			FDroneClientBubbleHandler& Bubble =
-				BubbleInfo.GetSerializerMutable().GetBubbleHandlerMutable();
-
-			bool bAnyDirty = false;
-
-			for (const FDroneDeathEvent& E : Deaths)
-			{
-				if (E.NetID.IsValid() == false)
-				{
-					continue;
-				}
-
-				const bool bDirty = Bubble.MarkingByNetId(E.NetID, E.DeathLocation, E.CueId);
-				DLOG("[ServerDeathFlush] Client=%d NetID=%u Marking=%d CueId=%d Loc=%s",
-					ClientHandle.GetIndex(),
-					(uint32)E.NetID.GetValue(),
-					(bDirty == true) ? 1 : 0,
-					(int32)E.CueId,
-					* E.DeathLocation.ToString());
-
-				if (bDirty == true)
-				{
-					bAnyDirty = true;
-
-					Bubble.EnqueueRemovalNextTick(E.NetID);
-				}
-			}
-
-			if (bAnyDirty == true)
-			{
-				BubbleInfo.ForceNetUpdate();
-				DLOG("[ServerDeathFlush] Client=%d ForceNetUpdate", ClientHandle.GetIndex());
-			}
-		}
-	}
-
-	{
-		TArray<FMassNetworkID> DueRemovals;
-		EventQ->MoveDueRemovals(DueRemovals);
-
-		if (DueRemovals.Num() > 0)
-		{
-			for (const FMassClientHandle ClientHandle : Clients)
-			{
-				ADroneClientBubbleInfo& BubbleInfo =
-					RepSharedFrag->GetTypedClientBubbleInfoChecked<ADroneClientBubbleInfo>(ClientHandle);
-
-				FDroneClientBubbleHandler& Bubble =
-					BubbleInfo.GetSerializerMutable().GetBubbleHandlerMutable();
-
-				bool bAnyRemoved = false;
-
-				for (const FMassNetworkID NetID : DueRemovals)
-				{
-					if (NetID.IsValid() == false)
-					{
-						continue;
-					}
-
-					const uint32 Key = (uint32)NetID.GetValue();
-
-					if ((Key != 0) && (DeathKeys.Contains(Key) == true))
-					{
-						Bubble.EnqueueRemovalNextTick(NetID);
-						DLOG("[ServerDueRemovals] Client=%d NetID=%u => Enqueue (death overlap)",
-							ClientHandle.GetIndex(), Key);
-						continue;
-					}
-
-					const bool bRemoved = (Bubble.RemoveByNetId(NetID) == true);
-					DLOG("[ServerDueRemovals] Client=%d NetID=%u RemoveByNetId=%d",
-						ClientHandle.GetIndex(),
-						Key,
-						(bRemoved == true) ? 1 : 0);
-
-					if (bRemoved == true)
-					{
-						bAnyRemoved = true;
-					}
-				}
-
-				if (bAnyRemoved == true)
-				{
-					BubbleInfo.ForceNetUpdate();
-				}
-			}
-		}
-	}*/
 
 #endif
 }
