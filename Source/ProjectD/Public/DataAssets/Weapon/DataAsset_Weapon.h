@@ -12,6 +12,7 @@ class UGameplayEffect;
 class UUserWidget;
 class USoundBase;
 class UNiagaraSystem;
+class UInputMappingContext;
 
 UCLASS()
 class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
@@ -19,6 +20,12 @@ class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
 	GENERATED_BODY()
 	
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputMappingContext> WeaponIMC = nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	int32 IMCPriority = 50;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EPDWeaponTypes WeaponType = EPDWeaponTypes::None;
 	

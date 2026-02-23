@@ -12,8 +12,10 @@
 				"Engine",
 				"GameplayAbilities",
 				"EnhancedInput",
-				"AdvancedSessions",
-				"CommonUI"
+				"MassEntity",
+				"MassReplication",
+				"CableComponent",
+				"Mover"
 			]
 		}
 	],
@@ -24,22 +26,6 @@
 			"TargetAllowList": [
 				"Editor"
 			]
-		},
-		{
-			"Name": "OnlineSubsystemSteam",
-			"Enabled": true
-		},
-		{
-			"Name": "SteamSockets",
-			"Enabled": true
-		},
-		{
-			"Name": "AdvancedSessions",
-			"Enabled": true
-		},
-		{
-			"Name": "AdvancedSteamSessions",
-			"Enabled": true
 		},
 		{
 			"Name": "PlayerLink",
@@ -225,14 +211,6 @@
 		},
 		{
 			"Name": "MetaHumanCharacter",
-			"Enabled": true
-		},
-		{
-			"Name": "StateTree",
-			"Enabled": true
-		},
-		{
-			"Name": "CommonUI",
 			"Enabled": true
 		}
 	]

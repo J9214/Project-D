@@ -11,6 +11,7 @@ enum class EPDAbilityActivationPolicy : uint8
 {
 	OnInputTriggered,
 	WhileInputActive,
+	OnInputToggled,
 	OnGiven
 };
 

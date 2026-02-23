@@ -1,8 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "Gimmick/PDInteractableObject.h"
+#include "Gimmick/PDDirectlyInteractGimmickBase.h"
 #include "GoalPost.generated.h"
 
 class ABallCore;
@@ -10,7 +9,7 @@ class APawn;
 class UStaticMeshComponent;
 
 UCLASS()
-class PROJECTD_API AGoalPost : public AActor, public IPDInteractableObject
+class PROJECTD_API AGoalPost : public APDDirectlyInteractGimmickBase
 {
 	GENERATED_BODY()
 
@@ -29,9 +28,6 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<ABallCore> PlacedBall = nullptr;
-
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh;
 
 	FTimerHandle HoldTimer;
 

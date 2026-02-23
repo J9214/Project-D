@@ -22,14 +22,14 @@ void UGA_Reload::ActivateAbility(
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
 	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
 	if (!IsValid(Weapon) || !Weapon->WeaponData)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
@@ -42,9 +42,13 @@ void UGA_Reload::ActivateAbility(
 	
 	if (HasAuthority(&ActivationInfo))
 	{
-		UAbilityTask_WaitGameplayEvent* WaitEventTask =
-		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-			this, CommitTag, nullptr, false, false);
+		auto* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this,
+			CommitTag,
+			nullptr,
+			true,
+			false
+		);
 		
 		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Reload::OnEventTagReceived);
 		WaitEventTask->ReadyForActivation();
@@ -66,27 +70,27 @@ void UGA_Reload::OnEventTagReceived(const FGameplayEventData Payload)
 {
 	if (!HasAuthority(&CurrentActivationInfo))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
 	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
 	if (!WMC)
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
 	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
 	if (!Weapon)
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
 	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	

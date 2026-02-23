@@ -23,6 +23,7 @@
 #include "Components/PrimitiveComponent.h" 
 #include "GameFramework/PawnMovementComponent.h"
 #include "MoverComponent.h"
+#include "Object/Throwable/PDThrowableObject.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -106,7 +107,7 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer))
 		{
-			Subsystem->AddMappingContext(InputConfigDataAsset->AbilityMappingContext, 1);
+			Subsystem->AddMappingContext(InputConfigDataAsset->AbilityIMC, InputConfigDataAsset->IMCPriority);
 		}
 	}
 
@@ -203,7 +204,7 @@ void APDPawnBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(APDPawnBase, CarriedBall);
+	DOREPLIFETIME(APDPawnBase, CarriedObject);
 	DOREPLIFETIME(APDPawnBase, bIsAiming);
 }
 
@@ -284,7 +285,7 @@ void APDPawnBase::TryInteract()
 {
 	AActor* Target = FindInteractTarget();
 
-	bool bIsInteractable = IsValid(Target) && Target->Implements<UPDInteractableObject>();
+	bool bIsInteractable = IsValid(Target) && Cast<APDDirectlyInteractGimmickBase>(Target);
 
 	if (bIsInteractable)
 	{
@@ -292,9 +293,9 @@ void APDPawnBase::TryInteract()
 	}
 	else
 	{
-		if (CarriedBall)
+		if (IsValid(CarriedObject.Get()))
 		{
-			Server_DropBall();
+			Server_DropObject();
 		}
 	}
 }
@@ -303,36 +304,36 @@ void APDPawnBase::Server_ForceClearCarriedBall()
 {
 	if (!HasAuthority()) return;
 
-	CarriedBall = nullptr;
+	CarriedObject = nullptr;
 
 	RemoveHoldingBallEffect();
 }
 
 void APDPawnBase::Server_TryInteract_Implementation(AActor* Target)
 {
-	if (Target && Target->Implements<UPDInteractableObject>())
+	if (Target && Cast<APDDirectlyInteractGimmickBase>(Target))
 	{
 		IPDInteractableObject::Execute_OnInteract(Target, this);
 	}
 }
 
-void APDPawnBase::Server_PickUpBall_Implementation(ABallCore* Ball)
+void APDPawnBase::Server_PickUpObject_Implementation(APDCarriableObjectBase* Object)
 {
-	if (!Ball || Ball->CarrierPawn) 
+	if (!Object || Object->CarrierPawn.Get())
 	{
 		return;
 	}
 
-	CarriedBall = Ball;
+	CarriedObject = Object;
 
-	Ball->SetCarrier(this);
+	Object->SetCarrier(this);
 
 	ApplyHoldingBallEffect();
 }
 
-void APDPawnBase::Server_DropBall_Implementation()
+void APDPawnBase::Server_DropObject_Implementation()
 {
-	if (!CarriedBall) 
+	if (!IsValid(CarriedObject.Get()))
 	{
 		return;
 	}
@@ -344,9 +345,9 @@ void APDPawnBase::Server_DropBall_Implementation()
 
 	const FVector Impulse = (Forward * 300.f) + (FVector::UpVector * 200.f);
 
-	CarriedBall->DropPhysics(DropLoc, Impulse);
+	CarriedObject->DropPhysics(DropLoc, Impulse);
 
-	CarriedBall = nullptr;
+	CarriedObject = nullptr;
 }
 
 void APDPawnBase::ApplyHoldingBallEffect()

@@ -14,6 +14,8 @@ public:
 	APDGimmickBase();
 
 public:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void OnInteract_Implementation(AActor* Interactor) PURE_VIRTUAL(APDGimmickBase::OnInteract_Implementation, );
 	virtual void OnEndInteract_Implementation(AActor* Interactor) PURE_VIRTUAL(APDGimmickBase::OnEndInteract_Implementation, );
 
@@ -24,6 +26,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gimmick|Component")
 	TObjectPtr<UStaticMeshComponent> StaticMesh;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gimmick|Interact")
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "Gimmick|Interact")
 	bool bIsCanInteract;
 };

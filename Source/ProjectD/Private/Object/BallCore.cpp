@@ -8,48 +8,37 @@
 
 ABallCore::ABallCore()
 {
-	bReplicates = true;
-	SetReplicateMovement(true);
-
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	SetRootComponent(Mesh);
-
-    Mesh->SetMobility(EComponentMobility::Movable);
-	Mesh->SetSimulatePhysics(true);
-	Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-
-    Mesh->BodyInstance.bUseCCD = true; // optional
-}
-
-void ABallCore::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ABallCore, CarrierPawn);
 }
 
 void ABallCore::OnInteract_Implementation(AActor* Interactor)
 {
-	if (APDPawnBase* PDPawn = Cast<APDPawnBase>(Interactor))
-	{
-		PDPawn->Server_PickUpBall(this);
-	}
-}
-
-void ABallCore::SetCarrier(APawn* NewCarrier)
-{
-	if (!HasAuthority()) 
+	if (!IsCanInteract(Interactor))
 	{
 		return;
 	}
 
-	CarrierPawn = NewCarrier;
-	HandleCarrierChanged();
-	if (NewCarrier)
+	if (APDPawnBase* PDPawn = Cast<APDPawnBase>(Interactor))
+	{
+		PDPawn->Server_PickUpObject(this);
+	}
+}
+
+void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
+{
+	Super::DropPhysics(DropLocation, Impulse);
+
+	StaticMesh->WakeAllRigidBodies();
+	StaticMesh->AddImpulse(Impulse, NAME_None, true);
+}
+
+void ABallCore::HandleCarrierChanged()
+{
+	if (IsValid(CarrierPawn.Get()))
 	{
 		APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>();
 		if (GS)
 		{
-			APlayerState* PS = NewCarrier->GetPlayerState();
+			APlayerState* PS = CarrierPawn->GetPlayerState();
 			if (PS)
 			{
 				APDPlayerState* MyPS = Cast<APDPlayerState>(PS);
@@ -59,73 +48,31 @@ void ABallCore::SetCarrier(APawn* NewCarrier)
 				}
 			}
 		}
+
+		StaticMesh->SetSimulatePhysics(false);
+		StaticMesh->SetEnableGravity(false);
+		SetActorEnableCollision(false);
+		StaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+		if (APDPawnBase* PD = Cast<APDPawnBase>(CarrierPawn))
+		{
+			USkeletalMeshComponent* CharacterMesh = PD->GetSkeletalMeshComponent();
+			FName SocketName = PD->BallSocketName;
+
+			if (CharacterMesh)
+			{
+				bool bAttached = StaticMesh->AttachToComponent(
+					CharacterMesh,
+					FAttachmentTransformRules::KeepWorldTransform,
+					SocketName
+				);
+
+				if (bAttached)
+				{
+					StaticMesh->SetRelativeLocation(FVector::ZeroVector);
+					StaticMesh->SetRelativeRotation(FRotator::ZeroRotator);
+				}
+			}
+		}
 	}
-}
-
-void ABallCore::ClearCarrier()
-{
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	SetCarrier(nullptr);
-}
-
-void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
-{
-	if (!HasAuthority()) 
-	{
-		return;
-	}
-
-	CarrierPawn = nullptr;
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-
-	SetActorLocation(DropLocation, false, nullptr, ETeleportType::TeleportPhysics);
-
-	SetActorEnableCollision(true);
-	Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); 
-	Mesh->SetSimulatePhysics(true);
-	Mesh->SetEnableGravity(true);
-	Mesh->WakeAllRigidBodies();
-	Mesh->AddImpulse(Impulse, NAME_None, true);
-}
-
-void ABallCore::OnRep_CarrierPawn()
-{
-	HandleCarrierChanged();
-}
-
-void ABallCore::HandleCarrierChanged()
-{
-    if (CarrierPawn)
-    {
-        Mesh->SetSimulatePhysics(false);
-        Mesh->SetEnableGravity(false);
-        SetActorEnableCollision(false); 
-        Mesh->SetCollisionProfileName(TEXT("NoCollision"));
-
-        if (APDPawnBase* PD = Cast<APDPawnBase>(CarrierPawn))
-        {
-            USkeletalMeshComponent* CharacterMesh = PD->GetSkeletalMeshComponent();
-            FName SocketName = PD->BallSocketName;
-
-            if (CharacterMesh)
-            {
-                bool bAttached = AttachToComponent(
-                    CharacterMesh,
-                    FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-                    SocketName
-                );
-
-                if (bAttached)
-                {
-                    SetActorRelativeLocation(FVector::ZeroVector);
-                    SetActorRelativeRotation(FRotator::ZeroRotator);
-                }
-            }
-        }
-    }
 }

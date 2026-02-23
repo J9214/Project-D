@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 using UnrealBuildTool;
 
@@ -29,11 +29,6 @@ public class ProjectD : ModuleRules
             "Sockets",
             "Networking",
             "NetCore",
-            "OnlineSubsystem",
-            "OnlineSubsystemUtils",
-            "OnlineSubsystemSteam",
-            "SteamSockets",
-			"CoreOnline",    
 
 			// Navigation
 			"NavigationSystem",
@@ -45,9 +40,28 @@ public class ProjectD : ModuleRules
 			// Mover
 			"Mover",
 
+			// Mass AI
+            "MassEntity",
+            "MassCommon",
+            "MassMovement",
+            "MassSpawner",
+            "MassRepresentation",
+            "MassSignals",
+            "StructUtils",
+            "MassNavigation",
+            "MassAIBehavior",
+            "MassReplication",
+            "MassLOD",
+            "MassSimulation",
+
+			//Niagara
+			"Niagara",
+
 			// Geometry Collection
 			"GeometryCollectionEngine",
-            "CommonUI"
+
+			// Cable
+			"CableComponent",
         });
 
 		// Uncomment if you are using Slate UI

@@ -12,6 +12,9 @@
 #include "PDGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AI/MassAI/MassPerceptionSubsystem.h"
+#include "AI/MassAI/MassDamageBridgeSubsystem.h"
+#include "AI/MassAI/MassProxyPoolSubsystem.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -90,7 +93,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(OwnerASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -100,8 +103,7 @@ void UGA_Fire::HandleServerReceivedTargetData(
 		return;
 	}
 
-	const FGameplayAbilityTargetData_LocationInfo* LocationInfo = static_cast<const
-		FGameplayAbilityTargetData_LocationInfo*>(Raw);
+	const FGameplayAbilityTargetData_LocationInfo* LocationInfo = static_cast<const FGameplayAbilityTargetData_LocationInfo*>(Raw);
 
 	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
 
@@ -132,7 +134,7 @@ void UGA_Fire::StartFireNow()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -144,7 +146,7 @@ void UGA_Fire::StartFireNow()
 	}
 	else
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }
 
@@ -183,7 +185,7 @@ void UGA_Fire::OnWaitDelayFinished()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 
@@ -193,7 +195,7 @@ void UGA_Fire::OnWaitDelayFinished()
 	}
 	else
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }
 
@@ -209,7 +211,7 @@ void UGA_Fire::FireOneShot()
 	APDWeaponBase* Weapon = nullptr;
 	if (!GetOwnerPawnWeapon(ASC, OwnerPawn, Weapon))
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
@@ -224,7 +226,7 @@ void UGA_Fire::FireOneShot()
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
 	if (!WeaponDA)
 	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
 	
@@ -389,6 +391,17 @@ void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weap
 		Params
 	);
 
+	{
+		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
+		if (IsValid(Perception) == true)
+		{
+			const FVector TubeEnd = (bHit == true) ? Hit.ImpactPoint : MuzzleEnd;
+			const float TubeLen = (TubeEnd - MuzzleStart).Size();
+
+			Perception->SubmitAimTubeRequest(MuzzleStart, FireDir, TubeLen);
+		}
+	}
+
 	ApplyWeaponDamageGE(Hit, Weapon);
 
 	OwnerPawn->ClientDrawFireDebug(MuzzleStart, bHit ? Hit.ImpactPoint : MuzzleEnd, bHit, Hit.ImpactPoint);
@@ -405,6 +418,23 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 	if (!IsValid(TargetActor))
 	{
 		return;
+	}
+
+	{
+		UWorld* World = GetWorld();
+		if (IsValid(World) == true)
+		{
+			UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
+			if (IsValid(Bridge) == true)
+			{
+				const float Damage = Weapon->WeaponData->WeaponDamage;
+
+				if (Bridge->TryApplyDamageFromProxyHit(Hit, Damage) == true)
+				{
+					return;
+				}
+			}
+		}
 	}
 
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
