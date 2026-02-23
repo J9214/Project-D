@@ -11,14 +11,20 @@
 #include "Engine/NetDriver.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include <Controller/PDLobbyPlayerController.h>
 
 APDLobbyGameMode::APDLobbyGameMode()
 {
-    for (int32 i = 0; i < 3; i++)
+    for (int32 i = 0; i < TEAM_COUNT; i++)
     {
-        TeamCounts[i] = 0;
+        TeamInfos[i].TeamID = static_cast<ETeamType>(i);
+		TeamInfos[i].LeaderSteamId = TEXT("");
+		TeamInfos[i].PlayerCount = 0;
+		TeamInfos[i].PendingCount = 0;
     }
+
     PendingIncomingPlayers = 0;
+    bUseSeamlessTravel = true;
 }
 
 void APDLobbyGameMode::BeginPlay()
@@ -35,13 +41,31 @@ void APDLobbyGameMode::BeginPlay()
 void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
     int32 IncomingSize = UGameplayStatics::GetIntOption(Options, TEXT("TeamSize"), 1);
+    FString LeaderSteamID = UGameplayStatics::ParseOption(Options, TEXT("LeaderSteamId"));
 
     bool bCanFit = false;
 
-    for (int32 i = 0; i < 3; i++)
+    for (int32 i = 0; i < TEAM_COUNT; i++)
     {
-        if (TeamCounts[i] + IncomingSize <= MaxTeamSize)
+        if (TeamInfos[i].LeaderSteamId == LeaderSteamID)
         {
+            LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
+            Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+            return;
+        }
+    }
+    
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        if (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize)
+        {
+            if (!TeamInfos[i].LeaderSteamId.IsEmpty())
+            {
+                continue;
+            }
+            TeamInfos[i].LeaderSteamId = LeaderSteamID;
+			TeamInfos[i].PendingCount = IncomingSize;
+            LoginInfo.Add(UniqueId.ToString(), TeamInfos[i].LeaderSteamId);
             bCanFit = true;
             break;
         }
@@ -66,29 +90,58 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    int32 SelectedTeam = -1;
-    for (int32 i = 0; i < 3; i++)
+    const FString NetIdKey = PlayerState->GetUniqueId().ToString(); 
+    FString* FoundLeaderSteamID = LoginInfo.Find(NetIdKey);
+
+    if (!FoundLeaderSteamID)
     {
-        if (TeamCounts[i] < MaxTeamSize)
+        UE_LOG(LogTemp, Warning, TEXT("LoginInfo missing: %s"), *NetIdKey);
+        return;
+    }
+
+    int32 SelectedTeam = -1;
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        if (TeamInfos[i].LeaderSteamId == *FoundLeaderSteamID)
         {
             SelectedTeam = i;
             break;
-        }
+		}
     }
 
     if (SelectedTeam != -1)
     {
-        PlayerState->TeamId = SelectedTeam;
-        TeamCounts[SelectedTeam]++;
-
-        UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamCounts[SelectedTeam]);
+        TeamInfos[SelectedTeam].PlayerCount++;
+        if (--TeamInfos[SelectedTeam].PendingCount == 0)
+        {
+			TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
+        }
+		PlayerState->SetTeamID(TeamInfos[SelectedTeam].TeamID);
+		LoginInfo.Remove(NetIdKey);
+        UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 팀에 배정되지 못함"), *PlayerState->GetPlayerName());
     }
 
+    if (auto* PC = Cast<APDLobbyPlayerController>(NewPlayer))
+    {
+        PC->Client_RequestCharacterCustomInfo();
+        PC->Client_RequestDisplayName();
+    }
     UpdateSessionMetadata();
+	TryGameStart(false);
 }
 
 void APDLobbyGameMode::Logout(AController* Exiting)
 {
+    APDPlayerState* PlayerState = Exiting ? Exiting->GetPlayerState<APDPlayerState>() : nullptr;
+    if (PlayerState && static_cast<int>(PlayerState->GetTeamID()) < TEAM_COUNT)
+    {
+		TeamInfos[static_cast<int>(PlayerState->GetTeamID())].PlayerCount--;
+    }
+
     Super::Logout(Exiting);
 
     UpdateSessionMetadata();
@@ -114,7 +167,7 @@ void APDLobbyGameMode::CreateDedicatedSession()
             Settings.bIsDedicated = true;
             Settings.bShouldAdvertise = true;
             Settings.bIsLANMatch = false;
-            Settings.NumPublicConnections = 10;
+            Settings.NumPublicConnections = 9;
             Settings.bAllowJoinInProgress = true;
             Settings.bUsesPresence = false;
             Settings.bAllowJoinViaPresence = false;
@@ -122,7 +175,7 @@ void APDLobbyGameMode::CreateDedicatedSession()
             int32 QueryPort = 27015;
             FParse::Value(FCommandLine::Get(), TEXT("QueryPort="), QueryPort);
 
-            Settings.Set(FName(TEXT("EEEUTTR")), FString("UnrealSteamTestLobbyEEEUTTR"), EOnlineDataAdvertisementType::ViaOnlineService);
+            Settings.Set(FName(TEXT("GameFilter")), FString("UnrealSteamTestLobbyEEEUTTR"), EOnlineDataAdvertisementType::ViaOnlineService);
             Settings.Set(FName(TEXT("MAX_FIT")), 3, EOnlineDataAdvertisementType::ViaOnlineService);
 
             SessionInterface->CreateSession(0, NAME_GameSession, Settings);
@@ -161,12 +214,37 @@ void APDLobbyGameMode::UpdateSessionMetadata()
     int32 MaxFit = 0;
     for (int32 i = 0; i < 3; i++)
     {
-        int32 FreeSpace = MaxTeamSize - TeamCounts[i];
-        if (FreeSpace > MaxFit) MaxFit = FreeSpace;
+        int32 FreeSpace = MaxTeamSize - TeamInfos[i].PlayerCount;
+        if (FreeSpace > MaxFit)
+        {
+            MaxFit = FreeSpace;
+        }
     }
 
     Settings->Set(FName(TEXT("MAX_FIT")), MaxFit, EOnlineDataAdvertisementType::ViaOnlineService);
     SessionInterface->UpdateSession(NAME_GameSession, *Settings);
 
     UE_LOG(LogTemp, Warning, TEXT("세션 메타데이터 갱신: MAX_FIT = %d"), MaxFit);
+}
+
+void APDLobbyGameMode::TryGameStart(bool bIsTest)
+{
+    if (GetWorld()->IsInSeamlessTravel())
+    {
+		return;
+    }
+
+    if (!bIsTest)
+    {
+        for(int i = 0 ; i < 3; i++)
+        {
+            if (TeamInfos[i].PlayerCount != MaxTeamSize)
+            {
+                return;
+            }
+		}
+    }
+
+    const FString TravelURL = TEXT("/Game/Levels/LevelPrototyping/AnimLevel");
+    GetWorld()->ServerTravel(TravelURL);
 }

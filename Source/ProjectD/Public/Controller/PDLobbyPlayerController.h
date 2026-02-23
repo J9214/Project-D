@@ -8,6 +8,7 @@
 #include "PDLobbyPlayerController.generated.h"
 
 class UUserWidget;
+struct FPDCharacterCustomInfo;
 /**
  * 
  */
@@ -23,6 +24,17 @@ public:
     UFUNCTION(BlueprintCallable)
     void ConnectToDedicatedServer();
 
+    UFUNCTION(Client, Reliable)
+    void Client_RequestCharacterCustomInfo();
+
+    UFUNCTION(Client, Reliable)
+    void Client_RequestDisplayName();
+
+    UFUNCTION(Server, Reliable)
+    void Server_SubmitDisplayName(const FString& Name);
+
+    UFUNCTION(Server, Reliable)
+    void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
     TSubclassOf<UUserWidget> UIWidgetClass;

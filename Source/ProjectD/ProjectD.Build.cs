@@ -33,6 +33,7 @@ public class ProjectD : ModuleRules
             "OnlineSubsystemUtils",
             "OnlineSubsystemSteam",
             "SteamSockets",
+			"CoreOnline",    
 
 			// Navigation
 			"NavigationSystem",
@@ -46,6 +47,7 @@ public class ProjectD : ModuleRules
 
 			// Geometry Collection
 			"GeometryCollectionEngine",
+            "CommonUI"
         });
 
 		// Uncomment if you are using Slate UI

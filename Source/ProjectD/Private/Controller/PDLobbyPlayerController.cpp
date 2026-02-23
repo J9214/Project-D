@@ -5,6 +5,8 @@
 #include "Blueprint/UserWidget.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "PlayerState/PDPlayerState.h"
+#include "GameInstance/PDGameInstance.h"
 
 void APDLobbyPlayerController::BeginPlay()
 {
@@ -33,6 +35,12 @@ void APDLobbyPlayerController::BeginPlay()
 
 void APDLobbyPlayerController::ConnectToDedicatedServer()
 {
+    if (GetNetMode() == NM_Client)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Guest cannot start dedi search/join."));
+        return;
+    }
+
     IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
     if (!Subsystem)
     {
@@ -63,6 +71,54 @@ void APDLobbyPlayerController::ConnectToDedicatedServer()
 
     UE_LOG(LogTemp, Warning, TEXT("=== 스팀 인터넷 세션 검색 시작 ==="));
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
+}
+
+void APDLobbyPlayerController::Server_SubmitDisplayName_Implementation(const FString& Name)
+{
+    if (auto* PS = GetPlayerState<APDPlayerState>())
+    {
+        PS->SetDisplayName(Name);
+    }
+}
+
+void APDLobbyPlayerController::Client_RequestDisplayName_Implementation()
+{
+    if (!IsLocalController())
+    {
+        return;
+    }
+
+    if (auto* GI = GetGameInstance<UPDGameInstance>())
+    {
+        Server_SubmitDisplayName(GI->GetPlayerLocalDisplayName());
+    }
+}
+
+void APDLobbyPlayerController::Server_SubmitCharacterCustomInfo_Implementation(const FPDCharacterCustomInfo& CharacterInfo)
+{
+    APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    PS->CharacterCustomInfo = CharacterInfo;
+}
+
+void APDLobbyPlayerController::Client_RequestCharacterCustomInfo_Implementation()
+{
+    if (!IsLocalController())
+    {
+        return;
+    }
+
+    auto* GI = GetGameInstance<UPDGameInstance>();
+    if (!GI)
+    {
+        return;
+    }
+
+    Server_SubmitCharacterCustomInfo(GI->GetLocalCharacterCustomInfo());
 }
 
 void APDLobbyPlayerController::OnFindSessionsComplete(bool bWasSuccessful)
@@ -107,6 +163,21 @@ void APDLobbyPlayerController::TryJoinNextAvailableSession()
         return;
     }
 
+    APDPlayerState* PDPS = GetPlayerState<APDPlayerState>();
+    if (!PDPS)
+    {
+        return;
+    }
+
+    const FUniqueNetIdRepl& ReplId = PDPS->GetUniqueId();
+    if (!ReplId.IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("PlayerState UniqueId is invalid"));
+        return;
+    }
+
+    const FString NetIdKey = ReplId.ToString();
+
     IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
     if (Subsystem)
     {
@@ -116,7 +187,7 @@ void APDLobbyPlayerController::TryJoinNextAvailableSession()
             FString ConnectString;
             if (SessionInterface->GetResolvedConnectString(SelectedSession, NAME_GamePort, ConnectString))
             {
-                PendingDediUrl = FString::Printf(TEXT("%s?TeamSize=%d"), *ConnectString, MyTeamSize);
+                PendingDediUrl = FString::Printf(TEXT("%s?LeaderSteamId=%s&TeamSize=%d"),*ConnectString, *NetIdKey, MyTeamSize);
 
                 UE_LOG(LogTemp, Log, TEXT("Steam Connect String: %s"), *PendingDediUrl);
             }

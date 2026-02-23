@@ -3,16 +3,36 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameMode/PDGameModeBase.h"
+#include "GameFramework/GameModeBase.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "Interface/PDTeamInterface.h"
 #include "PDLobbyGameMode.generated.h"
 
 struct FUniqueNetIdRepl;
 /**
  * 
  */
+
+USTRUCT(BlueprintType)
+struct FTeamInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	ETeamType TeamID = ETeamType::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString LeaderSteamId;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 PlayerCount = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 PendingCount = 0;
+};
+
 UCLASS()
-class PROJECTD_API APDLobbyGameMode : public APDGameModeBase
+class PROJECTD_API APDLobbyGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 	
@@ -34,10 +54,15 @@ protected:
 
 	void UpdateSessionMetadata();
 
-private:
+	void TryGameStart(bool bIsTest);
 
-	int32 TeamCounts[3];
+private:
+	static constexpr uint8 TEAM_COUNT = static_cast<uint8>(ETeamType::MAX); 
+
+	FTeamInfo TeamInfos[TEAM_COUNT];
 	const int32 MaxTeamSize = 3;
+
+	TMap<FString, FString> LoginInfo;
 
 	int32 PendingIncomingPlayers;
 

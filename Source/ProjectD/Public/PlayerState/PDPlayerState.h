@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "GameInstance/PDCharacterCustomInfo.h"
 #include "Interface/PDTeamInterface.h"
 #include "PDPlayerState.generated.h"
 
@@ -31,9 +32,25 @@ public:
 
 	void SetReviveState();
 
+	void SetTeamID(ETeamType NewTeamID) { TeamID = NewTeamID; }
+
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterCustomInfo, BlueprintReadOnly, Category = "Custom")
+	FPDCharacterCustomInfo CharacterCustomInfo;
+
+	UFUNCTION(BlueprintCallable)
+	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
+
+	UFUNCTION()
+	void OnRep_CharacterCustomInfo();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Team")
 	ETeamType TeamID;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NickName")
+	FString DisplayName;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<UPDAbilitySystemComponent> AbilitySystemComponent;

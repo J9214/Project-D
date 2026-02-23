@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AdvancedFriendsGameInstance.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "PDCharacterCustomInfo.h"
 #include "PDGameInstance.generated.h"
 
 class UCreateSessionCallbackProxyAdvanced;
@@ -24,6 +25,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void HostPartySessionCreate();
 
+	UFUNCTION(BlueprintCallable)
+	void SetLocalCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterCustomInfo);
+
+	const FPDCharacterCustomInfo& GetLocalCharacterCustomInfo() const { return  LocalCharacterCustomInfo; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetPlayerLocalDisplayName(const FString& NewDisplayName) { PlayerLocalDisplayName = NewDisplayName; }
+
+	UFUNCTION(BlueprintCallable)
+	FString GetPlayerLocalDisplayName() const { return PlayerLocalDisplayName; }
 private:
 
 	UPROPERTY()
@@ -34,8 +45,10 @@ private:
 	FDelegateHandle JoinCompleteHandle;
 	FDelegateHandle DestroyCompleteHandle;
 	FString PendingTravelURL;
+
 	bool bPendingTravelToDedi = false;
 
+	FString PlayerLocalDisplayName;
 
 	UFUNCTION()
 	void OnCreateHostSessionSuccess();
@@ -50,4 +63,8 @@ private:
 
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
+	void TrySubmitCharacterCustomInfo();
+
+	UPROPERTY()
+	FPDCharacterCustomInfo LocalCharacterCustomInfo;
 };

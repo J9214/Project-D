@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "CreateSessionCallbackProxyAdvanced.h" 
 #include "AdvancedSessionsLibrary.h"
+#include "Controller/PDLobbyPlayerController.h"
 
 
 void UPDGameInstance::Init()
@@ -49,13 +50,6 @@ void UPDGameInstance::BindSessionDelegates()
             &UPDGameInstance::HandleJoinSessionComplete
         )
     );
-
-    //DestroyCompleteHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
-    //    FOnDestroySessionCompleteDelegate::CreateUObject(
-    //        this,
-    //        &UPDGameInstance::HandleDestroySessionComplete
-    //    )
-    //);
 }
 
 void UPDGameInstance::HandleInviteAccepted(const bool bWasSuccessful, int32 ControllerId, TSharedPtr<const FUniqueNetId>, const FOnlineSessionSearchResult& InviteResult)
@@ -109,33 +103,6 @@ void UPDGameInstance::HandleJoinSessionComplete(FName SessionName, EOnJoinSessio
     }
 }
 
-//void UPDGameInstance::HandleDestroySessionComplete(FName SessionName, bool bWasSuccessful)
-//{
-//    if (SessionName != NAME_GameSession)
-//    {
-//        return;
-//    }
-//
-//    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-//    if (!PlayerController)
-//    {
-//        UE_LOG(LogTemp, Error, TEXT("ClientTravelTo GetPlayerController Failed"));
-//        return;
-//    }
-//
-//    if (SessionInterface.IsValid() && DestroyCompleteHandle.IsValid())
-//    {
-//        SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroyCompleteHandle);
-//        DestroyCompleteHandle.Reset();
-//    }
-//
-//    if (bPendingTravelToDedi)
-//    {
-//        bPendingTravelToDedi = false;
-//        PlayerController->ClientTravel(PendingTravelURL, TRAVEL_Absolute);
-//    }
-//}
-
 void UPDGameInstance::HostPartySessionCreate()
 {
     APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
@@ -182,4 +149,34 @@ void UPDGameInstance::OnCreateHostSessionSuccess()
 void UPDGameInstance::OnCreateHostSessionFailure()
 {
     UE_LOG(LogTemp, Warning, TEXT("SessionCreateFail"));
+}
+
+void UPDGameInstance::SetLocalCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterCustomInfo)
+{
+    LocalCharacterCustomInfo = CharacterCustomInfo;
+
+	TrySubmitCharacterCustomInfo();
+}
+
+void UPDGameInstance::TrySubmitCharacterCustomInfo()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    APlayerController* PC = World->GetFirstPlayerController();
+    auto* LobbyPC = Cast<APDLobbyPlayerController>(PC);
+    if (!LobbyPC)
+    {
+        return;
+    }
+
+    if (World->GetNetMode() == NM_Client && PC->GetNetConnection() == nullptr)
+    {
+        return;
+    }
+
+    LobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
 }
