@@ -46,6 +46,7 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 {
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
+			TryPlayDeathCueOnce(ReplicatedAgent);
 			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
 		};
 
@@ -102,13 +103,7 @@ void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> Remo
 				*DeathLoc.ToString(),
 				*UseLoc.ToString());
 
-			if ((bDead == true) && 
-				(EffectSubsystem != nullptr) 
-				&& (Cue != EMassEntityCueId::None))
-			{
-				EffectSubsystem->PlayCueAtLocation(Cue, UseLoc);
-				DLOG("[ClientPreRemove] FX Played NetID=%u Cue=%d", NetID, Cue);
-			}
+			PlayedDeathFxNetIDs.Remove(NetID);
 		}
 	}
 
@@ -120,10 +115,74 @@ void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& 
 	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
 	FTransform& Transform = TransformFragment.GetMutableTransform();
 
+	if (ReplicatedAgent.GetIsDead() == true)
+	{
+		const FVector Pos = ReplicatedAgent.GetPosition();
+		const FVector DeathLoc = ReplicatedAgent.GetDeathLocation();
+		const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+
+		Transform.SetLocation(UseLoc);
+		Transform.SetScale3D(FVector::ZeroVector);
+		return;
+	}
+
 	Transform.SetLocation(ReplicatedAgent.GetPosition());
 
 	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
 	Transform.SetRotation(FQuat(FRotator(0.0f, YawDeg, 0.0f)));
+}
+
+void FDroneClientBubbleHandler::TryPlayDeathCueOnce(const FDroneReplicatedAgent& ReplicatedAgent)
+{
+	UWorld* World = (EffectSubsystem != nullptr) ? EffectSubsystem->GetWorld() : nullptr;
+	const ENetMode NetMode = IsValid(World) ? World->GetNetMode() : NM_MAX;
+
+	if (NetMode != NM_Client)
+	{
+		return;
+	}
+
+	const uint32 NetID = (uint32)ReplicatedAgent.GetNetID().GetValue();
+	const bool bDead = (ReplicatedAgent.GetIsDead() == true);
+	const EMassEntityCueId Cue = ReplicatedAgent.GetCueId();
+
+	if (bDead == false)
+	{
+		PlayedDeathFxNetIDs.Remove(NetID);
+		return;
+	}
+
+	if (Cue == EMassEntityCueId::None)
+	{
+		DLOG("[ClientPostChange] Dead but Cue=None NetID=%u", NetID);
+		return;
+	}
+
+	if (IsValid(EffectSubsystem) == false)
+	{
+		DLOG("[ClientPostChange] EffectSubsystem invalid NetID=%u", NetID);
+		return;
+	}
+
+	if (PlayedDeathFxNetIDs.Contains(NetID) == true)
+	{
+		DLOG("[ClientPostChange] FX Skip (AlreadyPlayed) NetID=%u Cue=%d", NetID, Cue);
+		return;
+	}
+
+	const FVector Pos = ReplicatedAgent.GetPosition();
+	const FVector DeathLoc = ReplicatedAgent.GetDeathLocation();
+	const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+
+	EffectSubsystem->PlayCueAtLocation(Cue, UseLoc);
+	PlayedDeathFxNetIDs.Add(NetID);
+
+	DLOG("[ClientPostChange] FX Played NetID=%u Cue=%d Pos=%s DeathLoc=%s UseLoc=%s",
+		NetID,
+		Cue,
+		*Pos.ToString(),
+		*DeathLoc.ToString(),
+		*UseLoc.ToString());
 }
 
 #if UE_REPLICATION_COMPILE_SERVER_CODE

@@ -28,7 +28,11 @@ public:
 
 private:
 	void ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const;
+	void TryPlayDeathCueOnce(const FDroneReplicatedAgent& ReplicatedAgent);
 
 private:
 	UMassEntityEffectSubsystem* EffectSubsystem = nullptr;
+
+	// For Death FX
+	TSet<uint32> PlayedDeathFxNetIDs;
 };
