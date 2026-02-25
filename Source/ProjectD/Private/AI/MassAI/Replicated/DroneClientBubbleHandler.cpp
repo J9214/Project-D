@@ -16,7 +16,7 @@ void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedI
 {
 	auto AddRequirementsForSpawnQuery = [](FMassEntityQuery& Query)
 		{
-			Query.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
+			Query.AddRequirement<FClientVisualFragment>(EMassFragmentAccess::ReadWrite);
 		};
 
 	auto CacheFragmentViewsForSpawnQuery = [](FMassExecutionContext& Context)
@@ -25,12 +25,12 @@ void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedI
 
 	auto SetSpawnedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const int32 EntityIdx)
 		{
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, true);
 		};
 
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, true);
 		};
 
 	PostReplicatedAddHelper(
@@ -47,7 +47,7 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
 			TryPlayDeathCueOnce(ReplicatedAgent);
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, false);
 		};
 
 	PostReplicatedChangeHelper(
@@ -110,26 +110,40 @@ void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> Remo
 	Super::PreReplicatedRemove(RemovedIndices, FinalSize);
 }
 
-void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const
+void FDroneClientBubbleHandler::ApplyReplicatedVisualState(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const bool bForceSnap) const
 {
-	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
-	FTransform& Transform = TransformFragment.GetMutableTransform();
+	FClientVisualFragment& VisualTarget = EntityView.GetFragmentData<FClientVisualFragment>();
 
-	if (ReplicatedAgent.GetIsDead() == true)
+	const FVector Pos = ReplicatedAgent.GetPosition();
+	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
+
+	VisualTarget.TargetLocation = Pos;
+	VisualTarget.TargetRotation = FQuat(FRotator(0.0f, YawDeg, 0.0f));
+
+	const bool bDead = (ReplicatedAgent.GetIsDead() == true);
+	VisualTarget.bDead = bDead;
+
+	if (bDead == true)
 	{
-		const FVector Pos = ReplicatedAgent.GetPosition();
 		const FVector DeathLoc = ReplicatedAgent.GetDeathLocation();
-		const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+		VisualTarget.DeathLocation = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
 
-		Transform.SetLocation(UseLoc);
-		Transform.SetScale3D(FVector::ZeroVector);
-		return;
+		VisualTarget.bSnapThisFrame = true;
+	}
+	else
+	{
+		VisualTarget.DeathLocation = FVector::ZeroVector;
+
+		if ((bForceSnap == true) || (VisualTarget.bInitialized == false))
+		{
+			VisualTarget.bSnapThisFrame = true;
+		}
 	}
 
-	Transform.SetLocation(ReplicatedAgent.GetPosition());
-
-	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
-	Transform.SetRotation(FQuat(FRotator(0.0f, YawDeg, 0.0f)));
+	if (VisualTarget.bInitialized == false)
+	{
+		VisualTarget.bInitialized = true;
+	}
 }
 
 void FDroneClientBubbleHandler::TryPlayDeathCueOnce(const FDroneReplicatedAgent& ReplicatedAgent)

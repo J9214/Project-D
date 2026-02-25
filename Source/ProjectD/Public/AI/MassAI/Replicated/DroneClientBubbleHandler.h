@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "MassClientBubbleHandler.h"
 #include "MassCommonFragments.h"
+#include "AI/MassAI/Replicated/ClientVisualFragment.h"
 #include "AI/MassAI/Replicated/DroneFastArrayItem.h"
 
 class UMassEntityEffectSubsystem;
@@ -27,7 +28,7 @@ public:
 #endif
 
 private:
-	void ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const;
+	void ApplyReplicatedVisualState(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const bool bForceSnap) const;
 	void TryPlayDeathCueOnce(const FDroneReplicatedAgent& ReplicatedAgent);
 
 private:
