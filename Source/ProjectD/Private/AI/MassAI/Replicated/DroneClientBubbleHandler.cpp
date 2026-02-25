@@ -3,9 +3,6 @@
 #include "AI/MassAI/Replicated/DroneReplicatedAgent.h"
 #include "AI/MassAI/MassEntityEffectSubsystem.h"
 #include "MassClientBubbleHandler.h"
-#include "ProjectD/ProjectD.h"
-
-#define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
 
 FDroneClientBubbleHandler::FDroneClientBubbleHandler()
 	: TClientBubbleHandlerBase<FDroneFastArrayItem>()
@@ -79,29 +76,12 @@ void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> Remo
 		{
 			if (Agents->IsValidIndex(Idx) == false)
 			{
-				DLOG("[ClientPreRemove] InvalidIndex idx=%d", Idx);
 				continue;
 			}
 
 			const FDroneFastArrayItem& Item = (*Agents)[Idx];
 			const FDroneReplicatedAgent& Agent = Item.Agent;
-
 			const uint32 NetID = (uint32)Agent.GetNetID().GetValue();
-			const bool bDead = (Agent.GetIsDead() == true);
-			const EMassEntityCueId Cue = Agent.GetCueId();
-
-			const FVector Pos = Agent.GetPosition();
-			const FVector DeathLoc = Agent.GetDeathLocation();
-			const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
-
-			DLOG("[ClientPreRemove] idx=%d NetID=%u Dead=%d Cue=%d Pos=%s DeathLoc=%s UseLoc=%s",
-				Idx,
-				NetID,
-				bDead ? 1 : 0,
-				Cue,
-				*Pos.ToString(),
-				*DeathLoc.ToString(),
-				*UseLoc.ToString());
 
 			PlayedDeathFxNetIDs.Remove(NetID);
 		}
@@ -168,19 +148,16 @@ void FDroneClientBubbleHandler::TryPlayDeathCueOnce(const FDroneReplicatedAgent&
 
 	if (Cue == EMassEntityCueId::None)
 	{
-		DLOG("[ClientPostChange] Dead but Cue=None NetID=%u", NetID);
 		return;
 	}
 
 	if (IsValid(EffectSubsystem) == false)
 	{
-		DLOG("[ClientPostChange] EffectSubsystem invalid NetID=%u", NetID);
 		return;
 	}
 
 	if (PlayedDeathFxNetIDs.Contains(NetID) == true)
 	{
-		DLOG("[ClientPostChange] FX Skip (AlreadyPlayed) NetID=%u Cue=%d", NetID, Cue);
 		return;
 	}
 
@@ -190,13 +167,6 @@ void FDroneClientBubbleHandler::TryPlayDeathCueOnce(const FDroneReplicatedAgent&
 
 	EffectSubsystem->PlayCueAtLocation(Cue, UseLoc);
 	PlayedDeathFxNetIDs.Add(NetID);
-
-	DLOG("[ClientPostChange] FX Played NetID=%u Cue=%d Pos=%s DeathLoc=%s UseLoc=%s",
-		NetID,
-		Cue,
-		*Pos.ToString(),
-		*DeathLoc.ToString(),
-		*UseLoc.ToString());
 }
 
 #if UE_REPLICATION_COMPILE_SERVER_CODE
@@ -233,11 +203,8 @@ bool FDroneClientBubbleHandler::CleanAgent(const FMassReplicatedAgentHandle Hand
 
 	const bool bRemoved = Super::RemoveAgent(Handle);
 
-	DLOG("[DroneBubble][Server] CleanAgent handleIdx=%d removed=%d",
-		Handle.GetIndex(),
-		(bRemoved == true) ? 1 : 0);
-
-	if ((bRemoved == true) && (Serializer != nullptr))
+	if ((bRemoved == true) &&
+		(Serializer != nullptr))
 	{
 		Serializer->MarkArrayDirty();
 	}
