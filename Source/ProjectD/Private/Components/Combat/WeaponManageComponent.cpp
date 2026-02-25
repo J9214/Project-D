@@ -396,6 +396,8 @@ void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
         
         ScheduleRefreshAttachments();
     }
+    
+    RefreshEquipIMC();
 }
 
 void UWeaponManageComponent::UnequipCurrentWeapon()
@@ -426,6 +428,8 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
 
         ScheduleRefreshAttachments();
     }
+    
+    RefreshEquipIMC();
 }
 
 APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBase> WeaponClass)

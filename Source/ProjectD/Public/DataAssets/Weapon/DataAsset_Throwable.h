@@ -12,6 +12,15 @@ class UNiagaraSystem;
 class UInputMappingContext;
 class APDThrowableProjectile;
 
+UENUM(BlueprintType)
+enum class EPDThrowableEffectType : uint8
+{
+	Fragment,
+	Flame,
+	Smoke,
+	Flash
+};
+
 UCLASS()
 class PROJECTD_API UDataAsset_Throwable : public UPrimaryDataAsset
 {
@@ -24,30 +33,27 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	int32 IMCPriority = 50;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Type")
+	EPDThrowableEffectType EffectType = EPDThrowableEffectType::Fragment;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Projectile")
 	TSubclassOf<APDThrowableProjectile> ProjectileClass;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Data")
 	float MinThrowSpeed = 1200.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Data")
 	float MaxThrowSpeed = 1800.f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Data")
 	float GravityScale = 1.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Data")
 	float FuseTime = 3.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Data")
+	bool bExplosionOnImpact = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
-	float ExplosionDamage = 100.f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
-	float ExplosionRadius = 350.f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable")
-	TSubclassOf<UGameplayEffect> ExplosionGE;
-	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Preview")
 	float PredictSimTime = 2.0f;
 
@@ -60,6 +66,37 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
 	FPDWeaponMontageSet ThrowableMontages;
 	
+	// Fragment
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Fragment")
+	float ExplosionDamage = 100.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Fragment")
+	float ExplosionRadius = 350.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Fragment")
+	TSubclassOf<UGameplayEffect> ExplosionGE;
+	
+	// Flame
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	float FireDuration = 6.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	float FireRadius = 400.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	float FireTickInterval = 0.25f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	float FireDamagePerTick = 5.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	TSubclassOf<UGameplayEffect> FireDamageGE;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
+	TSubclassOf<AActor> FireAreaClass;
+	
+	// GameplayCue Tag
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CueTag")
 	FGameplayTag ExplosionCueTag;
+	
 };

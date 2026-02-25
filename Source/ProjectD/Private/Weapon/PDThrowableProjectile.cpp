@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Engine/OverlapResult.h"
+#include "Weapon/PDThrowableFireArea.h"
 #include "PDGameplayTags.h"
 
 APDThrowableProjectile::APDThrowableProjectile()
@@ -46,11 +47,44 @@ APDThrowableProjectile::APDThrowableProjectile()
 void APDThrowableProjectile::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	Collision->OnComponentHit.AddDynamic(this, &APDThrowableProjectile::OnProjectileHit);
+}
+
+void APDThrowableProjectile::OnProjectileHit(
+	UPrimitiveComponent* HitComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse,
+	const FHitResult& Hit
+)
+{
+	if (!HasAuthority() || !ThrowableData)
+	{
+		return;
+	}
+	
+	if (bExploded || !bExplosionOnImpact)
+	{
+		return;
+	}
+
+	if (!OtherActor || OtherActor == this || OtherActor == GetOwner())
+	{
+		return;
+	}
+
+	bExploded = true;
+	CachedExplosionLocation = GetActorLocation();
+	
+	GetWorldTimerManager().ClearTimer(FuseTimerHandle);
+	
+	Explode();
 }
 
 void APDThrowableProjectile::InitFromData(UDataAsset_Throwable* Data, const FVector& Start, const FVector& Velocity)
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !Data)
 	{
 		return;
 	}
@@ -59,9 +93,11 @@ void APDThrowableProjectile::InitFromData(UDataAsset_Throwable* Data, const FVec
 	SetActorLocation(Start);
 
 	ProjectileMove->Velocity = Velocity;
-	ProjectileMove->ProjectileGravityScale = Data ? Data->GravityScale : 1.0f;
+	ProjectileMove->ProjectileGravityScale = Data->GravityScale;
+	
+	bExplosionOnImpact = Data->bExplosionOnImpact;
 
-	const float Fuse = Data ? Data->FuseTime : 3.0f;
+	const float Fuse = Data->FuseTime;
 	GetWorldTimerManager().SetTimer(FuseTimerHandle, this, &APDThrowableProjectile::Explode, Fuse, false);
 }
 
@@ -72,108 +108,161 @@ void APDThrowableProjectile::Explode()
 		return;
 	}
 	
-	ApplyGE();
-	SendGameplayCueTag();
+	if (!bExploded)
+	{
+		bExploded = true;
+		CachedExplosionLocation = GetActorLocation();
+	}
+	
+	switch (ThrowableData->EffectType)
+	{
+	case EPDThrowableEffectType::Fragment:
+		ApplyExplosionGE();
+		SendExplosionCueTag();
+		break;
+
+	case EPDThrowableEffectType::Flame:
+		SpawnFireArea();
+		SendExplosionCueTag();
+		break;
+
+	default:
+		break;
+	}
 	
 	Destroy();
 }
 
-void APDThrowableProjectile::ApplyGE()
+void APDThrowableProjectile::ApplyExplosionGE()
 {
-	const FVector ExplodeLoc = GetActorLocation();
-
-	if (ThrowableData->ExplosionGE)
+	if (!ThrowableData || !ThrowableData->ExplosionGE)
 	{
-		AActor* OwnerActor = GetOwner();
-		if (!OwnerActor)
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	TArray<FOverlapResult> Overlaps;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ThrowableExplode), false, this);
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActor(OwnerActor);
+
+	FCollisionObjectQueryParams ObjParams;
+	ObjParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	const float Radius = ThrowableData->ExplosionRadius ? ThrowableData->ExplosionRadius : 400.f;
+
+	const bool bHit = GetWorld()->OverlapMultiByObjectType(
+		Overlaps,
+		CachedExplosionLocation,
+		FQuat::Identity,
+		ObjParams,
+		FCollisionShape::MakeSphere(Radius),
+		Params
+	);
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(ThrowableData->ExplosionGE, 1.0f, Context);
+
+	if (bHit && SpecHandle.IsValid())
+	{
+		const float Damage = ThrowableData->ExplosionDamage ? ThrowableData->ExplosionDamage : 50.f;
+		SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Throwable_Fragment_Damage, Damage);
+
+		for (const FOverlapResult& R : Overlaps)
 		{
-			return;
-		}
-		
-		UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
-		if (!SourceASC)
-		{
-			return;
-		}
-		
-		FGameplayEffectContextHandle Context;
-		if (SourceASC)
-		{
-			Context = SourceASC->MakeEffectContext();
-			Context.AddSourceObject(this);
-		}
-
-		TArray<FOverlapResult> Overlaps;
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(ThrowableExplode), false, this);
-		Params.AddIgnoredActor(this);
-		Params.AddIgnoredActor(OwnerActor);
-
-		FCollisionObjectQueryParams ObjParams;
-		ObjParams.AddObjectTypesToQuery(ECC_Pawn);
-
-		const float Radius = ThrowableData->ExplosionRadius ? ThrowableData->ExplosionRadius : 400.f;
-
-		const bool bHit = GetWorld()->OverlapMultiByObjectType(
-			Overlaps,
-			ExplodeLoc,
-			FQuat::Identity,
-			ObjParams,
-			FCollisionShape::MakeSphere(Radius),
-			Params
-		);
-
-		FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(ThrowableData->ExplosionGE, 1.0f, Context);
-
-		if (bHit && SpecHandle.IsValid())
-		{
-			const float Damage = ThrowableData->ExplosionDamage ? ThrowableData->ExplosionDamage : 50.f;
-			SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Throwable_Grenade_Damage, Damage);
-			
-			for (const FOverlapResult& R : Overlaps)
+			APawn* Pawn = Cast<APawn>(R.GetActor());
+			if (!Pawn)
 			{
-				APawn* Pawn = Cast<APawn>(R.GetActor());
-				if (!Pawn)
-				{
-					continue;
-				}
-				
-				UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Pawn);
-				if (!TargetASC)
-				{
-					continue;
-				}
-				
-				SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+				continue;
 			}
+
+			UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Pawn);
+			if (!TargetASC)
+			{
+				continue;
+			}
+
+			SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 		}
 	}
 }
 
-void APDThrowableProjectile::SendGameplayCueTag()
+void APDThrowableProjectile::SpawnFireArea()
 {
-	const FVector ExplodeLoc = GetActorLocation();
-	
-	if (ThrowableData->ExplosionCueTag.IsValid())
+	if (!HasAuthority() || !ThrowableData || !ThrowableData->FireAreaClass)
 	{
-		AActor* OwnerActor = GetOwner();
-		if (!OwnerActor)
-		{
-			return;
-		}
-		
-		UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
-		if (!SourceASC)
-		{
-			return;
-		}
+		return;
+	}
 
-		FGameplayCueParameters Params;
-		Params.Location = ExplodeLoc;
-		Params.Instigator = OwnerActor;
-		Params.EffectCauser = this;
-		Params.SourceObject = ThrowableData;
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
 
-		SourceASC->ExecuteGameplayCue(ThrowableData->ExplosionCueTag, Params);
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = OwnerActor;
+	Params.Instigator = Cast<APawn>(OwnerActor);
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	APDThrowableFireArea* FireArea = World->SpawnActorDeferred<APDThrowableFireArea>(
+		ThrowableData->FireAreaClass,
+		FTransform(FRotator::ZeroRotator, CachedExplosionLocation),
+		OwnerActor,
+		Cast<APawn>(OwnerActor),
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+	);
+
+	if (FireArea)
+	{
+		FireArea->InitFromData(OwnerActor, ThrowableData);
+		FireArea->FinishSpawning(FTransform(FRotator::ZeroRotator, CachedExplosionLocation)); 
 	}
 }
 
+void APDThrowableProjectile::SendExplosionCueTag()
+{
+	if (!ThrowableData || !ThrowableData->ExplosionCueTag.IsValid())
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
+	if (!SourceASC)
+	{
+		return;
+	}
+
+	FGameplayCueParameters Params;
+	Params.Location = GetActorLocation();;
+	Params.Instigator = OwnerActor;
+	Params.EffectCauser = this;
+	Params.SourceObject = ThrowableData;
+
+	SourceASC->ExecuteGameplayCue(ThrowableData->ExplosionCueTag, Params);
+}
