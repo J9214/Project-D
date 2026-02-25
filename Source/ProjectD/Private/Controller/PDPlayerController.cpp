@@ -181,7 +181,7 @@ void APDPlayerController::BindWeaponChangedDelegate()
 		return;
 	}
 
-	WeaponComp->OnEquippedWeaponDataChanged.AddUObject(this, &APDPlayerController::HandleWeaponChanged);
+	WeaponComp->OnEquippedWeaponChanged.AddUObject(this, &APDPlayerController::HandleWeaponChanged);
 
 	if (bWantsToAim)
 	{
@@ -203,7 +203,7 @@ void APDPlayerController::UnbindWeaponChangedDelegate() const
 		return;
 	}
 
-	WeaponComp->OnEquippedWeaponDataChanged.RemoveAll(this);
+	WeaponComp->OnEquippedWeaponChanged.RemoveAll(this);
 }
 
 void APDPlayerController::ShowGameOver()
