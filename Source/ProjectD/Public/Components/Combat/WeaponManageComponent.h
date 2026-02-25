@@ -106,7 +106,7 @@ public:
 	APDThrowableItemBase* GetThrowableInSlot(int32 SlotIndex) const;
 	FORCEINLINE int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
 
-	bool TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const;
+	bool TryGetMontageEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const;
 	bool HasItemInSlot(int32 SlotIndex) const;
 	
 	UFUNCTION(BlueprintCallable, Category="Input")
