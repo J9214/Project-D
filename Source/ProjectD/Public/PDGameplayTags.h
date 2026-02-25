@@ -46,6 +46,7 @@ namespace PDGameplayTags
 	/** GameplayCue Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Weapon_Fire);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GamePlayCue_Skill_Shield);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Movement_Dash);
 	
 	
 	/** SetByCaller Tags **/

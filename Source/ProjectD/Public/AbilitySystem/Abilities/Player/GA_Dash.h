@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
+#include "GameplayTagContainer.h"
 #include "GA_Dash.generated.h"
 
 class UAnimMontage;
@@ -34,4 +35,25 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Dash")
 	TObjectPtr<UAnimMontage> DashMontage;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Dash|Montage")
+	TObjectPtr<UAnimMontage> DashMontage_F;
+
+	UPROPERTY(EditDefaultsOnly, Category="Dash|Montage")
+	TObjectPtr<UAnimMontage> DashMontage_B;
+
+	UPROPERTY(EditDefaultsOnly, Category="Dash|Montage")
+	TObjectPtr<UAnimMontage> DashMontage_L;
+
+	UPROPERTY(EditDefaultsOnly, Category="Dash|Montage")
+	TObjectPtr<UAnimMontage> DashMontage_R;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CueTag")
+	FGameplayTag ExplosionCueTag;
+	
+	UAnimMontage* SelectDashMontage(const APawn* Pawn, const FVector& MoveDir) const;
+	
+	void ExecuteDashCue(const FVector& DashDir) const;
+	
+	
 };
