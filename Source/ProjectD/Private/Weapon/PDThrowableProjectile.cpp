@@ -6,6 +6,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Engine/OverlapResult.h"
 #include "Weapon/PDThrowableFireArea.h"
+#include "Weapon/PDThrowableSmokeArea.h"
 #include "PDGameplayTags.h"
 
 APDThrowableProjectile::APDThrowableProjectile()
@@ -116,18 +117,23 @@ void APDThrowableProjectile::Explode()
 	
 	switch (ThrowableData->EffectType)
 	{
-	case EPDThrowableEffectType::Fragment:
-		ApplyExplosionGE();
-		SendExplosionCueTag();
-		break;
+		case EPDThrowableEffectType::Fragment:
+			ApplyExplosionGE();
+			SendExplosionCueTag();
+			break;
 
-	case EPDThrowableEffectType::Flame:
-		SpawnFireArea();
-		SendExplosionCueTag();
-		break;
-
-	default:
-		break;
+		case EPDThrowableEffectType::Flame:
+			SpawnFireArea();
+			SendExplosionCueTag();
+			break;
+		
+		case EPDThrowableEffectType::Smoke:
+			SpawnSmokeArea();
+			SendExplosionCueTag();
+			break;
+		
+		default:
+			break;
 	}
 	
 	Destroy();
@@ -219,11 +225,6 @@ void APDThrowableProjectile::SpawnFireArea()
 		return;
 	}
 
-	FActorSpawnParameters Params;
-	Params.Owner = OwnerActor;
-	Params.Instigator = Cast<APawn>(OwnerActor);
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
 	APDThrowableFireArea* FireArea = World->SpawnActorDeferred<APDThrowableFireArea>(
 		ThrowableData->FireAreaClass,
 		FTransform(FRotator::ZeroRotator, CachedExplosionLocation),
@@ -236,6 +237,40 @@ void APDThrowableProjectile::SpawnFireArea()
 	{
 		FireArea->InitFromData(OwnerActor, ThrowableData);
 		FireArea->FinishSpawning(FTransform(FRotator::ZeroRotator, CachedExplosionLocation)); 
+	}
+}
+
+void APDThrowableProjectile::SpawnSmokeArea()
+{
+	if (!HasAuthority() || !ThrowableData || !ThrowableData->SmokeAreaClass)
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	APDThrowableSmokeArea* SmokeArea = World->SpawnActorDeferred<APDThrowableSmokeArea>(
+		ThrowableData->SmokeAreaClass,
+		FTransform(FRotator::ZeroRotator, CachedExplosionLocation),
+		OwnerActor,
+		Cast<APawn>(OwnerActor),
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn
+	);
+
+	if (SmokeArea)
+	{
+		SmokeArea->InitFromData(OwnerActor, ThrowableData);
+		SmokeArea->FinishSpawning(FTransform(FRotator::ZeroRotator, CachedExplosionLocation)); 
 	}
 }
 

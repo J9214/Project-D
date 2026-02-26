@@ -11,6 +11,8 @@ class UGameplayEffect;
 class UNiagaraSystem;
 class UInputMappingContext;
 class APDThrowableProjectile;
+class APDThrowableFireArea;
+class APDThrowableSmokeArea;
 
 UENUM(BlueprintType)
 enum class EPDThrowableEffectType : uint8
@@ -66,6 +68,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation")
 	FPDWeaponMontageSet ThrowableMontages;
 	
+	// GameplayCue Tag
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CueTag")
+	FGameplayTag ExplosionCueTag;
+	
 	// Fragment
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Fragment")
 	float ExplosionDamage = 100.f;
@@ -93,10 +99,18 @@ public:
 	TSubclassOf<UGameplayEffect> FireDamageGE;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flame")
-	TSubclassOf<AActor> FireAreaClass;
+	TSubclassOf<APDThrowableFireArea> FireAreaClass;
 	
-	// GameplayCue Tag
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CueTag")
-	FGameplayTag ExplosionCueTag;
-	
+	// Smoke
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Smoke")
+	float SmokeDuration = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Smoke")
+	float SmokeRadius = 450.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Smoke")
+	TSubclassOf<UGameplayEffect> SmokeGE;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Smoke")
+	TSubclassOf<APDThrowableSmokeArea> SmokeAreaClass;
 };

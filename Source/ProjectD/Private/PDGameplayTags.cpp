@@ -47,6 +47,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Fragment, "GameplayCue.Throwable.Explosion.Fragment");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Flame, "GameplayCue.Throwable.Explosion.Flame");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Smoke, "GameplayCue.Throwable.Explosion.Smoke");
 	
 	/** SetByCaller Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_Damage, "Data.Weapon.Damage");

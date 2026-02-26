@@ -49,6 +49,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Weapon_Fire);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Fragment);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Flame);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Smoke);
 	
 	/** SetByCaller Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_Damage);

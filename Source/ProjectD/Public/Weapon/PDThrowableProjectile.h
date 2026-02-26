@@ -36,6 +36,7 @@ private:
 	void ApplyExplosionGE();
 	
 	void SpawnFireArea();
+	void SpawnSmokeArea();
 	
 	void SendExplosionCueTag();
 	

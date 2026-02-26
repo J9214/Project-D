@@ -209,6 +209,12 @@ void APDThrowableFireArea::SpawnFireVFX()
         true
     );
     
+    if (!SpawnedFireVFX)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to spawn fire VFX"));
+        return;
+    }
+    
     const float Radius = (Data ? Data->FireRadius : 350.f);
     SpawnedFireVFX->SetFloatParameter(TEXT("FireRadius"), Radius);
 }
