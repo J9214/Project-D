@@ -7,6 +7,12 @@ ADroneClientBubbleInfo::ADroneClientBubbleInfo(const FObjectInitializer& ObjectI
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+
+	bReplicates = true;
+
+	NetUpdateFrequency = 30.0f;
+	MinNetUpdateFrequency = 15.0f;
+	NetPriority = 2.0f;
 }
 
 void ADroneClientBubbleInfo::Tick(float DeltaTime)

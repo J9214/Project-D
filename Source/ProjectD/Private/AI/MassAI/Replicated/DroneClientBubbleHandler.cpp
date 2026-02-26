@@ -3,7 +3,6 @@
 #include "AI/MassAI/Replicated/DroneReplicatedAgent.h"
 #include "AI/MassAI/MassEntityEffectSubsystem.h"
 #include "MassClientBubbleHandler.h"
-#include "ProjectD/ProjectD.h"
 
 FDroneClientBubbleHandler::FDroneClientBubbleHandler()
 	: TClientBubbleHandlerBase<FDroneFastArrayItem>()
@@ -14,7 +13,7 @@ void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedI
 {
 	auto AddRequirementsForSpawnQuery = [](FMassEntityQuery& Query)
 		{
-			Query.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
+			Query.AddRequirement<FClientVisualFragment>(EMassFragmentAccess::ReadWrite);
 		};
 
 	auto CacheFragmentViewsForSpawnQuery = [](FMassExecutionContext& Context)
@@ -23,12 +22,12 @@ void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedI
 
 	auto SetSpawnedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const int32 EntityIdx)
 		{
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, true);
 		};
 
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, true);
 		};
 
 	PostReplicatedAddHelper(
@@ -44,7 +43,8 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 {
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
-			ApplyReplicatedTransform(EntityView, ReplicatedAgent);
+			TryPlayDeathCueOnce(ReplicatedAgent);
+			ApplyReplicatedVisualState(EntityView, ReplicatedAgent, false);
 		};
 
 	PostReplicatedChangeHelper(
@@ -62,29 +62,111 @@ void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
 	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
 }
 
-void FDroneClientBubbleHandler::ApplyReplicatedTransform(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent) const
+void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
-	FTransformFragment& TransformFragment = EntityView.GetFragmentData<FTransformFragment>();
-	FTransform& Transform = TransformFragment.GetMutableTransform();
+	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
 
-	if (ReplicatedAgent.GetIsDead() == true)
+	UWorld* World = (EffectSubsystem != nullptr) ? EffectSubsystem->GetWorld() : nullptr;
+	const ENetMode NetMode = IsValid(World) ? World->GetNetMode() : NM_MAX;
+
+	if ((NetMode == NM_Client) &&
+		(Agents != nullptr))
 	{
-		Transform.SetLocation(ReplicatedAgent.GetDeathLocation());
-		Transform.SetScale3D(FVector::ZeroVector);
-
-		if (EffectSubsystem != nullptr)
+		for (const int32 Idx : RemovedIndices)
 		{
-			const EMassEntityCueId CueId = (EMassEntityCueId)ReplicatedAgent.GetDeathCueId();
-			EffectSubsystem->PlayCueAtLocation(CueId, ReplicatedAgent.GetDeathLocation());
+			if (Agents->IsValidIndex(Idx) == false)
+			{
+				continue;
+			}
+
+			const FDroneFastArrayItem& Item = (*Agents)[Idx];
+			const FDroneReplicatedAgent& Agent = Item.Agent;
+			const uint32 NetID = (uint32)Agent.GetNetID().GetValue();
+
+			PlayedDeathFxNetIDs.Remove(NetID);
 		}
+	}
+
+	Super::PreReplicatedRemove(RemovedIndices, FinalSize);
+}
+
+void FDroneClientBubbleHandler::ApplyReplicatedVisualState(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const bool bForceSnap) const
+{
+	FClientVisualFragment& VisualTarget = EntityView.GetFragmentData<FClientVisualFragment>();
+
+	const FVector Pos = ReplicatedAgent.GetPosition();
+	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
+
+	VisualTarget.TargetLocation = Pos;
+	VisualTarget.TargetRotation = FQuat(FRotator(0.0f, YawDeg, 0.0f));
+
+	const bool bDead = (ReplicatedAgent.GetIsDead() == true);
+	VisualTarget.bDead = bDead;
+
+	if (bDead == true)
+	{
+		const FVector DeathLoc = ReplicatedAgent.GetDeathLocation();
+		VisualTarget.DeathLocation = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+
+		VisualTarget.bSnapThisFrame = true;
+	}
+	else
+	{
+		VisualTarget.DeathLocation = FVector::ZeroVector;
+
+		if ((bForceSnap == true) || (VisualTarget.bInitialized == false))
+		{
+			VisualTarget.bSnapThisFrame = true;
+		}
+	}
+
+	if (VisualTarget.bInitialized == false)
+	{
+		VisualTarget.bInitialized = true;
+	}
+}
+
+void FDroneClientBubbleHandler::TryPlayDeathCueOnce(const FDroneReplicatedAgent& ReplicatedAgent)
+{
+	UWorld* World = (EffectSubsystem != nullptr) ? EffectSubsystem->GetWorld() : nullptr;
+	const ENetMode NetMode = IsValid(World) ? World->GetNetMode() : NM_MAX;
+
+	if (NetMode != NM_Client)
+	{
 		return;
 	}
 
-	Transform.SetScale3D(FVector::OneVector);
-	Transform.SetLocation(ReplicatedAgent.GetPosition());
+	const uint32 NetID = (uint32)ReplicatedAgent.GetNetID().GetValue();
+	const bool bDead = (ReplicatedAgent.GetIsDead() == true);
+	const EMassEntityCueId Cue = ReplicatedAgent.GetCueId();
 
-	const float YawDeg = FMath::RadiansToDegrees(ReplicatedAgent.GetYawRadians());
-	Transform.SetRotation(FQuat(FRotator(0.0f, YawDeg, 0.0f)));
+	if (bDead == false)
+	{
+		PlayedDeathFxNetIDs.Remove(NetID);
+		return;
+	}
+
+	if (Cue == EMassEntityCueId::None)
+	{
+		return;
+	}
+
+	if (IsValid(EffectSubsystem) == false)
+	{
+		return;
+	}
+
+	if (PlayedDeathFxNetIDs.Contains(NetID) == true)
+	{
+		return;
+	}
+
+	const FVector Pos = ReplicatedAgent.GetPosition();
+	const FVector DeathLoc = ReplicatedAgent.GetDeathLocation();
+	const FVector UseLoc = (DeathLoc.IsNearlyZero() == false) ? DeathLoc : Pos;
+
+	EffectSubsystem->PlayCueAtLocation(Cue, UseLoc);
+	PlayedDeathFxNetIDs.Add(NetID);
 }
 
 #if UE_REPLICATION_COMPILE_SERVER_CODE
@@ -115,99 +197,18 @@ void FDroneClientBubbleHandler::MarkItemDirty(FDroneFastArrayItem& Item) const
 	Serializer->MarkItemDirty(Item);
 }
 
-void FDroneClientBubbleHandler::RegisterNetIdHandle(const FMassNetworkID NetID, const FMassReplicatedAgentHandle Handle)
-{
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return;
-	}
-
-	NetIdToHandle.Add(Key, Handle);
-}
-
-bool FDroneClientBubbleHandler::MarkDeadByNetId(const FMassNetworkID NetID, const FVector_NetQuantize& DeathLoc, const EMassEntityCueId CueId)
-{
-	if ((Agents == nullptr) ||
-		(Serializer == nullptr))
-	{
-		return false;
-	}
-
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return false;
-	}
-
-	const FMassReplicatedAgentHandle* HandlePtr = NetIdToHandle.Find(Key);
-	if (HandlePtr == nullptr)
-	{
-		return false;
-	}
-
-	FDroneFastArrayItem* Item = GetMutableItem(*HandlePtr);
-	if (Item == nullptr)
-	{
-		return false;
-	}
-
-	Item->Agent.SetDead(DeathLoc, CueId);
-
-	Serializer->MarkItemDirty(*Item);
-	return true;
-}
-
-bool FDroneClientBubbleHandler::RemoveByNetId(const FMassNetworkID NetID)
-{
-	const uint32 Key = (uint32)NetID.GetValue();
-	if (Key == 0)
-	{
-		return false;
-	}
-
-	const FMassReplicatedAgentHandle* HandlePtr = NetIdToHandle.Find(Key);
-	if (HandlePtr == nullptr)
-	{
-		return false;
-	}
-
-	return CleanAgent(*HandlePtr);
-}
-
 bool FDroneClientBubbleHandler::CleanAgent(const FMassReplicatedAgentHandle Handle)
 {
 	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
 
-	uint32 NetKey = 0;
-	{
-		FDroneFastArrayItem* Item = GetMutableItem(Handle);
-		if (Item != nullptr)
-		{
-			NetKey = (uint32)Item->Agent.GetNetID().GetValue();
-		}
-	}
-
 	const bool bRemoved = Super::RemoveAgent(Handle);
 
-	UE_LOG(LogProjectD, Warning, TEXT("[DroneBubble] CleanAgent handleIdx=%d removed=%d"),
-		Handle.GetIndex(),
-		(bRemoved == true) ? 1 : 0);
-
-	if (bRemoved == true)
+	if ((bRemoved == true) &&
+		(Serializer != nullptr))
 	{
-		if (NetKey != 0)
-		{
-			NetIdToHandle.Remove(NetKey);
-		}
-
-		if (Serializer != nullptr)
-		{
-			Serializer->MarkArrayDirty();
-		}
+		Serializer->MarkArrayDirty();
 	}
 
 	return bRemoved;
 }
-
 #endif // UE_REPLICATION_COMPILE_SERVER_CODE
