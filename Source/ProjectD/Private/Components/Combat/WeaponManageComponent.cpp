@@ -396,6 +396,8 @@ void UWeaponManageComponent::EquipSlot(int32 SlotIndex)
         
         ScheduleRefreshAttachments();
     }
+    
+    RefreshEquipIMC();
 }
 
 void UWeaponManageComponent::UnequipCurrentWeapon()
@@ -426,6 +428,8 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
 
         ScheduleRefreshAttachments();
     }
+    
+    RefreshEquipIMC();
 }
 
 APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBase> WeaponClass)
@@ -588,7 +592,7 @@ APDThrowableItemBase* UWeaponManageComponent::GetThrowableInSlot(int32 SlotIndex
     return ThrowableSlots.IsValidIndex(LocalIndex) ? ThrowableSlots[LocalIndex].ThrowableItemActor : nullptr;
 }
 
-bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const
+bool UWeaponManageComponent::TryGetMontageEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const
 {
     OutEntry = FPDWeaponMontageEntry();
     
@@ -600,12 +604,8 @@ bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageA
             return false;
         }
         
-        const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-        const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(Action);
-
-        OutEntry.Montage = Entry.Montage;
-        OutEntry.CommitEventTag = Entry.CommitEventTag;
-        OutEntry.PlayRate = Entry.PlayRate;
+        const auto& Entry = Weapon->WeaponData->WeaponMontages.Get(Action);
+        OutEntry = Entry;
         
         return true;
     }
@@ -618,12 +618,8 @@ bool UWeaponManageComponent::TryGetEquipEntry(int32 SlotIndex, EPDWeaponMontageA
             return false;
         }
         
-        const UDataAsset_Throwable* ThrowableDA = Throwable->GetThrowableData();
-        const FPDWeaponMontageEntry& Entry = ThrowableDA->ThrowableMontages.Get(Action);
-        
-        OutEntry.Montage = Entry.Montage;
-        OutEntry.CommitEventTag = Entry.CommitEventTag;
-        OutEntry.PlayRate = Entry.PlayRate;
+        const auto& Entry = Throwable->GetThrowableData()->ThrowableMontages.Get(Action);
+        OutEntry = Entry;
         
         return true;
     }
