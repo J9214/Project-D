@@ -6,6 +6,7 @@
 #include "MassProcessor.h"
 #include "MassCommonTypes.h"
 #include "MassEntityTypes.h"
+#include "MassEntityHandle.h"
 #include "MassBoidsDestructionProcessor.generated.h"
 
 UCLASS()

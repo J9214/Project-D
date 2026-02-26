@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "MassEntityTypes.h"
+#include "MassEntityHandle.h"
 #include "AI/MassAI/MassEntityCueId.h"
 #include "DeathScheduleFragment.generated.h"
 
