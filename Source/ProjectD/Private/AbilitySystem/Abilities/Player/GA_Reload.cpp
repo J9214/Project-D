@@ -26,43 +26,55 @@ void UGA_Reload::ActivateAbility(
 		return;
 	}
 	
-	APDWeaponBase* Weapon = WMC->GetEquippedWeapon();
-	if (!IsValid(Weapon) || !Weapon->WeaponData)
+	int32 CurrentEquippedSlotIndex = WMC->GetEquippedSlotIndex();
+	FPDWeaponMontageEntry Entry;
+	if (!WMC->TryGetMontageEntry(CurrentEquippedSlotIndex, EPDWeaponMontageAction::Reload, Entry))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 	
-	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Reload);
-	
-	UAnimMontage* MontageToPlay = Entry.Montage;
-	FGameplayTag CommitTag = Entry.CommitEventTag;
-	float PlayRate = Entry.PlayRate;
-	
 	if (HasAuthority(&ActivationInfo))
 	{
-		auto* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-			this,
-			CommitTag,
-			nullptr,
-			true,
-			false
-		);
-		
-		WaitEventTask->EventReceived.AddDynamic(this, &UGA_Reload::OnEventTagReceived);
-		WaitEventTask->ReadyForActivation();
+		if (Entry.CommitEventTag.IsValid() && Entry.Montage)
+		{
+			auto* WaitEvent = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+				this,
+				Entry.CommitEventTag,
+				nullptr,
+				true,
+				false
+			);
+			WaitEvent->EventReceived.AddDynamic(this, &UGA_Reload::OnEventTagReceived);
+			WaitEvent->ReadyForActivation();
+		}
+		else
+		{
+			if (CommitAbility(Handle, ActorInfo, ActivationInfo))
+			{
+				WMC->UnequipCurrentWeapon();
+			}
+			
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		}
 	}
 	
-	UAbilityTask_PlayMontageAndWait* PlayTask =
-		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("ReloadMontageTask"), MontageToPlay, PlayRate);
-	if (IsValid(PlayTask))
+	if (Entry.Montage)
 	{
-		PlayTask->OnCompleted.AddDynamic(this, &UGA_Reload::OnMontageCompleted);
-		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Reload::OnMontageInterrupted);
-		PlayTask->OnCancelled.AddDynamic(this, &UGA_Reload::OnMontageCancelled);
-		PlayTask->ReadyForActivation();
+		UAbilityTask_PlayMontageAndWait* PlayTask =
+			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+				this, TEXT("ReloadMontageTask"), Entry.Montage, Entry.PlayRate);
+		if (IsValid(PlayTask))
+		{
+			PlayTask->OnCompleted.AddDynamic(this, &UGA_Reload::OnMontageCompleted);
+			PlayTask->OnInterrupted.AddDynamic(this, &UGA_Reload::OnMontageInterrupted);
+			PlayTask->OnCancelled.AddDynamic(this, &UGA_Reload::OnMontageCancelled);
+			PlayTask->ReadyForActivation();
+		}
+	}
+	else
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 	}
 }
 

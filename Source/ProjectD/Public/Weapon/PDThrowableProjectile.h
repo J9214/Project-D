@@ -22,10 +22,23 @@ protected:
 	virtual void BeginPlay() override;
 	
 private:
+	UFUNCTION()
+	void OnProjectileHit(
+		UPrimitiveComponent* HitComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		FVector NormalImpulse,
+		const FHitResult& Hit
+	);
+	
 	void Explode();
 	
-	void ApplyGE();
-	void SendGameplayCueTag();
+	void ApplyExplosionGE();
+	
+	void SpawnFireArea();
+	void SpawnSmokeArea();
+	
+	void SendExplosionCueTag();
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -36,10 +49,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UProjectileMovementComponent> ProjectileMove;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throwable")
+	
+private:
+	UPROPERTY()
 	TObjectPtr<UDataAsset_Throwable> ThrowableData;
-
+	
+	UPROPERTY()
+	bool bExploded = false;
+	
+	UPROPERTY()
+	FVector CachedExplosionLocation = FVector::ZeroVector;
+	
+	bool bExplosionOnImpact = false;
+	
 	FTimerHandle FuseTimerHandle;
-
 };
