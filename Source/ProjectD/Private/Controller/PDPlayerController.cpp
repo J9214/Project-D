@@ -5,6 +5,7 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Pawn/PDPawnBase.h"
 #include "GameState/PDGameStateBase.h"
+#include "UI/HUD/IngameHUD.h"
 
 void APDPlayerController::BeginPlay()
 {
@@ -33,10 +34,10 @@ void APDPlayerController::OnPossess(APawn* InPawn)
 	if (IsLocalController())
 	{
 		if (PlayerHUDClass) {
-			UUserWidget* PlayerHUD = CreateWidget<UUserWidget>(this, PlayerHUDClass);
-			if (PlayerHUD)
+			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+			if (PlayerHUDWidget)
 			{
-				PlayerHUD->AddToViewport();
+				PlayerHUDWidget->AddToViewport();
 			}
 		}
 
@@ -218,3 +219,12 @@ void APDPlayerController::ShowGameOver()
 		SetInputMode(FInputModeUIOnly());
 	}
 }
+
+void APDPlayerController::InitGoldDisplay(int InGold)
+{
+}
+
+void APDPlayerController::InitItemDataDisplay()
+{
+}
+

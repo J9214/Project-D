@@ -8,6 +8,8 @@
 class APDWeaponBase;
 class UUserWidget;
 class UWeaponManageComponent;
+class UPDShopComponent;
+class UIngameHUD;
 
 UCLASS()
 class PROJECTD_API APDPlayerController : public APlayerController
@@ -15,6 +17,9 @@ class PROJECTD_API APDPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+
+	FORCEINLINE UPDShopComponent* GetShopComponent() const { return ShopComponent; }
+
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 
@@ -24,15 +29,25 @@ public:
 
 	void ShowGameOver();
 
+	void InitGoldDisplay(int InGold);
+	void InitItemDataDisplay();
+
+	UIngameHUD* GetIngameHUDWidget() const { return PlayerHUDWidget; }
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> PlayerHUDClass;
+
+	UPROPERTY()
+	TObjectPtr<UIngameHUD> PlayerHUDWidget;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> ResultWidgetClass;
 	UPROPERTY()
 	UUserWidget* ResultWidget;
-	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shop")
+	TObjectPtr<UPDShopComponent> ShopComponent;
 private:
 	UFUNCTION(BlueprintCallable)
 	void OnAimStarted();

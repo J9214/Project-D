@@ -10,6 +10,7 @@
 class UPDAbilitySystemComponent;
 class UPDAttributeSetBase;
 class UGameplayEffect;
+class UPDInventoryComponent;
 
 UCLASS()
 class PROJECTD_API APDPlayerState : public APlayerState, public IAbilitySystemInterface, public IPDTeamInterface
@@ -20,6 +21,9 @@ public:
 	APDPlayerState();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	FORCEINLINE UPDInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
 	virtual ETeamType GetTeamID() const override { return TeamID; }
 	
 	UFUNCTION(BlueprintPure)
@@ -63,4 +67,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "GAS")
 	TSubclassOf<UGameplayEffect> GE_ReviveClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inven")
+	TObjectPtr<UPDInventoryComponent> InventoryComponent;
 };

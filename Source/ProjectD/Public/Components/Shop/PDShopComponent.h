@@ -4,8 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Components/Shop/FPDItemInfo.h"
+#include "Net/Serialization/FastArraySerializer.h"
 #include "PDShopComponent.generated.h"
 
+UENUM(BlueprintType)
+enum class EShopBuyResult : uint8
+{
+	Success,
+	NotEnoughGold,
+	OutOfStock,
+	InvalidItem
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class PROJECTD_API UPDShopComponent : public UActorComponent
@@ -15,13 +25,13 @@ class PROJECTD_API UPDShopComponent : public UActorComponent
 public:	
 	UPDShopComponent();
 
-	//UFUNCTION(BlueprintCallable, Category = "Shop|Data")
-	//UDataTable* GetItemDataTable() const;
-
+	UFUNCTION(BlueprintCallable)
+	void RequestBuy(FName ItemId);
 protected:
 
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shop|Data")
-	//TSoftObjectPtr<UDataTable> ItemDataTable;
+	virtual void BeginPlay() override;
 
+	UFUNCTION(Server, Reliable)
+	void AcceptanceBuy(FName ItemId);
 
 };

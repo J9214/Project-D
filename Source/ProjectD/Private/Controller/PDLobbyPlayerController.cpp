@@ -169,14 +169,7 @@ void APDLobbyPlayerController::TryJoinNextAvailableSession()
         return;
     }
 
-    const FUniqueNetIdRepl& ReplId = PDPS->GetUniqueId();
-    if (!ReplId.IsValid())
-    {
-        UE_LOG(LogTemp, Error, TEXT("PlayerState UniqueId is invalid"));
-        return;
-    }
-
-    const FString NetIdKey = ReplId.ToString();
+    const FString NetIdKey = PDPS->GetUniqueId().ToString();
 
     IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
     if (Subsystem)

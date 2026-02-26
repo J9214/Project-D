@@ -1,4 +1,4 @@
-#include "Components/Combat/WeaponManageComponent.h"
+﻿#include "Components/Combat/WeaponManageComponent.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
 #include "DataAssets/Weapon/DataAsset_Throwable.h"
 #include "Weapon/PDWeaponBase.h"
@@ -910,5 +910,32 @@ void UWeaponManageComponent::RefreshAttachments()
         {
             ThrowableAttachToBack(Throwable, i);
         }
+    }
+}
+
+void UWeaponManageComponent::ChangeWeapon(int32 TargetSlot, TSubclassOf<APDWeaponBase> NewWeaponClass)
+{
+    if (!(GetOwnerRole() == ROLE_Authority) || !Slots.IsValidIndex(TargetSlot))
+    {
+        return;
+    }
+
+    if (IsValid(Slots[TargetSlot].WeaponActor))
+    {
+        if (TargetSlot == EquippedSlotIndex)
+        {
+            UnequipCurrentWeapon();
+        }
+
+        Slots[TargetSlot].WeaponActor->Destroy();
+        Slots[TargetSlot].WeaponActor = nullptr;
+    }
+
+    APDWeaponBase* NewWeapon = SpawnWeaponActor(NewWeaponClass);
+    if (IsValid(NewWeapon))
+    {
+        NewWeapon->InitWeaponData();
+        Slots[TargetSlot].WeaponActor = NewWeapon;
+        AttachToBack(NewWeapon, TargetSlot);
     }
 }
