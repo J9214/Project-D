@@ -5,8 +5,6 @@
 #include "ProjectD/ProjectD.h"
 #include "Engine/World.h"
 
-#define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
-
 UMassDelayRemovalProcessor::UMassDelayRemovalProcessor()
 	:EntityQuery(*this)
 {
@@ -45,22 +43,12 @@ void UMassDelayRemovalProcessor::Execute(FMassEntityManager& EntityManager, FMas
 				{
 					S.bMarkedForRemoval = true;
 					ExecContext.Defer().AddTag<FMassEntityPendingRemovalTag>(Entity);
-
-					DLOG("[DelayedRemove] Entity=%d RemoveAt=%u Now=%u",
-						Entity.Index,
-						S.RemoveAtFrame,
-						NowFrame);
 				}
 
 				if ((S.DestroyAtFrame != 0) &&
 					(NowFrame >= S.DestroyAtFrame))
 				{
 					ExecContext.Defer().DestroyEntity(Entity);
-
-					DLOG("[DelayedDestroy] Entity=%d DestroyAt=%u Now=%u",
-						Entity.Index,
-						S.DestroyAtFrame,
-						NowFrame);
 				}
 			}
 		});

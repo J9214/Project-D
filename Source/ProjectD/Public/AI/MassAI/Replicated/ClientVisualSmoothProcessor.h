@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,9 +6,6 @@
 #include "AI/MassAI/Replicated/ClientVisualFragment.h"
 #include "ClientVisualSmoothProcessor.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class PROJECTD_API UClientVisualSmoothProcessor : public UMassProcessor
 {
@@ -27,9 +22,9 @@ private:
 	FMassEntityQuery EntityQuery;
 
 private:
-	UPROPERTY(EditAnywhere, Category = "Drone|Visual")
+	UPROPERTY(EditAnywhere, Category = "Visual")
 	float LocationInterpSpeed = 18.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Drone|Visual")
+	UPROPERTY(EditAnywhere, Category = "Visual")
 	float RotationInterpSpeed = 20.0f;
 };

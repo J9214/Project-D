@@ -12,8 +12,6 @@
 #include "MassReplicationFragments.h"
 #include "MassLODTypes.h"
 
-#define DLOG(Format, ...) UE_LOG(LogProjectD, Warning, TEXT("[F=%u] " Format), (uint32)GFrameCounter, ##__VA_ARGS__)
-
 void UDroneMassReplicator::AddRequirements(FMassEntityQuery& EntityQuery)
 {
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
@@ -119,11 +117,6 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			{
 				Item->Agent.SetDead(Schedule.DeathLoc, EMassEntityCueId::Drone_Death);
 				bMarkItemDirty = true;
-
-				DLOG("[RepModify] Client=%d NetID=%u => SetDead Loc=%s",
-					ClientHandle.GetIndex(),
-					(uint32)Item->Agent.GetNetID().GetValue(),
-					*FVector(Schedule.DeathLoc).ToString());
 			}
 
 			if (bMarkItemDirty == true)
@@ -145,20 +138,7 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			FDroneClientBubbleHandler& Bubble =
 				BubbleInfo.GetSerializerMutable().GetBubbleHandlerMutable();
 
-			FDroneFastArrayItem* Item = Bubble.GetMutableItem(Handle);
-			if (Item == nullptr)
-			{
-				DLOG("[ServerRemoveCB] Client=%d HandleIdx=%d Item=NULL", ClientHandle.GetIndex(), Handle.GetIndex());
-				return;
-			}
-
-			const uint32 NetID = (uint32)Item->Agent.GetNetID().GetValue();
-			const bool bRemoved = Bubble.CleanAgent(Handle);
-
-			DLOG("[ServerRemoveCB] Client=%d NetID=%u => CleanAgent=%d",
-				ClientHandle.GetIndex(),
-				NetID,
-				(bRemoved == true) ? 1 : 0);
+			Bubble.CleanAgent(Handle);
 		};
 
 	CalculateClientReplication<FDroneFastArrayItem>(
