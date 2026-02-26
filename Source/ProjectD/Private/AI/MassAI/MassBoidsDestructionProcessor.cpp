@@ -3,12 +3,12 @@
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
-#include "AI/MassAI/Replicated/DroneEventQueueSubsystem.h"
-#include "AI/MassAI/MassEntityCueId.h"
 #include "MassCommonFragments.h"
 #include "MassExecutionContext.h"
 #include "MassEntityView.h"
 #include "MassReplicationFragments.h"
+#include "AI/MassAI/Replicated/DeathScheduleFragment.h"
+#include "ProjectD/ProjectD.h"
 
 UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
 	:EntityQuery(*this)
@@ -21,8 +21,9 @@ UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
 
 void UMassBoidsDestructionProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
-	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FDeathScheduleFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
 
 	EntityQuery.RegisterWithProcessor(*this);
@@ -30,15 +31,6 @@ void UMassBoidsDestructionProcessor::ConfigureQueries(const TSharedRef<FMassEnti
 
 void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
-	for (const FMassEntityHandle& E : PendingDestroyEntities)
-	{
-		if (EntityManager.IsEntityValid(E) == true)
-		{
-			Context.Defer().DestroyEntity(E);
-		}
-	}
-	PendingDestroyEntities.Reset();
-
 	UWorld* World = GetWorld();
 	if (IsValid(World) == false)
 	{
@@ -81,58 +73,53 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 		}
 	}
 
-	UDroneEventQueueSubsystem* EventSub = World->GetSubsystem<UDroneEventQueueSubsystem>();
 	UMassProxyPoolSubsystem* Pool = World->GetSubsystem<UMassProxyPoolSubsystem>();
 
-	if ((IsValid(EventSub) == true) &&
-		(IsValid(Pool) == true))
-	{
-		EntityQuery.ForEachEntityChunk(Context, [this, EventSub, Pool](FMassExecutionContext& ExecContext)
+	EntityQuery.ForEachEntityChunk(Context, [this, Pool](FMassExecutionContext& ExecContext)
+		{
+			const TArrayView<FMassBoidsHealthFragment> Healths = ExecContext.GetMutableFragmentView<FMassBoidsHealthFragment>();
+			const TConstArrayView<FTransformFragment> Transforms = ExecContext.GetFragmentView<FTransformFragment>();
+			TArrayView<FDeathScheduleFragment> Schedules = ExecContext.GetMutableFragmentView<FDeathScheduleFragment>();
+
+			const uint32 NowFrame = (uint32)GFrameCounter;
+
+			constexpr uint32 RemoveDelayFrames = 2;
+			constexpr uint32 DestroyDelayFrames = 4;
+
+			const int32 NumEntities = ExecContext.GetNumEntities();
+			for (int32 i = 0; i < NumEntities; ++i)
 			{
-				const TConstArrayView<FMassBoidsHealthFragment> Healths = ExecContext.GetFragmentView<FMassBoidsHealthFragment>();
-				const TConstArrayView<FTransformFragment> Transforms = ExecContext.GetFragmentView<FTransformFragment>();
-
-				const int32 NumEntities = ExecContext.GetNumEntities();
-				for (int32 i = 0; i < NumEntities; ++i)
+				if (Healths[i].Health > 0.0f)
 				{
-					if (Healths[i].Health > 0.0f)
-					{
-						continue;
-					}
-
-					const FMassEntityHandle Entity = ExecContext.GetEntity(i);
-
-					FMassNetworkID NetID;
-					{
-						const FMassEntityView View = FMassEntityView::TryMakeView(ExecContext.GetEntityManagerChecked(), Entity);
-						if (View.IsValid() == true)
-						{
-							const FMassNetworkIDFragment* NetFrag = View.GetFragmentDataPtr<FMassNetworkIDFragment>();
-							if (NetFrag != nullptr)
-							{
-								NetID = NetFrag->NetID;
-							}
-						}
-					}
-
-					const FVector DeathLocation = Transforms[i].GetTransform().GetLocation();
-
-					if (IsValid(EventSub) == true &&
-						NetID.IsValid() == true)
-					{
-						// if need CudId Define Enum
-						EventSub->EnqueueDeathEvent(NetID, DeathLocation, EMassEntityCueId::Drone_Death);
-					}
-
-					ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);
-
-					if (IsValid(Pool) == true)
-					{
-						Pool->Release(Entity);
-					}
-
-					PendingDestroyEntities.Add(Entity);
+					continue;
 				}
-			});
-	}
+
+				const FMassEntityHandle Entity = ExecContext.GetEntity(i);
+				FDeathScheduleFragment& Schedule = Schedules[i];
+
+				if (Schedule.RemoveAtFrame != 0)
+				{
+					continue;
+				}
+
+				Schedule.RemoveAtFrame = NowFrame + RemoveDelayFrames;
+				Schedule.DestroyAtFrame = NowFrame + DestroyDelayFrames;
+				Schedule.DeathLoc = Transforms[i].GetTransform().GetLocation();
+				Schedule.bMarkedForRemoval = false;
+
+				ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);
+
+				if (IsValid(Pool) == true)
+				{
+					Pool->Release(Entity);
+				}
+
+				UE_LOG(LogProjectD, Warning, TEXT("[F=%u][DeathSchedule] Entity=%d RemoveAt=%u DestroyAt=%u Loc=%s"),
+					(uint32)GFrameCounter,
+					Entity.Index,
+					Schedule.RemoveAtFrame,
+					Schedule.DestroyAtFrame,
+					*FVector(Schedule.DeathLoc).ToString());
+			}
+		});
 }

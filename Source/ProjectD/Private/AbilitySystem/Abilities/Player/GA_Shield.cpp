@@ -1,9 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Pawn/PDPawnBase.h"
 #include "AbilitySystem/Abilities/Player/GA_Shield.h"
-
+#include "Pawn/PDPawnBase.h"
 #include "AbilitySystemComponent.h"
+
 
 
 UGA_Shield::UGA_Shield()
