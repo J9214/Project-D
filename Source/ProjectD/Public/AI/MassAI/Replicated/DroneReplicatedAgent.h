@@ -21,20 +21,20 @@ public:
 	FORCEINLINE FVector GetPosition() const { return PositionYaw.GetPosition(); };
 	FORCEINLINE float GetYawRadians() const { return PositionYaw.GetYaw(); };
 
-	FORCEINLINE bool GetIsDead() const { return (bDead == 1); }
+	FORCEINLINE bool GetIsDead() const { return (bDead == true); }
 	FORCEINLINE FVector GetDeathLocation() const { return DeathLocation; }
-	FORCEINLINE EMassEntityCueId  GetDeathCueId() const { return DeathCueId; }
+	FORCEINLINE EMassEntityCueId GetCueId() const { return CueId; }
 
 private:
 	UPROPERTY(Transient)
 	FReplicatedAgentPositionYawData PositionYaw;
 
 	UPROPERTY(Transient)
-	bool bDead = 0;
+	bool bDead = false;
 
 	UPROPERTY(Transient)
 	FVector_NetQuantize DeathLocation = FVector::ZeroVector;
 
 	UPROPERTY(Transient)
-	EMassEntityCueId DeathCueId = EMassEntityCueId::Drone_Death;
+	EMassEntityCueId CueId = EMassEntityCueId::None;
 };

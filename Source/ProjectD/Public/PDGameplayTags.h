@@ -31,13 +31,15 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Movement);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Movement_Dash);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Movement_WallJump);
-
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Skill_Shield);
+	
 	/** Player State Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Firinig);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Equipping);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Unequipping);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Reloading);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Throwing);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Shielding);
 	
 	/** Event Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipRequest);
@@ -50,6 +52,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Fragment);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Flame);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Smoke);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GamePlayCue_Skill_Shield);
 	
 	/** SetByCaller Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_Damage);
