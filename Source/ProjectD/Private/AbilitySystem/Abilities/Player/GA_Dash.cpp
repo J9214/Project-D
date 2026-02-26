@@ -1,6 +1,5 @@
 #include "AbilitySystem/Abilities/Player/GA_Dash.h"
 
-#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "PDGameplayTags.h"
 #include "Components/Input/MovementBridgeComponent.h"
@@ -34,20 +33,41 @@ void UGA_Dash::ActivateAbility(
 		return;
 	}
 
+	UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo();
+	if (!OwnerASC)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
+
+	if (!OwnerASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_DashAvailable))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (OwnerASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_Dashing))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
-	
-	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerPawn);
-	if (!SourceASC)
-	{
-		return;
-	}
 
 	const FVector Start = OwnerPawn->GetActorLocation();
-	const FVector DashDir = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
+	FVector DashDir = OwnerPawn->GetDirectionByMoveInput(OwnerPawn->GetActorForwardVector());
+	DashDir.Z = 0.f;
+	if (DashDir.IsNearlyZero())
+	{
+		DashDir = OwnerPawn->GetActorForwardVector();
+		DashDir.Z = 0.f;
+	}
+	DashDir = DashDir.GetSafeNormal();
+
 	FVector Target = Start + DashDir * DashDistance;
 
 	FHitResult Hit;
@@ -55,25 +75,48 @@ void UGA_Dash::ActivateAbility(
 
 	const bool bBlocked = OwnerPawn->GetWorld()->SweepSingleByChannel(
 		Hit, Start, Target, FQuat::Identity,
-		ECC_Visibility,
+		ECC_Pawn,
 		FCollisionShape::MakeSphere(20.f),
 		Params
 	);
 
 	if (bBlocked)
 	{
-		Target = Hit.Location;
+		Target = Hit.Location - (DashDir * CollisionSafetyOffset);
+	}
+	Target.Z = Start.Z;
+
+	const float ActualDistance = FVector::Dist2D(Start, Target);
+	if (bCancelDashIfTooShort && ActualDistance < MinDashTravelDistance)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
 	}
 
+	FVector LaunchDir = (Target - Start);
+	LaunchDir.Z = 0.f;
+	LaunchDir = LaunchDir.GetSafeNormal();
+	if (LaunchDir.IsNearlyZero())
+	{
+		LaunchDir = DashDir;
+	}
+
+	const float Speed = FMath::Max(0.f, DashSpeed);
+	const FVector LaunchVelocity = LaunchDir * Speed;
+
 	FMoveRequest Req;
-	Req.Type = EMoveRequestType::MoveTo;
+	Req.Type = EMoveRequestType::MoveLaunch;
 	Req.Start = Start;
-	Req.Target = Target;
-	Req.DurationMs = DashDurationMs;
+	Req.LaunchVelocity = LaunchVelocity;
+	Req.ForceMovementMode = "Falling";
 	Req.Priority = Priority;
+	Req.bCancelExisting = true;
 	Bridge->EnqueueMoveRequest(Req);
 
-	DashMontage = SelectDashMontage(OwnerPawn, DashDir);
+	OwnerASC->RemoveLooseGameplayTag(PDGameplayTags::Player_State_DashAvailable);
+	OwnerASC->AddLooseGameplayTag(PDGameplayTags::Player_State_Dashing);
+
+	UAnimMontage* DashMontage = SelectDashMontage(OwnerPawn, DashDir);
 	ExecuteDashCue(DashDir);
 
 	UAbilityTask_PlayMontageAndWait* PlayTask =
@@ -86,11 +129,30 @@ void UGA_Dash::ActivateAbility(
 		PlayTask->OnCancelled.AddDynamic(this, &UGA_Dash::OnMontageCancelled);
 		PlayTask->ReadyForActivation();
 	}
+	else
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+	}
 }
+
+void UGA_Dash::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		OwnerASC->RemoveLooseGameplayTag(PDGameplayTags::Player_State_Dashing);
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
 
 UAnimMontage* UGA_Dash::SelectDashMontage(const APawn* Pawn, const FVector& MoveDir) const
 {
-	if (!Pawn) return DashMontage_F;
+	if (!Pawn)
+	{
+		return DashMontage_F;
+	}
 
 	const FVector Dir = MoveDir.GetSafeNormal();
 	const FVector Forward = Pawn->GetActorForwardVector().GetSafeNormal();
@@ -99,16 +161,18 @@ UAnimMontage* UGA_Dash::SelectDashMontage(const APawn* Pawn, const FVector& Move
 	const float ForwardDot = FVector::DotProduct(Dir, Forward);
 	const float RightDot = FVector::DotProduct(Dir, Right);
 
+	UAnimMontage* SelectedMontage = DashMontage_F;
+
 	if (FMath::Abs(ForwardDot) >= FMath::Abs(RightDot))
 	{
-		return (ForwardDot >= 0.f) ? DashMontage_F : (DashMontage_B ? DashMontage_B : DashMontage_F);
+		SelectedMontage = (ForwardDot >= 0.f) ? DashMontage_F : DashMontage_B;
 	}
 	else
 	{
-		return (RightDot >= 0.f)
-			       ? (DashMontage_R ? DashMontage_R : DashMontage_F)
-			       : (DashMontage_L ? DashMontage_L : DashMontage_F);
+		SelectedMontage = (RightDot >= 0.f) ? DashMontage_R : DashMontage_L;
 	}
+
+	return SelectedMontage;
 }
 
 void UGA_Dash::ExecuteDashCue(const FVector& DashDir) const
@@ -119,7 +183,7 @@ void UGA_Dash::ExecuteDashCue(const FVector& DashDir) const
 		return;
 	}
 		
-	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
 	if (!SourceASC)
 	{
 		return;
@@ -135,9 +199,7 @@ void UGA_Dash::ExecuteDashCue(const FVector& DashDir) const
 	static FGameplayTag DashCueTag = PDGameplayTags::GameplayCue_Movement_Dash;
 
 	FGameplayCueParameters Params;
-	Params.Location = OwnerActor->GetActorLocation();
 	Params.Normal   = Dir;   
-	Params.RawMagnitude = DashDistance;          
 
 	SourceASC->ExecuteGameplayCue(DashCueTag, Params);
 }

@@ -45,4 +45,5 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category="WallJump")
 	TObjectPtr<UAnimMontage> JumpMontage;
+	
 };

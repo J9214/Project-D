@@ -1,9 +1,11 @@
 
 #include "AbilitySystem/Abilities/Player/GA_WallJump.h"
 #include "Components/Input/MovementBridgeComponent.h"
+#include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Pawn/PDPawnBase.h"
+#include "PDGameplayTags.h"
 
 UGA_WallJump::UGA_WallJump()
 {
@@ -75,6 +77,14 @@ void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		Req.ForceMovementMode = "Falling";
 		
 		Bridge->EnqueueMoveRequest(Req);
+
+		if (UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			if (!OwnerASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_DashAvailable))
+			{
+				OwnerASC->AddLooseGameplayTag(PDGameplayTags::Player_State_DashAvailable);
+			}
+		}
 	
 		UAbilityTask_PlayMontageAndWait* PlayTask =
 			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
