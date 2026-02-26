@@ -111,7 +111,7 @@ void UMassProxyAssignmentProcessor::Execute(FMassEntityManager& EntityManager, F
 	TArray<FCandidate> Candidates;
 	Candidates.Reserve(256);
 
-	EntityQuery.ForEachEntityChunk(EntityManager, Context, [&](FMassExecutionContext& ExecContext)
+	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& ExecContext)
 		{
 			const TConstArrayView<FTransformFragment> Transforms = ExecContext.GetFragmentView<FTransformFragment>();
 			const TConstArrayView<FMassBoidsHealthFragment> Healths = ExecContext.GetFragmentView<FMassBoidsHealthFragment>();
