@@ -13,6 +13,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ADS, "InputTag.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Weapon_ChangeFireMode, "InputTag.Weapon.ChangeFireMode");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Throwable_Throw, "InputTag.Throwable.Throw");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Throwable_Equip, "InputTag.Throwable.Equip");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillQ, "InputTag.Ability.SkillQ");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillE, "InputTag.Ability.SkillE");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_Dash, "InputTag.Ability.Movement.Dash");
@@ -26,6 +27,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ADS, "Player.Ability.Weapon.ADS");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_ChangeFireMode, "Player.Ability.Weapon.ChangeFireMode");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Throwable_Throw, "Player.Ability.Throwable.Throw");
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Throwable_Equip, "Player.Ability.Throwable.Equip");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement, "Player.Ability.Movement");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_Dash, "Player.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");

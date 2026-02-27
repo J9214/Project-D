@@ -412,23 +412,11 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
         return;
     }
 
-    if (IsWeaponSlotIndex(EquippedSlotIndex))
-    {
-        EquippedWeapon = nullptr;
-        EquippedThrowable = nullptr;
-        EquippedSlotIndex = INDEX_NONE;
+    EquippedWeapon = nullptr;
+    EquippedThrowable = nullptr;
+    EquippedSlotIndex = INDEX_NONE;
 
-        ScheduleRefreshAttachments();
-    }
-    else if (IsThrowableSlotIndex(EquippedSlotIndex))
-    {
-        EquippedWeapon = nullptr;
-        EquippedThrowable = nullptr;
-        EquippedSlotIndex = INDEX_NONE;
-
-        ScheduleRefreshAttachments();
-    }
-    
+    ScheduleRefreshAttachments();
     RefreshEquipIMC();
 }
 
@@ -590,6 +578,35 @@ APDThrowableItemBase* UWeaponManageComponent::GetThrowableInSlot(int32 SlotIndex
 {
     const int32 LocalIndex = ToThrowableLocalIndex(SlotIndex);
     return ThrowableSlots.IsValidIndex(LocalIndex) ? ThrowableSlots[LocalIndex].ThrowableItemActor : nullptr;
+}
+
+int32 UWeaponManageComponent::FindNextThrowableGlobalSlotIndex() const
+{
+    if (ThrowableSlotCount <= 0)
+    {
+        return INDEX_NONE;
+    }
+
+    int32 StartLocalIndex = 0;
+    
+    if (IsThrowableSlotIndex(EquippedSlotIndex))
+    {
+        const int32 CurLocalIndex = ToThrowableLocalIndex(EquippedSlotIndex);
+        StartLocalIndex = (CurLocalIndex + 1) % ThrowableSlotCount;
+    }
+
+    for (int32 i = 0; i < ThrowableSlotCount; ++i)
+    {
+        const int32 LocalIndex = (StartLocalIndex + i) % ThrowableSlotCount;
+        const int32 GlobalIndex = WeaponSlotCount + LocalIndex;
+
+        if (HasItemInSlot(GlobalIndex))
+        {
+            return GlobalIndex;
+        }
+    }
+
+    return INDEX_NONE;
 }
 
 bool UWeaponManageComponent::TryGetMontageEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const
