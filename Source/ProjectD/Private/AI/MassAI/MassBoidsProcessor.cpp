@@ -1,12 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "AI/MassAI/MassBoidsProcessor.h"
 #include "MassCommonFragments.h"		// Tranform Fragment
 #include "MassMovementFragments.h"		// VelocityFragment
 #include "MassExecutionContext.h"
 #include "AI/MassAI/MassBoidsFragment.h"
 #include "AI/MassAI/MassTargetFragment.h"
+#include "AI/MassAI/MassBoidsHealthFragment.h"
 
 UMassBoidsProcessor::UMassBoidsProcessor()
 	:EntityQuery(*this)
@@ -21,6 +19,7 @@ void UMassBoidsProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassVelocityFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassTargetFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddSharedRequirement<FMassBoidsFragment>(EMassFragmentAccess::ReadOnly);
 
 	EntityQuery.RegisterWithProcessor(*this);
@@ -35,6 +34,7 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 			TArrayView<FTransformFragment> Transforms = Context.GetMutableFragmentView<FTransformFragment>();
 			TArrayView<FMassVelocityFragment> Velocities = Context.GetMutableFragmentView<FMassVelocityFragment>();
 			TConstArrayView<FMassTargetFragment> TargetInfos = Context.GetFragmentView<FMassTargetFragment>();
+			TConstArrayView<FMassBoidsHealthFragment> HealthInfos = Context.GetFragmentView<FMassBoidsHealthFragment>();
 
 			const FMassBoidsFragment& Settings = Context.GetSharedFragment<FMassBoidsFragment>();
 
@@ -45,6 +45,12 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 				FTransform& Transform = Transforms[i].GetMutableTransform();
 				FVector& Velocity = Velocities[i].Value;
 				const FMassTargetFragment& TargetInfo = TargetInfos[i];
+				const FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
+
+				if (HealthInfo.Health <= 0)
+				{
+					continue;
+				}
 
 				FVector CurrentPos = Transform.GetLocation();
 				FVector Acceleration = FVector::ZeroVector;
