@@ -1,14 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "MassEntityTypes.h"
 #include "MassBoidsFragment.generated.h"
 
-/**
- * PROJECTD_API
- */
 USTRUCT()
 struct PROJECTD_API FMassBoidsFragment : public FMassSharedFragment
 {
@@ -66,6 +61,9 @@ public:
     // 중심으로 돌아오려는 힘의 세기
     UPROPERTY(EditAnywhere, Category = "Boids|Bounds")
     float BoundsWeight = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Boids|Attack")
+    float AttackRange = 25.0f;
 
 public:
     // Boids 계산에 필요한 파라미터 (설정값)
