@@ -11,6 +11,8 @@
 UMassBoidsProcessor::UMassBoidsProcessor()
 	:EntityQuery(*this)
 {
+	ExecutionFlags = (int32)EProcessorExecutionFlags::Server;
+	bAutoRegisterWithProcessingPhases = true;
 	ProcessingPhase = EMassProcessingPhase::PrePhysics;
 }
 
