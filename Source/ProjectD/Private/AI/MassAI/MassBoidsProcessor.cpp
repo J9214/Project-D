@@ -62,8 +62,9 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 
 				FVector CurrentPos = Transform.GetLocation();
 
-				if (TargetInfo.IsTargetChase == true &&
-					FVector::DistSquared(CurrentPos, TargetInfo.TargetPosition) <= AttackRangeSq)
+				if ((TargetInfo.IsTargetChase == true &&
+					FVector::DistSquared(CurrentPos, TargetInfo.TargetPosition) <= AttackRangeSq) || // Target In Range
+					ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings, GetWorld(), DT) == true) // To Close Obstacle
 				{
 					HealthInfo.Health = 0.0f;
 					Velocity = FVector::ZeroVector;
@@ -322,4 +323,39 @@ FVector UMassBoidsProcessor::SteerTowards(const FVector& DesiredDirection, const
 	FVector DesiredVelocity = DesiredDirection.GetSafeNormal() * Settings.MaxMoveSpeed;
 	FVector Steer = DesiredVelocity - CurrentVel;
 	return Steer.GetClampedToMaxSize(Settings.MaxSteerWeight);
+}
+
+bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& Settings, const UWorld* World, const float DT) const
+{
+	if (IsValid(World) == false)
+	{
+		return false;
+	}
+
+	const float SpeedSq = MyVel.SizeSquared();
+	if (SpeedSq <= KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+
+	const FVector Forward = MyVel.GetSafeNormal();
+
+	const float OneFrameMove = FMath::Sqrt(SpeedSq) * DT;
+	const float CheckDist = FMath::Max(Settings.ObstacleRange, OneFrameMove);
+
+	const FVector Start = MyPos;
+	const FVector End = MyPos + (Forward * CheckDist);
+
+	FCollisionQueryParams Params;
+	Params.bTraceComplex = false;
+
+	FHitResult Hit;
+	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, Settings.ObstacleTraceChannel, Params);
+
+	if (bHit == false)
+	{
+		return false;
+	}
+
+	return true;
 }

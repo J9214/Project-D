@@ -65,6 +65,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Boids|Attack")
     float AttackRange = 25.0f;
 
+    UPROPERTY(EditAnywhere, Category = "Boids|Attack")
+    float ObstacleRange = 5.0f;
+
 public:
     // Boids 계산에 필요한 파라미터 (설정값)
     UPROPERTY(EditAnywhere)

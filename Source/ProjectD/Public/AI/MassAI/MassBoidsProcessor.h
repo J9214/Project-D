@@ -28,6 +28,8 @@ private:
 
     FVector SteerTowards(const FVector& DesiredDirection, const FVector& CurrentVel, const FMassBoidsFragment& Settings) const;
 
+    bool ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& Settings, const UWorld* World, const float DT) const;
+
 private:
     FMassEntityQuery EntityQuery;
 };
