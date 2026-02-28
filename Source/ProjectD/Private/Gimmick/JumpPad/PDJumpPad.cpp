@@ -48,7 +48,7 @@ void APDJumpPad::OnInteract_Implementation(AActor* Interactor)
 
 	if (!SPJump.IsValid())
 	{
-		UAssetManager* AssetManager = UAssetManager::GetIfValid();
+		UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
 		if (!IsValid(AssetManager))
 		{
 			UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::OnInteract - Invalid Asset Manager!"));
@@ -89,7 +89,7 @@ void APDJumpPad::OnEndInteract_Implementation(AActor* Interactor)
 
 void APDJumpPad::LoadPDA()
 {
-	UAssetManager* AssetManager = UAssetManager::GetIfValid();
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
 	if (!IsValid(AssetManager))
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("APDJumpPad::LoadPDA - Invalid Asset Manager!"));
