@@ -61,7 +61,10 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 			const FDeathScheduleFragment& Schedule = DeathSchedules[EntityIdx];
 			if (Schedule.RemoveAtFrame != 0)
 			{
-				InReplicatedAgent.SetDead(Schedule.DeathLoc, EMassEntityCueId::Drone_Death);
+				const EMassEntityCueId CueId =
+					(Schedule.DeathCueId != EMassEntityCueId::None) ? Schedule.DeathCueId : EMassEntityCueId::Drone_Death;
+
+				InReplicatedAgent.SetDead(Schedule.DeathLoc, CueId);
 			}
 
 			const FMassEntityHandle EntityHandle = InContext.GetEntity(EntityIdx);
