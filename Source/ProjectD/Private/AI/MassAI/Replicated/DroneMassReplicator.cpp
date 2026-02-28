@@ -118,7 +118,7 @@ void UDroneMassReplicator::ProcessClientReplication(FMassExecutionContext& Conte
 
 			if ((bShouldBeDead == true) && (Item->Agent.GetIsDead() == false))
 			{
-				Item->Agent.SetDead(Schedule.DeathLoc, EMassEntityCueId::Drone_Death);
+				Item->Agent.SetDead(Schedule.DeathLoc, Schedule.DeathCueId);
 				bMarkItemDirty = true;
 			}
 
