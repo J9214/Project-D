@@ -107,19 +107,35 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 				Schedule.DeathLoc = Transforms[i].GetTransform().GetLocation();
 				Schedule.bMarkedForRemoval = false;
 
+
+				const bool bIsSuicideChunk = ExecContext.DoesArchetypeHaveTag<FMassEntitySuicideTag>();
+				const bool bExplosionSpawnedChunk = ExecContext.DoesArchetypeHaveTag<FMassEntityExplosionSpawnedTag>();
+
+				if (Schedule.DeathCueId == EMassEntityCueId::None)
+				{
+					Schedule.DeathCueId = (bIsSuicideChunk == true) ? 
+						EMassEntityCueId::Drone_Explode : EMassEntityCueId::Drone_Death;
+				}
+
+				if (bIsSuicideChunk == true &&
+					bExplosionSpawnedChunk == false)
+				{
+					UE_LOG(LogProjectD, Warning, TEXT("[F=%u][SuicideExplode] Entity=%d Loc=%s"),
+						(uint32)GFrameCounter,
+						Entity.Index,
+						*FVector(Schedule.DeathLoc).ToString());
+
+					// TODO : Spawn Expolosion Actor
+
+					ExecContext.Defer().AddTag<FMassEntityExplosionSpawnedTag>(Entity);
+				}
+
 				ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);
 
 				if (IsValid(Pool) == true)
 				{
 					Pool->Release(Entity);
 				}
-
-				UE_LOG(LogProjectD, Warning, TEXT("[F=%u][DeathSchedule] Entity=%d RemoveAt=%u DestroyAt=%u Loc=%s"),
-					(uint32)GFrameCounter,
-					Entity.Index,
-					Schedule.RemoveAtFrame,
-					Schedule.DestroyAtFrame,
-					*FVector(Schedule.DeathLoc).ToString());
 			}
 		});
 }
