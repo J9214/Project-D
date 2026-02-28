@@ -40,18 +40,6 @@ void UGA_Dash::ActivateAbility(
 		return;
 	}
 
-	if (!OwnerASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_DashAvailable))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	if (OwnerASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_Dashing))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -75,7 +63,7 @@ void UGA_Dash::ActivateAbility(
 
 	const bool bBlocked = OwnerPawn->GetWorld()->SweepSingleByChannel(
 		Hit, Start, Target, FQuat::Identity,
-		ECC_Pawn,
+		ECC_Visibility,
 		FCollisionShape::MakeSphere(20.f),
 		Params
 	);
@@ -114,38 +102,25 @@ void UGA_Dash::ActivateAbility(
 	Bridge->EnqueueMoveRequest(Req);
 
 	OwnerASC->RemoveLooseGameplayTag(PDGameplayTags::Player_State_DashAvailable);
-	OwnerASC->AddLooseGameplayTag(PDGameplayTags::Player_State_Dashing);
 
 	UAnimMontage* DashMontage = SelectDashMontage(OwnerPawn, DashDir);
 	ExecuteDashCue(DashDir);
 
 	UAbilityTask_PlayMontageAndWait* PlayTask =
-		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-			this, TEXT("DashMontageTask"), DashMontage, 1.0f);
-	if (IsValid(PlayTask))
-	{
-		PlayTask->OnCompleted.AddDynamic(this, &UGA_Dash::OnMontageCompleted);
-		PlayTask->OnInterrupted.AddDynamic(this, &UGA_Dash::OnMontageInterrupted);
-		PlayTask->OnCancelled.AddDynamic(this, &UGA_Dash::OnMontageCancelled);
-		PlayTask->ReadyForActivation();
-	}
-	else
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
-	}
+			UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+				this, TEXT("DashMontageTask"), DashMontage, 1.0f);
+		if (IsValid(PlayTask))
+		{
+			PlayTask->OnCompleted.AddDynamic(this, &UGA_Dash::OnMontageCompleted);
+			PlayTask->OnInterrupted.AddDynamic(this, &UGA_Dash::OnMontageInterrupted);
+			PlayTask->OnCancelled.AddDynamic(this, &UGA_Dash::OnMontageCancelled);
+			PlayTask->ReadyForActivation();
+		}
+		else
+		{
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+		}
 }
-
-void UGA_Dash::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{
-	if (UAbilitySystemComponent* OwnerASC = GetAbilitySystemComponentFromActorInfo())
-	{
-		OwnerASC->RemoveLooseGameplayTag(PDGameplayTags::Player_State_Dashing);
-	}
-
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
 
 UAnimMontage* UGA_Dash::SelectDashMontage(const APawn* Pawn, const FVector& MoveDir) const
 {
