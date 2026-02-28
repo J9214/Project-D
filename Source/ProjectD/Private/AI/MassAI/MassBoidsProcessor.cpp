@@ -5,6 +5,7 @@
 #include "AI/MassAI/MassBoidsFragment.h"
 #include "AI/MassAI/MassTargetFragment.h"
 #include "AI/MassAI/MassBoidsHealthFragment.h"
+#include "AI/MassAI/Replicated/MassEntityTags.h"
 
 UMassBoidsProcessor::UMassBoidsProcessor()
 	:EntityQuery(*this)
@@ -19,8 +20,13 @@ void UMassBoidsProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassVelocityFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassTargetFragment>(EMassFragmentAccess::ReadOnly);
-	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadWrite);
+
 	EntityQuery.AddSharedRequirement<FMassBoidsFragment>(EMassFragmentAccess::ReadOnly);
+
+	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
+	EntityQuery.AddTagRequirement<FMassEntityPendingRemovalTag>(EMassFragmentPresence::None);
+	EntityQuery.AddTagRequirement<FMassEntitySuicideTag>(EMassFragmentPresence::None);
 
 	EntityQuery.RegisterWithProcessor(*this);
 }
@@ -34,18 +40,20 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 			TArrayView<FTransformFragment> Transforms = Context.GetMutableFragmentView<FTransformFragment>();
 			TArrayView<FMassVelocityFragment> Velocities = Context.GetMutableFragmentView<FMassVelocityFragment>();
 			TConstArrayView<FMassTargetFragment> TargetInfos = Context.GetFragmentView<FMassTargetFragment>();
-			TConstArrayView<FMassBoidsHealthFragment> HealthInfos = Context.GetFragmentView<FMassBoidsHealthFragment>();
+			TArrayView<FMassBoidsHealthFragment> HealthInfos = Context.GetMutableFragmentView<FMassBoidsHealthFragment>();
 
 			const FMassBoidsFragment& Settings = Context.GetSharedFragment<FMassBoidsFragment>();
 
 			const float DT = Context.GetDeltaTimeSeconds();
+
+			const float AttackRangeSq = Settings.AttackRange * Settings.AttackRange;
 
 			for (int32 i = 0; i < NumEntities; ++i)
 			{
 				FTransform& Transform = Transforms[i].GetMutableTransform();
 				FVector& Velocity = Velocities[i].Value;
 				const FMassTargetFragment& TargetInfo = TargetInfos[i];
-				const FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
+				FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
 
 				if (HealthInfo.Health <= 0)
 				{
@@ -53,6 +61,18 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 				}
 
 				FVector CurrentPos = Transform.GetLocation();
+
+				if (TargetInfo.IsTargetChase == true &&
+					FVector::DistSquared(CurrentPos, TargetInfo.TargetPosition) <= AttackRangeSq)
+				{
+					HealthInfo.Health = 0.0f;
+					Velocity = FVector::ZeroVector;
+
+					const FMassEntityHandle Entity = Context.GetEntity(i);
+					Context.Defer().AddTag<FMassEntitySuicideTag>(Entity);
+					continue;
+				}
+
 				FVector Acceleration = FVector::ZeroVector;
 
 				if (TargetInfo.IsTargetChase)
