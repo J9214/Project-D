@@ -63,6 +63,9 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_FireInterval, "Data.Weapon.FireInterval");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Fragment_Damage, "Data.Throwable.Fragment.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Flame_Damage, "Data.Throwable.Flame.Damage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ExplodeDamage, "Data.ThrowableObject.ExplodeDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ContinuousDamage, "Data.ThrowableObject.ContinuousDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_DestructDamage, "Data.ThrowableObject.DestructDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Weapon_Fire, "Cooldown.Weapon.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Movement_Dash, "Cooldown.Movement.Dash");
 

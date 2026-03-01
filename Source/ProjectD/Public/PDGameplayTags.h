@@ -63,6 +63,9 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_FireInterval);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Fragment_Damage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Flame_Damage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ExplodeDamage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ContinuousDamage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_DestructDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Weapon_Fire);
 
 	/** Gimmick Tags **/

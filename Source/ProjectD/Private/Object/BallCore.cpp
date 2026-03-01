@@ -23,9 +23,9 @@ void ABallCore::OnInteract_Implementation(AActor* Interactor)
 	}
 }
 
-void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
+void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection)
 {
-	Super::DropPhysics(DropLocation, Impulse);
+	Super::DropPhysics(DropLocation, Impulse, InCamDirection);
 
 	StaticMesh->WakeAllRigidBodies();
 	StaticMesh->AddImpulse(Impulse, NAME_None, true);

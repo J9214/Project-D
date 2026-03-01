@@ -43,7 +43,7 @@ void APDCarriableObjectBase::ClearCarrier()
 	SetCarrier(nullptr);
 }
 
-void APDCarriableObjectBase::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
+void APDCarriableObjectBase::DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection)
 {
 	if (!HasAuthority())
 	{
