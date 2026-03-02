@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "MassEntityTypes.h"
+#include "MassEntityHandle.h"
 #include "MassProxyPoolSubsystem.generated.h"
 
 class ACollisionProxyActor;
