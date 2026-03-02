@@ -33,6 +33,9 @@ public:
 	
 	bool AddItem(const FPDItemInfo* ItemInfo);
 	bool AddItem_ETC(const FPDItemInfo* ItemInfo);
+	bool AddItem_Weapon(const FPDItemInfo* ItemInfo);
+	bool AddItem_Grenade(const FPDItemInfo* ItemInfo);
+	bool AddItem_Skill(const FPDItemInfo* ItemInfo);
 
 	void AddGold(int InGold);
 	bool CheckGold(int Cost) const { return Gold >= Cost; };
@@ -54,17 +57,31 @@ protected:
 	void OnRep_Gold();
 
 	UFUNCTION()
-	void OnRep_ItemChanged();
+	void OnRep_WeaponChanged(const TArray<FPDItemData>& OldItemSlot);
+
+	UFUNCTION()
+	void OnRep_SkillChanged(const TArray<FPDItemData>& OldItemSlot);
+
+	UFUNCTION()
+	void OnRep_GrenadeChanged(const TArray<FPDItemData>& OldItemSlot);
+
+	UFUNCTION()
+	void OnRep_ETCChanged(const TArray<FPDItemData>& OldItemSlot);
+
+	UFUNCTION()
+	void ItemChanged(EItemType ItemType, const TArray<FPDItemData>& OldItemSlot);
+
+	TArray<FPDItemData>& GetItemSlot(EItemType ItemType);
 
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Gold, BlueprintReadOnly)
-	int Gold;
+	int Gold = 10;
 
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ItemChanged, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_WeaponChanged, BlueprintReadOnly)
 	TArray<FPDItemData> WeaponSlot;
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ItemChanged, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_SkillChanged, BlueprintReadOnly)
 	TArray<FPDItemData> SkillSlot;
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ItemChanged, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_GrenadeChanged, BlueprintReadOnly)
 	TArray<FPDItemData> GrenadeSlot;
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ItemChanged, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ETCChanged, BlueprintReadOnly)
 	TArray<FPDItemData> ETCSlot;
 };

@@ -87,7 +87,7 @@ void UPD_ShopUI::SetInit()
 void UPD_ShopUI::HandleWeaponTabClicked()
 {
 	SetInit();
-
+	ResetTabButtons();
 	if (WeaponTab)
 	{
 		WeaponTab->SetIsEnabled(false);
@@ -111,7 +111,7 @@ void UPD_ShopUI::HandleWeaponTabClicked()
 void UPD_ShopUI::HandleSkillTabClicked()
 {
 	SetInit();
-
+	ResetTabButtons();
 	if (SkillTab)
 	{
 		SkillTab->SetIsEnabled(false);
@@ -134,7 +134,7 @@ void UPD_ShopUI::HandleSkillTabClicked()
 void UPD_ShopUI::HandleItemTabClicked()
 {
 	SetInit();
-
+	ResetTabButtons();
 	if (ItemTab)
 	{
 		ItemTab->SetIsEnabled(false);

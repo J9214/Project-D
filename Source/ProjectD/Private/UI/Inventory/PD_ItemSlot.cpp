@@ -31,7 +31,7 @@ void UPD_ItemSlot::UpdateSlot(const FName& NewItemID, int32 NewCount)
             ItemDisplayName->SetVisibility(ESlateVisibility::Hidden);
         }
 
-        if (Count)
+        if (NewCount == 0)
         {
             Count->SetVisibility(ESlateVisibility::Hidden);
         }

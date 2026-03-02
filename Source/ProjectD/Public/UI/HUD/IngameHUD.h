@@ -28,12 +28,16 @@ public:
 
 	UFUNCTION()
 	void InitItem(EItemType ItemType, int SlotIndex, const FName& NewItemID, int Count = 0);
+
+	UFUNCTION()
+	void InitUI();
+
 protected:
 
-	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UPROPERTY(Transient, meta = (BindWidget))
 	TObjectPtr<UPD_InventoryUI> InventoryUI;
 
-	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UPROPERTY(Transient, meta = (BindWidget))
 	TObjectPtr<UPD_ShopUI> ShopUI;
 
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
@@ -57,5 +61,5 @@ protected:
 	int32 OpenedUIPriority = 0;
 	bool bIsUIPanelOpen = false;
 
-	FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent);
+	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 };

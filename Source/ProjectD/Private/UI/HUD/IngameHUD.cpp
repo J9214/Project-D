@@ -29,6 +29,7 @@ void UIngameHUD::NativeOnInitialized()
 
 void UIngameHUD::ToggleGameUI()
 {
+    UE_LOG(LogTemp, Warning, TEXT("00"));
     if (IsAnimationPlaying(OpenShopUI) || IsAnimationPlaying(CloseShopUI) ||
         IsAnimationPlaying(OpenInventoryUI) || IsAnimationPlaying(CloseInventoryUI))
     {
@@ -37,12 +38,14 @@ void UIngameHUD::ToggleGameUI()
 
     if (!bIsUIPanelOpen)
     {
+        UE_LOG(LogTemp, Warning, TEXT("01"));
         PlayAnimation(OpenShopUI);
         PlayAnimation(OpenInventoryUI);
         bIsUIPanelOpen = true;
     }
     else
     {
+        UE_LOG(LogTemp, Warning, TEXT("02"));
         PlayAnimation(CloseShopUI);
         PlayAnimation(CloseInventoryUI);
         bIsUIPanelOpen = false;
@@ -75,6 +78,12 @@ void UIngameHUD::InitItem(EItemType ItemType, int SlotIndex, const FName& NewIte
     }
 }
 
+void UIngameHUD::InitUI()
+{
+
+
+}
+
 
 void UIngameHUD::InitGold(int NewGold)
 {
@@ -105,12 +114,13 @@ void UIngameHUD::OnUIOpenFinished()
         return;
     }
 
-    FInputModeUIOnly InputMode;
+    FInputModeGameAndUI InputMode;
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputMode.SetWidgetToFocus(TakeWidget());
-
+    InputMode.SetWidgetToFocus(TakeWidget()); 
+    InputMode.SetWidgetToFocus(GetCachedWidget());
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = true;
+    SetKeyboardFocus();
 }
 
 void UIngameHUD::OnUICloseFinished()
@@ -133,12 +143,15 @@ void UIngameHUD::OnUICloseFinished()
     PC->bShowMouseCursor = false; 
 }
 
-FReply UIngameHUD::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+FReply UIngameHUD::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
+
+    UE_LOG(LogTemp, Warning, TEXT("00"));
     if (InKeyEvent.GetKey() == EKeys::Tab)
     {
+        UE_LOG(LogTemp, Warning, TEXT("00"));
         ToggleGameUI();
         return FReply::Handled();
     }
-    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+    return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
 }

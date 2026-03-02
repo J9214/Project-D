@@ -50,10 +50,10 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Team")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	ETeamType TeamID;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NickName")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	FString DisplayName;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")

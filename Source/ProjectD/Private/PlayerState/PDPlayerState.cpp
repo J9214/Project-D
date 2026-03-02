@@ -2,6 +2,7 @@
 #include "AbilitySystem/PDAbilitySystemComponent.h"
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 
 APDPlayerState::APDPlayerState()
 {
@@ -13,6 +14,7 @@ APDPlayerState::APDPlayerState()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	
 	AttributeSetBase = CreateDefaultSubobject<UPDAttributeSetBase>(TEXT("AttributeSetBase"));
+	InventoryComponent = CreateDefaultSubobject<UPDInventoryComponent>(TEXT("InventoryComponent"));
 	
 	TeamID = ETeamType::None;
 }

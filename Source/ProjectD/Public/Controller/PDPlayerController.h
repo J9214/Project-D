@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Components/Shop/FPDItemInfo.h"
 #include "Interface/PDTeamInterface.h"
 #include "PDPlayerController.generated.h"
 
@@ -17,6 +18,7 @@ class PROJECTD_API APDPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	APDPlayerController();
 
 	FORCEINLINE UPDShopComponent* GetShopComponent() const { return ShopComponent; }
 
@@ -30,9 +32,11 @@ public:
 	void ShowGameOver();
 
 	void InitGoldDisplay(int InGold);
-	void InitItemDataDisplay();
+	void InitItemDataDisplay(EItemType ItemType, int SlotIndex, const FName& NewItemID, int Count);
 
 	UIngameHUD* GetIngameHUDWidget() const { return PlayerHUDWidget; }
+
+	void InitializeHUD();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -48,6 +52,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shop")
 	TObjectPtr<UPDShopComponent> ShopComponent;
+
 private:
 	UFUNCTION(BlueprintCallable)
 	void OnAimStarted();

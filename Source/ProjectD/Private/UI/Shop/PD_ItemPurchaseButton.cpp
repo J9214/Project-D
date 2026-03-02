@@ -91,6 +91,7 @@ void UPD_ItemPurchaseButton::NativeOnInitialized()
 
 void UPD_ItemPurchaseButton::HandleItemPurchase()
 {
+    UE_LOG(LogTemp, Warning, TEXT("BuyTry1"));
     APDPlayerController* PC = GetOwningPlayer<APDPlayerController>();
     if (!IsValid(PC))
     {
@@ -103,5 +104,6 @@ void UPD_ItemPurchaseButton::HandleItemPurchase()
         return;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("BuyTry"));
     ShopComponent->RequestBuy(ItemID);
 }

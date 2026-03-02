@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "NativeGameplayTags.h"
 
@@ -18,6 +18,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_SkillE);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Movement_Dash);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Movement_WallJump);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_UI_Ingame_Inventory);
 
 	/** Player Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_Equip);

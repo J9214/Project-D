@@ -231,13 +231,8 @@
 			"Enabled": true
 		},
 		{
-			"Name": "StateTree",
-			"Enabled": true
-		},
-		{
 			"Name": "CommonUI",
 			"Enabled": true
 		}
-
 	]
 }

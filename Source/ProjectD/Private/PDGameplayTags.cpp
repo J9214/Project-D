@@ -1,4 +1,4 @@
-#include "PDGameplayTags.h"
+﻿#include "PDGameplayTags.h"
 
 namespace PDGameplayTags
 {
@@ -17,7 +17,8 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillE, "InputTag.Ability.SkillE");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_Dash, "InputTag.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_WallJump, "InputTag.Ability.Movement.WallJump");
-
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_UI_Ingame_Inventory, "InputTag.UI.Ingame.Inventory");
+	 
 	/** Player Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Equip, "Player.Ability.Weapon.Equip");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Unequip, "Player.Ability.Weapon.Unequip");
