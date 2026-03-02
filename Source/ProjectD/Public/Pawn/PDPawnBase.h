@@ -93,7 +93,8 @@ public:
 	void Server_PickUpObject(APDCarriableObjectBase* Object);
 
 	UFUNCTION(Server, Reliable)
-	void Server_DropObject();
+	void Server_DropObject(const FVector& InCamDirecion);
+	FVector CalcCamDirection();
 
 	void Server_ForceClearCarriedBall();
 

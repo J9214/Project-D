@@ -27,7 +27,7 @@ void UGA_Unequip::ActivateAbility(
 	
 	int32 CurrentEquippedSlotIndex = WMC->GetEquippedSlotIndex();
 	FPDWeaponMontageEntry Entry;
-	if (!WMC->TryGetEquipEntry(CurrentEquippedSlotIndex, EPDWeaponMontageAction::Unequip, Entry))
+	if (!WMC->TryGetMontageEntry(CurrentEquippedSlotIndex, EPDWeaponMontageAction::Unequip, Entry))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;

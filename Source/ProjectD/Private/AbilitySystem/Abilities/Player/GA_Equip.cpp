@@ -26,7 +26,7 @@ void UGA_Equip::ActivateAbility(
 	}
 	
 	FPDWeaponMontageEntry Entry;
-	if (!WMC->TryGetEquipEntry(EquipSlotIndex, EPDWeaponMontageAction::Equip, Entry))
+	if (!WMC->TryGetMontageEntry(EquipSlotIndex, EPDWeaponMontageAction::Equip, Entry))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;

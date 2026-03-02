@@ -227,7 +227,7 @@ AActor* APDPawnBase::FindInteractTarget() const
 
 	FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-	DrawDebugLine(GetWorld(),Start,End,DebugColor,false,2.0f,0,2.0f);
+	//DrawDebugLine(GetWorld(),Start,End,DebugColor,false,2.0f,0,2.0f);
 
 	return Hit.GetActor();
 }
@@ -295,9 +295,27 @@ void APDPawnBase::TryInteract()
 	{
 		if (IsValid(CarriedObject.Get()))
 		{
-			Server_DropObject();
+			Server_DropObject(CalcCamDirection());
 		}
 	}
+}
+
+FVector APDPawnBase::CalcCamDirection()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!IsValid(PC))
+	{
+		return FVector::ForwardVector;
+	}
+
+	FVector CamLoc;
+	FRotator CamRot;
+
+	PC->GetPlayerViewPoint(CamLoc, CamRot);
+
+	FVector Forward = CamRot.Vector();
+	
+	return Forward.GetSafeNormal();;
 }
 
 void APDPawnBase::Server_ForceClearCarriedBall()
@@ -331,7 +349,7 @@ void APDPawnBase::Server_PickUpObject_Implementation(APDCarriableObjectBase* Obj
 	ApplyHoldingBallEffect();
 }
 
-void APDPawnBase::Server_DropObject_Implementation()
+void APDPawnBase::Server_DropObject_Implementation(const FVector& InCamDirecion)
 {
 	if (!IsValid(CarriedObject.Get()))
 	{
@@ -345,7 +363,7 @@ void APDPawnBase::Server_DropObject_Implementation()
 
 	const FVector Impulse = (Forward * 300.f) + (FVector::UpVector * 200.f);
 
-	CarriedObject->DropPhysics(DropLoc, Impulse);
+	CarriedObject->DropPhysics(DropLoc, Impulse, InCamDirecion);
 
 	CarriedObject = nullptr;
 }
