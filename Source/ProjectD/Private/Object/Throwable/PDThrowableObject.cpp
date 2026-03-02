@@ -1,10 +1,12 @@
 #include "Object/Throwable/PDThrowableObject.h"
 
+#include "Explosion/PDExplosionActor.h"
 #include "Object/Throwable/PDThrowableDataAsset.h"
 #include "Pawn/PDPawnBase.h"
 
 #include "Engine/AssetManager.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
 #include "ProjectD/ProjectD.h"
@@ -14,11 +16,17 @@ TSet<FName> APDThrowableObject::PDANameSet;
 APDThrowableObject::APDThrowableObject()
 {
 	PDAType = "Throw";
+	PDAExplosionType = "Explosion";
 
 	StaticMesh->SetSimulatePhysics(false);
 
 	Projectile = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile"));
 	Projectile->SetIsReplicated(true);
+	Projectile->bSweepCollision = true;
+
+	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
+	SetRootComponent(Capsule);
+	StaticMesh->SetupAttachment(Capsule);
 }
 
 void APDThrowableObject::BeginPlay()
@@ -46,7 +54,10 @@ void APDThrowableObject::OnInteract_Implementation(AActor* Interactor)
 
 	if (APDPawnBase* PDPawn = Cast<APDPawnBase>(Interactor))
 	{
+		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		PDPawn->Server_PickUpObject(this);
+
+		Multicast_SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
 
@@ -56,7 +67,7 @@ void APDThrowableObject::OnEndInteract_Implementation(AActor* Interactor)
 	ThrowObject();
 }
 
-void APDThrowableObject::DropPhysics(const FVector& DropLocation, const FVector& Impulse)
+void APDThrowableObject::DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection)
 {
 	if (!HasAuthority())
 	{
@@ -67,7 +78,10 @@ void APDThrowableObject::DropPhysics(const FVector& DropLocation, const FVector&
 
 	SetActorLocation(DropLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
-	StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Capsule->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+
+	CamDirection = InCamDirection;
 
 	Execute_OnEndInteract(this, CarrierPawn.Get());
 }
@@ -86,7 +100,7 @@ bool APDThrowableObject::IsCanInteract(AActor* Interactor)
 
 void APDThrowableObject::ThrowObject()
 {
-	UAssetManager* AssetManager = UAssetManager::GetIfValid();
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
 	if (!IsValid(AssetManager))
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("APDThrowableObject::ThrowObject - Invalid Asset Manager!"));
@@ -113,17 +127,11 @@ void APDThrowableObject::ThrowObject()
 		return;
 	}
 
-	FVector CamLocation;
-	FRotator CamRotation;
-	PC->GetPlayerViewPoint(CamLocation, CamRotation);
-
-	CamRotation.Pitch += 8.0f;
-	FVector Forward = CamRotation.Vector();
 	FVector UpBoost = FVector::UpVector * ThrowData->AdjZVelocity;
 
-	FVector Direction = (Forward + UpBoost).GetSafeNormal();
+	FVector Direction = (CamDirection + UpBoost).GetSafeNormal();
 
-	Projectile->SetUpdatedComponent(RootComponent);
+	Projectile->SetUpdatedComponent(Capsule);
 
 	Projectile->InitialSpeed = ThrowData->InitialSpeed;
 	Projectile->MaxSpeed = ThrowData->MaxSpeed;
@@ -131,6 +139,49 @@ void APDThrowableObject::ThrowObject()
 	Projectile->Velocity = Direction * Projectile->InitialSpeed;
 
 	Projectile->Activate();
+
+	if (HasAuthority() && !Capsule->OnComponentHit.IsBound())
+	{
+		Capsule->OnComponentHit.AddDynamic(this, &APDThrowableObject::HandleHit);
+
+		Capsule->SetNotifyRigidBodyCollision(true);
+		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Capsule->SetCollisionResponseToAllChannels(ECR_Block);
+		Capsule->SetCollisionObjectType(ECC_WorldDynamic);
+	}
+}
+
+void APDThrowableObject::Explode(const FVector& HitLocation)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!IsValid(ExplosionClass))
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDThrowableObject::Explode - Invalid ExplosionClass!"));
+		return;
+	}
+
+	APDExplosionActor* Explosion = GetWorld()->SpawnActor<APDExplosionActor>(ExplosionClass, GetActorLocation(), FRotator::ZeroRotator);
+	if (!IsValid(Explosion))
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDThrowableObject::Explode - Spawn Explosion Fail!"));
+		return;
+	}
+
+	Explosion->InitExplosion(PDAExplosionName, PDAExplosionType);
+}
+
+void APDThrowableObject::EndPlay(EEndPlayReason::Type EndPlayReason)
+{
+	if (Capsule->OnComponentHit.IsBound())
+	{
+		Capsule->OnComponentHit.RemoveDynamic(this, &APDThrowableObject::HandleHit);
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void APDThrowableObject::HandleCarrierChanged()
@@ -155,8 +206,6 @@ void APDThrowableObject::HandleCarrierChanged()
 
 			if (bAttached)
 			{
-				StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 				SetActorRelativeLocation(FVector::ZeroVector);
 				SetActorRelativeRotation(FRotator::ZeroRotator);
 			}
@@ -164,9 +213,32 @@ void APDThrowableObject::HandleCarrierChanged()
 	}
 }
 
+void APDThrowableObject::HandleHit(
+	UPrimitiveComponent* HitComponent,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse,
+	const FHitResult& Hit)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	Explode(Hit.Location);
+
+	Destroy();
+}
+
+void APDThrowableObject::Multicast_SetCollisionEnabled_Implementation(ECollisionEnabled::Type InType)
+{
+	Capsule->SetCollisionEnabled(InType);
+	StaticMesh->SetCollisionEnabled(InType);
+}
+
 void APDThrowableObject::LoadPDA()
 {
-	UAssetManager* AssetManager = UAssetManager::GetIfValid();
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
 	if (!IsValid(AssetManager))
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("APDThrowableObject::LoadPDA - Invalid Asset Manager!"));

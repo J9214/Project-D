@@ -16,7 +16,7 @@ public:
 
 	virtual void SetCarrier(APawn* NewCarrier);
 	virtual void ClearCarrier();
-	virtual void DropPhysics(const FVector& DropLocation, const FVector& Impulse);
+	virtual void DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection);
 
 	virtual bool IsCanInteract(AActor* Interactor) override;
 
