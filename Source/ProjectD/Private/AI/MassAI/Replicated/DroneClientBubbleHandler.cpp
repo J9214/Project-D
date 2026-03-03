@@ -1,4 +1,4 @@
-#include "AI/MassAI/Replicated/DroneClientBubbleHandler.h"
+﻿#include "AI/MassAI/Replicated/DroneClientBubbleHandler.h"
 #include "AI/MassAI/Replicated/DroneFastArrayItem.h"
 #include "AI/MassAI/Replicated/DroneReplicatedAgent.h"
 #include "AI/MassAI/MassEntityEffectSubsystem.h"
@@ -11,6 +11,7 @@ FDroneClientBubbleHandler::FDroneClientBubbleHandler()
 
 void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
+#if UE_REPLICATION_COMPILE_CLIENT_CODE
 	auto AddRequirementsForSpawnQuery = [](FMassEntityQuery& Query)
 		{
 			Query.AddRequirement<FClientVisualFragment>(EMassFragmentAccess::ReadWrite);
@@ -37,10 +38,12 @@ void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedI
 		SetSpawnedEntityData,
 		SetModifiedEntityData
 	);
+#endif
 }
 
 void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize)
 {
+#if UE_REPLICATION_COMPILE_CLIENT_CODE
 	auto SetModifiedEntityData = [this](const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent)
 		{
 			TryPlayDeathCueOnce(ReplicatedAgent);
@@ -51,6 +54,7 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 		ChangedIndices,
 		SetModifiedEntityData
 	);
+#endif
 }
 
 void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
@@ -62,6 +66,7 @@ void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
 	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
 }
 
+#if !UE_SERVER
 void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
 	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
@@ -89,6 +94,7 @@ void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> Remo
 
 	Super::PreReplicatedRemove(RemovedIndices, FinalSize);
 }
+#endif
 
 void FDroneClientBubbleHandler::ApplyReplicatedVisualState(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const bool bForceSnap) const
 {
