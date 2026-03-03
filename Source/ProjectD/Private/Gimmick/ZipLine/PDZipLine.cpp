@@ -52,7 +52,8 @@ void APDZipLine::BeginPlay()
 		InteractBox->SetWorldRotation(NewRotator);
 
 		FVector NewExtent = InteractBox->GetUnscaledBoxExtent();
-		Length += InteractBox->GetComponentScale().X;
+		UE_LOG(LogTemp, Warning, TEXT("Length : %f"), Length);
+		Length /= InteractBox->GetComponentScale().X;
 		NewExtent.X = Length * 0.5f + 32.0f;
 		InteractBox->SetBoxExtent(NewExtent);
 	}

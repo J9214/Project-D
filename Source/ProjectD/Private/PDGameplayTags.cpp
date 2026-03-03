@@ -1,4 +1,4 @@
-#include "PDGameplayTags.h"
+﻿#include "PDGameplayTags.h"
 
 namespace PDGameplayTags
 {
@@ -18,7 +18,8 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_SkillE, "InputTag.Ability.SkillE");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_Dash, "InputTag.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Ability_Movement_WallJump, "InputTag.Ability.Movement.WallJump");
-
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_UI_Ingame_Inventory, "InputTag.UI.Ingame.Inventory");
+	 
 	/** Player Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Equip, "Player.Ability.Weapon.Equip");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Unequip, "Player.Ability.Weapon.Unequip");
@@ -31,19 +32,25 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement, "Player.Ability.Movement");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_Dash, "Player.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");
+    UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_Shield, "Player.Ability.Skill.Shield");
+
 
 	/** Player State Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Equipping, "Player.State.Equipping");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Unequipping, "Player.State.Unequipping");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Reloading, "Player.State.Reloading");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Dashing, "Player.State.Dashing");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_DashAvailable, "Player.State.DashAvailable");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Throwing, "Player.State.Throwing");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Shielding, "Player.State.Shielding");
 	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_ReloadRequest, "Event.Weapon.ReloadRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Throwable_ThrowRequest, "Event.Throwable.ThrowRequest");
+
 	
 	/** GameplayCue Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");
@@ -51,6 +58,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Flame, "GameplayCue.Throwable.Explosion.Flame");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Smoke, "GameplayCue.Throwable.Explosion.Smoke");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_Shield, "GameplayCue.Skill.Shield");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Movement_Dash, "GameplayCue.Movement.Dash");
 
 	/** SetByCaller Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_Damage, "Data.Weapon.Damage");
@@ -58,7 +66,11 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_FireInterval, "Data.Weapon.FireInterval");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Fragment_Damage, "Data.Throwable.Fragment.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Flame_Damage, "Data.Throwable.Flame.Damage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ExplodeDamage, "Data.ThrowableObject.ExplodeDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ContinuousDamage, "Data.ThrowableObject.ContinuousDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_DestructDamage, "Data.ThrowableObject.DestructDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Weapon_Fire, "Cooldown.Weapon.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Movement_Dash, "Cooldown.Movement.Dash");
 
 	/** Gimmick Tags **/
 	PROJECTD_API UE_DEFINE_GAMEPLAY_TAG(Gimmick_Interactable_ZipLine, "Gimmick.Interactable.ZipLine");

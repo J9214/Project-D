@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "NativeGameplayTags.h"
 
@@ -20,6 +20,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_SkillE);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Movement_Dash);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Ability_Movement_WallJump);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_UI_Ingame_Inventory);
 
 	/** Player Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Weapon_Equip);
@@ -42,6 +43,8 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Reloading);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Throwing);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Shielding);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Dashing);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_DashAvailable);
 	
 	/** Event Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipRequest);
@@ -55,6 +58,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Flame);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Smoke);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GamePlayCue_Skill_Shield);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Movement_Dash);
 	
 	/** SetByCaller Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_Damage);
@@ -62,6 +66,9 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Weapon_FireInterval);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Fragment_Damage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Flame_Damage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ExplodeDamage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ContinuousDamage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_DestructDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Weapon_Fire);
 
 	/** Gimmick Tags **/

@@ -1,6 +1,8 @@
 ﻿#include "PlayerState/PDPlayerState.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "Net/UnrealNetwork.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 
 APDPlayerState::APDPlayerState()
 {
@@ -12,7 +14,9 @@ APDPlayerState::APDPlayerState()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	
 	AttributeSetBase = CreateDefaultSubobject<UPDAttributeSetBase>(TEXT("AttributeSetBase"));
+	InventoryComponent = CreateDefaultSubobject<UPDInventoryComponent>(TEXT("InventoryComponent"));
 	
+	TeamID = ETeamType::None;
 }
 
 UAbilitySystemComponent* APDPlayerState::GetAbilitySystemComponent() const
@@ -102,4 +106,18 @@ void APDPlayerState::SetReviveState()
 	{
 		AbilitySystemComponent->ApplyGameplayEffectToSelf(ReviveGE, 1.0f, Context);
 	}
+}
+
+void APDPlayerState::OnRep_CharacterCustomInfo()
+{
+
+}
+
+void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APDPlayerState, CharacterCustomInfo);
+	DOREPLIFETIME(APDPlayerState, TeamID);
+	DOREPLIFETIME(APDPlayerState, DisplayName);
 }

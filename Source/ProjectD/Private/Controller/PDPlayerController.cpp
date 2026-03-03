@@ -5,10 +5,43 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Pawn/PDPawnBase.h"
 #include "GameState/PDGameStateBase.h"
+#include "UI/HUD/IngameHUD.h"
+#include "Components/Inventory/PDInventoryComponent.h"
+#include "PlayerState/PDPlayerState.h"
+#include "Components/Shop/PDShopComponent.h"
+
+APDPlayerController::APDPlayerController()
+{
+	ShopComponent = CreateDefaultSubobject<UPDShopComponent>(TEXT("ShopComponent"));
+
+}
 
 void APDPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IsLocalController())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("9"));
+		if (PlayerHUDClass) {
+			UE_LOG(LogTemp, Warning, TEXT("99"));
+			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+			if (PlayerHUDWidget)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("999"));
+				PlayerHUDWidget->AddToViewport();
+			}
+		}
+
+		//if (ResultWidgetClass)
+		//{
+		//	ResultWidget = CreateWidget<UUserWidget>(this, ResultWidgetClass);
+		//	if (ResultWidget)
+		//	{
+		//		ResultWidget->AddToViewport(10);
+		//	}
+		//}
+	}
 }
 
 void APDPlayerController::SetupInputComponent()
@@ -29,26 +62,6 @@ void APDPlayerController::SetPawn(APawn* InPawn)
 void APDPlayerController::OnPossess(APawn* InPawn) 
 {
 	Super::OnPossess(InPawn);
-
-	if (IsLocalController())
-	{
-		if (PlayerHUDClass) {
-			UUserWidget* PlayerHUD = CreateWidget<UUserWidget>(this, PlayerHUDClass);
-			if (PlayerHUD)
-			{
-				PlayerHUD->AddToViewport();
-			}
-		}
-
-		if (ResultWidgetClass)
-		{
-			ResultWidget = CreateWidget<UUserWidget>(this, ResultWidgetClass);
-			if (ResultWidget)
-			{
-				ResultWidget->AddToViewport(10);
-			}
-		}
-	}
 }
 
 void APDPlayerController::OnUnPossess()
@@ -218,3 +231,36 @@ void APDPlayerController::ShowGameOver()
 		SetInputMode(FInputModeUIOnly());
 	}
 }
+
+void APDPlayerController::InitGoldDisplay(int InGold)
+{
+	if (!PlayerHUDWidget)
+	{
+		return;
+	}
+
+	PlayerHUDWidget->InitGold(InGold);
+}
+
+void APDPlayerController::InitItemDataDisplay(EItemType ItemType, int SlotIndex, const FName& NewItemID, int Count)
+{
+	if (!PlayerHUDWidget)
+	{
+		return;
+	}
+
+	PlayerHUDWidget->InitItem(ItemType, SlotIndex, NewItemID, Count);
+}
+
+void APDPlayerController::InitializeHUD()
+{
+	if (PlayerHUDClass && !PlayerHUDWidget)
+	{
+		PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+		if (PlayerHUDWidget)
+		{
+			PlayerHUDWidget->AddToViewport();
+		}
+	}
+}
+

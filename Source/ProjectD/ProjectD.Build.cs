@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 using UnrealBuildTool;
 
@@ -7,8 +7,10 @@ public class ProjectD : ModuleRules
 	public ProjectD(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
-		PublicDependencyModuleNames.AddRange(new string[] {
+
+        PublicDefinitions.Add("UE_PROJECT_STEAMSHIPPINGID=0");
+
+        PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
 			"CoreUObject",
 			"Engine",
@@ -29,6 +31,11 @@ public class ProjectD : ModuleRules
             "Sockets",
             "Networking",
             "NetCore",
+            "OnlineSubsystem",
+            "OnlineSubsystemUtils",
+            "OnlineSubsystemSteam",
+            "SteamSockets",
+			"CoreOnline",    
 
 			// Navigation
 			"NavigationSystem",
@@ -40,7 +47,7 @@ public class ProjectD : ModuleRules
 			// Mover
 			"Mover",
 
-			// Mass AI
+            // Mass AI
             "MassEntity",
             "MassCommon",
             "MassMovement",
@@ -54,22 +61,26 @@ public class ProjectD : ModuleRules
             "MassLOD",
             "MassSimulation",
 
-			//Niagara
-			"Niagara",
+            //Niagara
+            "Niagara",
 
-			// Geometry Collection
-			"GeometryCollectionEngine",
+            // Geometry Collection
+            "GeometryCollectionEngine",
 
-			// Cable
-			"CableComponent",
+            // Cable
+            "CableComponent",
+
+            //UI
+            "CommonUI"
         });
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
-	}
+        // Uncomment if you are using Slate UI
+        // PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+
+        // Uncomment if you are using online features
+        // PrivateDependencyModuleNames.Add("OnlineSubsystem");
+
+        // To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+    }
 }
