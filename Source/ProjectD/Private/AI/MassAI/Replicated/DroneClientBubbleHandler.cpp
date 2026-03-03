@@ -9,6 +9,17 @@ FDroneClientBubbleHandler::FDroneClientBubbleHandler()
 {
 }
 
+void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
+{
+	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
+
+	Super::InitializeForWorld(World);
+
+	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
+}
+
+
+#if UE_REPLICATION_COMPILE_CLIENT_CODE
 void FDroneClientBubbleHandler::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
 	auto AddRequirementsForSpawnQuery = [](FMassEntityQuery& Query)
@@ -53,15 +64,6 @@ void FDroneClientBubbleHandler::PostReplicatedChange(const TArrayView<int32> Cha
 	);
 }
 
-void FDroneClientBubbleHandler::InitializeForWorld(UWorld& World)
-{
-	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
-
-	Super::InitializeForWorld(World);
-
-	EffectSubsystem = World.GetSubsystem<UMassEntityEffectSubsystem>();
-}
-
 void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize)
 {
 	using Super = TClientBubbleHandlerBase<FDroneFastArrayItem>;
@@ -89,6 +91,8 @@ void FDroneClientBubbleHandler::PreReplicatedRemove(const TArrayView<int32> Remo
 
 	Super::PreReplicatedRemove(RemovedIndices, FinalSize);
 }
+
+#endif // UE_REPLICATION_COMPILE_CLIENT_CODE
 
 void FDroneClientBubbleHandler::ApplyReplicatedVisualState(const FMassEntityView& EntityView, const FDroneReplicatedAgent& ReplicatedAgent, const bool bForceSnap) const
 {

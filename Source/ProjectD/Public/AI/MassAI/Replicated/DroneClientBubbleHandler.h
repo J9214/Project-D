@@ -13,12 +13,15 @@ class FDroneClientBubbleHandler : public TClientBubbleHandlerBase<FDroneFastArra
 public:
 	FDroneClientBubbleHandler();
 
-	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
-	void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize);
-
 protected:
 	virtual void InitializeForWorld(UWorld& World) override;
+
+#if UE_REPLICATION_COMPILE_CLIENT_CODE
+public:
+	virtual void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize) override;
+	virtual void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize) override;
 	virtual void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize) override;
+#endif
 
 #if UE_REPLICATION_COMPILE_SERVER_CODE
 public:
