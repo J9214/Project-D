@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.7",
+	"EngineAssociation": "{763D5DC8-4EA2-B292-FBCE-FF88D6A752DA}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -16,7 +16,8 @@
 				"MassReplication",
 				"AdvancedSessions",
 				"CableComponent",
-				"Mover"
+				"Mover",
+				"CommonUI"
 			]
 		}
 	],
@@ -27,7 +28,7 @@
 			"TargetAllowList": [
 				"Editor"
 			]
-		},			
+		},
 		{
 			"Name": "OnlineSubsystemSteam",
 			"Enabled": true

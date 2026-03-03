@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "MassClientBubbleHandler.h"
@@ -18,7 +18,10 @@ public:
 
 protected:
 	virtual void InitializeForWorld(UWorld& World) override;
+
+#if !UE_SERVER
 	virtual void PreReplicatedRemove(const TArrayView<int32> RemovedIndices, int32 FinalSize) override;
+#endif
 
 #if UE_REPLICATION_COMPILE_SERVER_CODE
 public:

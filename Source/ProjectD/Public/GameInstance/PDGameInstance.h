@@ -35,6 +35,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FString GetPlayerLocalDisplayName() const { return PlayerLocalDisplayName; }
+
 private:
 
 	UPROPERTY()

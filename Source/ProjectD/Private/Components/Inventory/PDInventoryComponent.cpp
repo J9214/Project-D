@@ -61,6 +61,8 @@ bool UPDInventoryComponent::AddItem_Weapon(const FPDItemInfo* ItemInfo)
 			});
 	}
 
+	UE_LOG(LogTemp, Error, TEXT("TargetIndex : %d"), TargetIndex);
+
 	if (TargetIndex != INDEX_NONE)
 	{
 		APDPlayerState* PS = Cast<APDPlayerState>(GetOwner());
@@ -412,17 +414,21 @@ void UPDInventoryComponent::OnRep_ETCChanged(const TArray<FPDItemData>& OldItemS
 {
 	ItemChanged(EItemType::Etc, OldItemSlot);
 }
+
 void UPDInventoryComponent::ItemChanged(EItemType ItemType, const TArray<FPDItemData>& OldItemSlot)
 {
+	UE_LOG(LogTemp, Warning, TEXT("a"));
 	APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!OwnerPawn)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("b"));
 		return;
 	}
 
 	APDPlayerController* PC = Cast<APDPlayerController>(OwnerPawn->GetController());
 	if (!PC)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("c"));
 		return;
 	}
 
@@ -430,6 +436,7 @@ void UPDInventoryComponent::ItemChanged(EItemType ItemType, const TArray<FPDItem
 	int32 MaxIndex = CurrentSlot.Num();
 	for (int32 i = 0; i < MaxIndex; ++i)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("d"));
 		bool bIsSame = false;
 		if (OldItemSlot.IsValidIndex(i))
 		{
@@ -442,8 +449,10 @@ void UPDInventoryComponent::ItemChanged(EItemType ItemType, const TArray<FPDItem
 
 		if (!bIsSame)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("e"));
 			PC->InitItemDataDisplay(ItemType, i, CurrentSlot[i].ItemID, CurrentSlot[i].Count);
 		}
+		UE_LOG(LogTemp, Warning, TEXT("f"));
 	}
 }
 
