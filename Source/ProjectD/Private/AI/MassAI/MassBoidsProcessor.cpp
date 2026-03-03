@@ -6,6 +6,7 @@
 #include "AI/MassAI/MassTargetFragment.h"
 #include "AI/MassAI/MassBoidsHealthFragment.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
+#include "Subsystem/PlayerLocSubsystem.h"
 
 UMassBoidsProcessor::UMassBoidsProcessor()
 	:EntityQuery(*this)
@@ -33,7 +34,21 @@ void UMassBoidsProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 
 void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
-	EntityQuery.ForEachEntityChunk(Context, [this](FMassExecutionContext& Context)
+	UWorld* World = GetWorld();
+	if (IsValid(World) == false)
+	{
+		return;
+	}
+
+	UPlayerLocSubsystem* PlayerLocSub = World->GetSubsystem<UPlayerLocSubsystem>();
+
+	TArray<FVector> PlayerLocs;
+	if (IsValid(PlayerLocSub) == true)
+	{
+		PlayerLocSub->GetPlayerLocations(PlayerLocs);
+	}
+
+	EntityQuery.ForEachEntityChunk(Context, [this, &PlayerLocs](FMassExecutionContext& Context)
 		{
 			const int32 NumEntities = Context.GetNumEntities();
 
@@ -62,9 +77,20 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 
 				FVector CurrentPos = Transform.GetLocation();
 
-				if ((TargetInfo.IsTargetChase == true &&
-					FVector::DistSquared(CurrentPos, TargetInfo.TargetPosition) <= AttackRangeSq) || // Target In Range
-					ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings, GetWorld(), DT) == true) // To Close Obstacle
+				auto IsCloseToAnyPlayer = [&PlayerLocs, AttackRangeSq](const FVector& Pos) -> bool
+					{
+						for (const FVector& P : PlayerLocs)
+						{
+							if (FVector::DistSquared(Pos, P) <= AttackRangeSq)
+							{
+								return true;
+							}
+						}
+						return false;
+					};
+
+				if (IsCloseToAnyPlayer(CurrentPos) == true ||
+					(ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings, GetWorld(), DT) == true))
 				{
 					HealthInfo.Health = 0.0f;
 					Velocity = FVector::ZeroVector;
