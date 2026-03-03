@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.7",
+	"EngineAssociation": "{763D5DC8-4EA2-B292-FBCE-FF88D6A752DA}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -14,8 +14,10 @@
 				"EnhancedInput",
 				"MassEntity",
 				"MassReplication",
+				"AdvancedSessions",
 				"CableComponent",
-				"Mover"
+				"Mover",
+				"CommonUI"
 			]
 		}
 	],
@@ -26,6 +28,22 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true
+		},
+		{
+			"Name": "SteamSockets",
+			"Enabled": true
+		},
+		{
+			"Name": "AdvancedSessions",
+			"Enabled": true
+		},
+		{
+			"Name": "AdvancedSteamSessions",
+			"Enabled": true
 		},
 		{
 			"Name": "PlayerLink",
@@ -211,6 +229,10 @@
 		},
 		{
 			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
 			"Enabled": true
 		}
 	]

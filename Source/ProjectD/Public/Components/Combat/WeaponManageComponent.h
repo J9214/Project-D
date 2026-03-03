@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/Combat/PawnCombatComponent.h"
@@ -112,6 +112,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	UInputMappingContext* GetEquippedIMC(int32& OutPriority) const;
 	
+	void ChangeWeapon(int32 TargetSlot, TSubclassOf<APDWeaponBase> NewWeaponClass);
 protected:
     virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

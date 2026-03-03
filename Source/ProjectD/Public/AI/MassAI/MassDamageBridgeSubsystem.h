@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "MassEntityTypes.h"
+#include "MassEntityHandle.h"
 #include "MassDamageBridgeSubsystem.generated.h"
 
 struct FHitResult;
