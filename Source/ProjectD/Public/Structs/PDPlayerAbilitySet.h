@@ -14,7 +14,7 @@ public:
 	bool IsValid() const;
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Categories = "Input"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FGameplayTag InputTag;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

@@ -102,9 +102,10 @@ public:
 	
     FORCEINLINE APDWeaponBase* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE APDThrowableItemBase* GetEquippedThrowable() const { return EquippedThrowable; }
+	FORCEINLINE int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
 	APDWeaponBase* GetWeaponInSlot(int32 SlotIndex) const;
 	APDThrowableItemBase* GetThrowableInSlot(int32 SlotIndex) const;
-	FORCEINLINE int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
+	int32 FindNextThrowableGlobalSlotIndex() const;
 
 	bool TryGetMontageEntry(int32 SlotIndex, EPDWeaponMontageAction Action, FPDWeaponMontageEntry& OutEntry) const;
 	bool HasItemInSlot(int32 SlotIndex) const;
