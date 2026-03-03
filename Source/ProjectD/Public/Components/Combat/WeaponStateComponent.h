@@ -20,7 +20,7 @@ public:
 	UWeaponStateComponent();
 
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_RegisterFireShotKey(FGameplayAbilitySpecHandle AbilityHandle, FPredictionKey ShotKey);
+	void ServerRPC_RegisterFireShotKey(FGameplayTag FireTag, FPredictionKey ShotKey);
 	
 protected:
 	UAbilitySystemComponent* GetASC() const;
@@ -32,5 +32,5 @@ protected:
 		FPredictionKey ShotKey
 	);
 
-	FGameplayAbilitySpec* FindSpecByHandle(UAbilitySystemComponent* ASC, FGameplayAbilitySpecHandle Handle);
+	FGameplayAbilitySpec* FindSpecByTag(UAbilitySystemComponent* ASC, const FGameplayTag& Tag);
 };

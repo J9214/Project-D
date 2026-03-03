@@ -34,12 +34,12 @@ void UWeaponStateComponent::ForwardTargetDataToFireGA(
 		return;
 	}
 
-	FGameplayAbilitySpec* Spec = FindSpecByHandle(ASC, AbilityHandle);
+	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromHandle(AbilityHandle);
 	if (!Spec)
 	{
 		return;
 	}
-
+	
 	UGameplayAbility* Instance = Spec->GetPrimaryInstance();
 	UGA_Fire* FireGA = Cast<UGA_Fire>(Instance);
 	if (!FireGA)
@@ -50,19 +50,19 @@ void UWeaponStateComponent::ForwardTargetDataToFireGA(
 	FireGA->HandleServerReceivedTargetData(Data, Tag, AbilityHandle, ShotKey);
 }
 
-FGameplayAbilitySpec* UWeaponStateComponent::FindSpecByHandle(
+FGameplayAbilitySpec* UWeaponStateComponent::FindSpecByTag(
 	UAbilitySystemComponent* ASC,
-	FGameplayAbilitySpecHandle Handle
+	const FGameplayTag& Tag
 )
 {
-	if (!ASC)
+	if (!ASC || !Tag.IsValid())
 	{
 		return nullptr;
 	}
 	
 	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
 	{
-		if (Spec.Handle == Handle)
+		if (Spec.GetDynamicSpecSourceTags().HasTagExact(Tag))
 		{
 			return &Spec;
 		}
@@ -72,7 +72,7 @@ FGameplayAbilitySpec* UWeaponStateComponent::FindSpecByHandle(
 }
 
 void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
-	FGameplayAbilitySpecHandle AbilityHandle,
+	FGameplayTag FireTag,
 	FPredictionKey ShotKey
 )
 {
@@ -81,29 +81,49 @@ void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
 	{
 		return;
 	}
+	
+	if (!FireTag.IsValid() || !ShotKey.IsValidKey())
+	{
+		return;
+	}
+	
+	FGameplayAbilitySpec* Spec = FindSpecByTag(ASC, FireTag);
+	if (!Spec)
+	{
+		return;
+	}
+	
+	const FGameplayAbilitySpecHandle ServerHandle = Spec->Handle;
 
-	if (ASC->AbilityTargetDataSetDelegate(AbilityHandle, ShotKey).IsBound())
+	auto& Delegate = ASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey);
+	if (Delegate.IsBound())
 	{
 		return;
 	}
 
-	auto TargetDataReceivedFunc = [this, AbilityHandle, ShotKey](
-		const FGameplayAbilityTargetDataHandle& Data,
-		FGameplayTag Tag
-	)
+	TWeakObjectPtr<UWeaponStateComponent> WeakThis(this);
+	TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
+
+	Delegate.AddLambda([WeakThis, WeakASC, ServerHandle, ShotKey](const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
 	{
-		UAbilitySystemComponent* LocalASC = GetASC();
-		if (!LocalASC)
+		if (!WeakThis.IsValid() || !WeakASC.IsValid())
 		{
 			return;
 		}
 
-		LocalASC->ConsumeClientReplicatedTargetData(AbilityHandle, ShotKey);
-		LocalASC->AbilityTargetDataSetDelegate(AbilityHandle, ShotKey).Clear();
+		UWeaponStateComponent* This = WeakThis.Get();
+		UAbilitySystemComponent* LocalASC = WeakASC.Get();
 
-		ForwardTargetDataToFireGA(Data, Tag, AbilityHandle, ShotKey);
-	};
-	ASC->AbilityTargetDataSetDelegate(AbilityHandle, ShotKey).AddLambda(TargetDataReceivedFunc);
-	
-	ASC->CallReplicatedTargetDataDelegatesIfSet(AbilityHandle, ShotKey);
+		if (!LocalASC->FindAbilitySpecFromHandle(ServerHandle))
+		{
+			return;
+		}
+
+		LocalASC->ConsumeClientReplicatedTargetData(ServerHandle, ShotKey);
+		LocalASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey).Clear();
+
+		This->ForwardTargetDataToFireGA(Data, Tag, ServerHandle, ShotKey);
+	});
+
+	ASC->CallReplicatedTargetDataDelegatesIfSet(ServerHandle, ShotKey);
 }

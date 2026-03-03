@@ -14,7 +14,7 @@ bool UGCN_WeaponFire::OnExecute_Implementation(AActor* MyTarget, const FGameplay
 		return false;
 	}
 	
-	if (OwnerPawn->IsLocallyControlled())
+	if (OwnerPawn->IsLocallyControlled() || OwnerPawn->GetNetMode() == NM_DedicatedServer)
 	{
 		return false;
 	}

@@ -88,12 +88,12 @@ void APDWeaponBase::ReloadAmmo()
 
 void APDWeaponBase::OnRep_AmmoChanged()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Ammo Changed: %d / %d"), CurrentAmmo, MaxAmmo);
+	// Update HUD
 }
 
 void APDWeaponBase::OnRep_FireModeChanged()
 {
-	// Update HUD, Sound, Anim
+	// Update HUD, Sound
 }
 
 EPDWeaponFireMode APDWeaponBase::GetNextFireMode() const
