@@ -45,6 +45,7 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
 
     bool bCanFit = false;
 
+    UE_LOG(LogTemp, Warning, TEXT("PreLogin"));
     for (int32 i = 0; i < TEAM_COUNT; i++)
     {
         if (TeamInfos[i].LeaderSteamId == LeaderSteamID)
@@ -84,6 +85,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin"));
     APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
     if (!PlayerState)
     {
@@ -167,7 +169,7 @@ void APDLobbyGameMode::CreateDedicatedSession()
             Settings.bIsDedicated = true;
             Settings.bShouldAdvertise = true;
             Settings.bIsLANMatch = false;
-            Settings.NumPublicConnections = 9;
+            Settings.NumPublicConnections = 6;
             Settings.bAllowJoinInProgress = true;
             Settings.bUsesPresence = false;
             Settings.bAllowJoinViaPresence = false;
@@ -229,6 +231,7 @@ void APDLobbyGameMode::UpdateSessionMetadata()
 
 void APDLobbyGameMode::TryGameStart(bool bIsTest)
 {
+    UE_LOG(LogTemp, Warning, TEXT("TryGameStart"));
     if (GetWorld()->IsInSeamlessTravel())
     {
 		return;
@@ -245,6 +248,6 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 		}
     }
 
-    const FString TravelURL = TEXT("/Game/Levels/LevelPrototyping/AnimLevel");
+    const FString TravelURL = TEXT("/Game/LakeTown/Maps/Demonstration");
     GetWorld()->ServerTravel(TravelURL);
 }

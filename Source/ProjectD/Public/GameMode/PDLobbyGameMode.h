@@ -60,7 +60,7 @@ private:
 	static constexpr uint8 TEAM_COUNT = static_cast<uint8>(ETeamType::MAX); 
 
 	FTeamInfo TeamInfos[TEAM_COUNT];
-	const int32 MaxTeamSize = 3;
+	const int32 MaxTeamSize = 2;
 
 	TMap<FString, FString> LoginInfo;
 

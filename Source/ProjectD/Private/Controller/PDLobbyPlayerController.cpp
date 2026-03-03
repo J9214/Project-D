@@ -125,6 +125,7 @@ void APDLobbyPlayerController::OnFindSessionsComplete(bool bWasSuccessful)
 {
     if (bWasSuccessful && SessionSearch.IsValid() && SessionSearch->SearchResults.Num() > 0)
     {
+        UE_LOG(LogTemp, Warning, TEXT("=== 검색 완료: 총 %d개의 세션을 찾았습니다. ==="), SessionSearch->SearchResults.Num());
         CurrentSessionIndex = 0;
         TryJoinNextAvailableSession();
     }
