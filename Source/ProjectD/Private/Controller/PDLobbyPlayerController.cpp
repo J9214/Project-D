@@ -195,6 +195,7 @@ void APDLobbyPlayerController::TryJoinNextAvailableSession()
             APDLobbyPlayerController* PlayerController = Cast<APDLobbyPlayerController>(It->Get());
             if (PlayerController && PlayerController != this)
             {
+                UE_LOG(LogTemp, Log, TEXT("Steam Connect String: %s"), *PendingDediUrl);
                 PlayerController->Client_BeginTravelToDedi(PendingDediUrl);
             }
         }
