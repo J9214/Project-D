@@ -5,6 +5,7 @@
 #include "AI/MassAI/MassBoidsFragment.h"
 #include "AI/MassAI/MassTargetFragment.h"
 #include "AI/MassAI/MassBoidsHealthFragment.h"
+#include "AI/MassAI/DroneExplosionFragment.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
 #include "Subsystem/PlayerLocSubsystem.h"
 
@@ -24,6 +25,7 @@ void UMassBoidsProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadWrite);
 
 	EntityQuery.AddSharedRequirement<FMassBoidsFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddSharedRequirement<FDroneExplosionFragment>(EMassFragmentAccess::ReadOnly);
 
 	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
 	EntityQuery.AddTagRequirement<FMassEntityPendingRemovalTag>(EMassFragmentPresence::None);
@@ -58,10 +60,12 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 			TArrayView<FMassBoidsHealthFragment> HealthInfos = Context.GetMutableFragmentView<FMassBoidsHealthFragment>();
 
 			const FMassBoidsFragment& Settings = Context.GetSharedFragment<FMassBoidsFragment>();
+			const FDroneExplosionFragment& ExplodeSettings = Context.GetSharedFragment<FDroneExplosionFragment>();
+
+			const float PlayerRangeSq = ExplodeSettings.PlayerExplodeRange * ExplodeSettings.PlayerExplodeRange;
+			const float ObstacleRange = ExplodeSettings.ObstacleRange;
 
 			const float DT = Context.GetDeltaTimeSeconds();
-
-			const float AttackRangeSq = Settings.AttackRange * Settings.AttackRange;
 
 			for (int32 i = 0; i < NumEntities; ++i)
 			{
@@ -77,11 +81,11 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 
 				FVector CurrentPos = Transform.GetLocation();
 
-				auto IsCloseToAnyPlayer = [&PlayerLocs, AttackRangeSq](const FVector& Pos) -> bool
+				auto IsCloseToAnyPlayer = [&PlayerLocs, PlayerRangeSq](const FVector& Pos) -> bool
 					{
 						for (const FVector& P : PlayerLocs)
 						{
-							if (FVector::DistSquared(Pos, P) <= AttackRangeSq)
+							if (FVector::DistSquared(Pos, P) <= PlayerRangeSq)
 							{
 								return true;
 							}
@@ -90,7 +94,7 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 					};
 
 				if (IsCloseToAnyPlayer(CurrentPos) == true ||
-					(ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings, GetWorld(), DT) == true))
+					(ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings,ExplodeSettings, GetWorld(), DT) == true))
 				{
 					HealthInfo.Health = 0.0f;
 					Velocity = FVector::ZeroVector;
@@ -351,7 +355,7 @@ FVector UMassBoidsProcessor::SteerTowards(const FVector& DesiredDirection, const
 	return Steer.GetClampedToMaxSize(Settings.MaxSteerWeight);
 }
 
-bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& Settings, const UWorld* World, const float DT) const
+bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& BoidsSettings, const FDroneExplosionFragment& ExpSettings, const UWorld* World, const float DT) const
 {
 	if (IsValid(World) == false)
 	{
@@ -367,7 +371,7 @@ bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FV
 	const FVector Forward = MyVel.GetSafeNormal();
 
 	const float OneFrameMove = FMath::Sqrt(SpeedSq) * DT;
-	const float CheckDist = FMath::Max(Settings.ObstacleRange, OneFrameMove);
+	const float CheckDist = FMath::Max(ExpSettings.ObstacleRange, OneFrameMove);
 
 	const FVector Start = MyPos;
 	const FVector End = MyPos + (Forward * CheckDist);
@@ -376,7 +380,7 @@ bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FV
 	Params.bTraceComplex = false;
 
 	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, Settings.ObstacleTraceChannel, Params);
+	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, BoidsSettings.ObstacleTraceChannel, Params);
 
 	if (bHit == false)
 	{
