@@ -253,7 +253,7 @@ void UGA_Fire::FireOneShot()
 		UWeaponStateComponent* WSC = OwnerPawn->GetWeaponStateComponent();
 		if (WSC)
 		{
-			WSC->ServerRPC_RegisterFireShotKey(CurrentSpecHandle, PredictKey);
+			WSC->ServerRPC_RegisterFireShotKey(PDGameplayTags::InputTag_Weapon_Fire, PredictKey);
 		}
 
 		const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
