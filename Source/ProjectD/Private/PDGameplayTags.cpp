@@ -1,4 +1,4 @@
-﻿#include "PDGameplayTags.h"
+#include "PDGameplayTags.h"
 
 namespace PDGameplayTags
 {
@@ -69,6 +69,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ExplodeDamage, "Data.ThrowableObject.ExplodeDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ContinuousDamage, "Data.ThrowableObject.ContinuousDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_DestructDamage, "Data.ThrowableObject.DestructDamage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_AI_Drone_ExplodeDamage, "Data.AI.Drone.ExplodeDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Weapon_Fire, "Cooldown.Weapon.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Movement_Dash, "Cooldown.Movement.Dash");
 
