@@ -12,6 +12,7 @@
 #include "ProjectD/ProjectD.h"
 
 TSet<FName> APDThrowableObject::PDANameSet;
+TSet<FName> APDThrowableObject::PDAExplosionNameSet;
 
 APDThrowableObject::APDThrowableObject()
 {
@@ -21,12 +22,15 @@ APDThrowableObject::APDThrowableObject()
 	StaticMesh->SetSimulatePhysics(false);
 
 	Projectile = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile"));
-	Projectile->SetIsReplicated(true);
+	Projectile->SetIsReplicated(false);
 	Projectile->bSweepCollision = true;
 
 	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
 	SetRootComponent(Capsule);
 	StaticMesh->SetupAttachment(Capsule);
+
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 void APDThrowableObject::BeginPlay()
@@ -35,10 +39,11 @@ void APDThrowableObject::BeginPlay()
 
 	bIsCanInteract = true;
 	Projectile->Deactivate();
+	Projectile->SetComponentTickEnabled(HasAuthority());
 
 	if (HasAuthority())
 	{
-		if (!PDANameSet.Contains(PDAName))
+		if (!PDANameSet.Contains(PDAName) || !PDANameSet.Contains(PDAExplosionName))
 		{
 			LoadPDA();
 		}
@@ -63,6 +68,11 @@ void APDThrowableObject::OnInteract_Implementation(AActor* Interactor)
 
 void APDThrowableObject::OnEndInteract_Implementation(AActor* Interactor)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	bIsCanInteract = false;
 	ThrowObject();
 }
@@ -249,5 +259,11 @@ void APDThrowableObject::LoadPDA()
 	if (Handle.IsValid())
 	{
 		PDANameSet.Add(PDAName);
+	}
+
+	TSharedPtr<FStreamableHandle> ExplosionHandle = AssetManager->LoadPrimaryAsset(FPrimaryAssetId(PDAExplosionType, PDAExplosionName), TArray<FName>());
+	if (Handle.IsValid())
+	{
+		PDAExplosionNameSet.Add(PDAExplosionName);
 	}
 }
