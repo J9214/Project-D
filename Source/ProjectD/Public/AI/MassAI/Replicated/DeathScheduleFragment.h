@@ -18,4 +18,7 @@ public:
 	FVector_NetQuantize DeathLoc = FVector::ZeroVector;
 
 	bool bMarkedForRemoval = false;
+
+	UPROPERTY()
+	EMassEntityCueId DeathCueId = EMassEntityCueId::None;
 };

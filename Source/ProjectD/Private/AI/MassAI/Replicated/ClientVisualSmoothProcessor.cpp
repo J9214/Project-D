@@ -22,7 +22,7 @@ void UClientVisualSmoothProcessor::Execute(FMassEntityManager& EntityManager, FM
 {
 	const float DeltaSeconds = Context.GetDeltaTimeSeconds();
 
-	EntityQuery.ForEachEntityChunk(EntityManager, Context, [this, DeltaSeconds](FMassExecutionContext& ChunkContext)
+	EntityQuery.ForEachEntityChunk(Context, [this, DeltaSeconds](FMassExecutionContext& ChunkContext)
 		{
 			const int32 NumEntities = ChunkContext.GetNumEntities();
 

@@ -1,16 +1,19 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "AI/MassAI/MassBoidsProcessor.h"
 #include "MassCommonFragments.h"		// Tranform Fragment
 #include "MassMovementFragments.h"		// VelocityFragment
 #include "MassExecutionContext.h"
 #include "AI/MassAI/MassBoidsFragment.h"
 #include "AI/MassAI/MassTargetFragment.h"
+#include "AI/MassAI/MassBoidsHealthFragment.h"
+#include "AI/MassAI/DroneExplosionFragment.h"
+#include "AI/MassAI/Replicated/MassEntityTags.h"
+#include "Subsystem/PlayerLocSubsystem.h"
 
 UMassBoidsProcessor::UMassBoidsProcessor()
 	:EntityQuery(*this)
 {
+	ExecutionFlags = (int32)EProcessorExecutionFlags::Server;
+	bAutoRegisterWithProcessingPhases = true;
 	ProcessingPhase = EMassProcessingPhase::PrePhysics;
 }
 
@@ -19,22 +22,48 @@ void UMassBoidsProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassVelocityFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassTargetFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadWrite);
+
 	EntityQuery.AddSharedRequirement<FMassBoidsFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddSharedRequirement<FDroneExplosionFragment>(EMassFragmentAccess::ReadOnly);
+
+	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
+	EntityQuery.AddTagRequirement<FMassEntityPendingRemovalTag>(EMassFragmentPresence::None);
+	EntityQuery.AddTagRequirement<FMassEntitySuicideTag>(EMassFragmentPresence::None);
 
 	EntityQuery.RegisterWithProcessor(*this);
 }
 
 void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
-	EntityQuery.ForEachEntityChunk(Context, [this](FMassExecutionContext& Context)
+	UWorld* World = GetWorld();
+	if (IsValid(World) == false)
+	{
+		return;
+	}
+
+	UPlayerLocSubsystem* PlayerLocSub = World->GetSubsystem<UPlayerLocSubsystem>();
+
+	TArray<FVector> PlayerLocs;
+	if (IsValid(PlayerLocSub) == true)
+	{
+		PlayerLocSub->GetPlayerLocations(PlayerLocs);
+	}
+
+	EntityQuery.ForEachEntityChunk(Context, [this, &PlayerLocs](FMassExecutionContext& Context)
 		{
 			const int32 NumEntities = Context.GetNumEntities();
 
 			TArrayView<FTransformFragment> Transforms = Context.GetMutableFragmentView<FTransformFragment>();
 			TArrayView<FMassVelocityFragment> Velocities = Context.GetMutableFragmentView<FMassVelocityFragment>();
 			TConstArrayView<FMassTargetFragment> TargetInfos = Context.GetFragmentView<FMassTargetFragment>();
+			TArrayView<FMassBoidsHealthFragment> HealthInfos = Context.GetMutableFragmentView<FMassBoidsHealthFragment>();
 
 			const FMassBoidsFragment& Settings = Context.GetSharedFragment<FMassBoidsFragment>();
+			const FDroneExplosionFragment& ExplodeSettings = Context.GetSharedFragment<FDroneExplosionFragment>();
+
+			const float PlayerRangeSq = ExplodeSettings.PlayerExplodeRange * ExplodeSettings.PlayerExplodeRange;
+			const float ObstacleRange = ExplodeSettings.ObstacleRange;
 
 			const float DT = Context.GetDeltaTimeSeconds();
 
@@ -43,8 +72,38 @@ void UMassBoidsProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 				FTransform& Transform = Transforms[i].GetMutableTransform();
 				FVector& Velocity = Velocities[i].Value;
 				const FMassTargetFragment& TargetInfo = TargetInfos[i];
+				FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
+
+				if (HealthInfo.Health <= 0)
+				{
+					continue;
+				}
 
 				FVector CurrentPos = Transform.GetLocation();
+
+				auto IsCloseToAnyPlayer = [&PlayerLocs, PlayerRangeSq](const FVector& Pos) -> bool
+					{
+						for (const FVector& P : PlayerLocs)
+						{
+							if (FVector::DistSquared(Pos, P) <= PlayerRangeSq)
+							{
+								return true;
+							}
+						}
+						return false;
+					};
+
+				if (IsCloseToAnyPlayer(CurrentPos) == true ||
+					(ShouldExplodeOnObstacle(CurrentPos, Velocity, Settings,ExplodeSettings, GetWorld(), DT) == true))
+				{
+					HealthInfo.Health = 0.0f;
+					Velocity = FVector::ZeroVector;
+
+					const FMassEntityHandle Entity = Context.GetEntity(i);
+					Context.Defer().AddTag<FMassEntitySuicideTag>(Entity);
+					continue;
+				}
+
 				FVector Acceleration = FVector::ZeroVector;
 
 				if (TargetInfo.IsTargetChase)
@@ -294,4 +353,39 @@ FVector UMassBoidsProcessor::SteerTowards(const FVector& DesiredDirection, const
 	FVector DesiredVelocity = DesiredDirection.GetSafeNormal() * Settings.MaxMoveSpeed;
 	FVector Steer = DesiredVelocity - CurrentVel;
 	return Steer.GetClampedToMaxSize(Settings.MaxSteerWeight);
+}
+
+bool UMassBoidsProcessor::ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& BoidsSettings, const FDroneExplosionFragment& ExpSettings, const UWorld* World, const float DT) const
+{
+	if (IsValid(World) == false)
+	{
+		return false;
+	}
+
+	const float SpeedSq = MyVel.SizeSquared();
+	if (SpeedSq <= KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+
+	const FVector Forward = MyVel.GetSafeNormal();
+
+	const float OneFrameMove = FMath::Sqrt(SpeedSq) * DT;
+	const float CheckDist = FMath::Max(ExpSettings.ObstacleRange, OneFrameMove);
+
+	const FVector Start = MyPos;
+	const FVector End = MyPos + (Forward * CheckDist);
+
+	FCollisionQueryParams Params;
+	Params.bTraceComplex = false;
+
+	FHitResult Hit;
+	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, BoidsSettings.ObstacleTraceChannel, Params);
+
+	if (bHit == false)
+	{
+		return false;
+	}
+
+	return true;
 }
