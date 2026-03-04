@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "MassEntityTypes.h"
 #include "MassEntityHandle.h"
+#include "GameplayEffect.h"
 #include "DroneExplosionFragment.generated.h"
 
 USTRUCT()
@@ -21,4 +22,7 @@ public:
 
     UPROPERTY(EditAnywhere)
     float Damage = 50.0f;
+
+    UPROPERTY(EditAnywhere)
+    TSubclassOf<UGameplayEffect> ExplosionDamageGE = nullptr;
 };
