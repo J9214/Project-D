@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "NativeGameplayTags.h"
 
@@ -69,6 +69,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ExplodeDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ContinuousDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_DestructDamage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_AI_Drone_ExplodeDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Weapon_Fire);
 
 	/** Gimmick Tags **/
