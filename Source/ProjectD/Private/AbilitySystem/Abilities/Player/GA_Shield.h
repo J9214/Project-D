@@ -6,6 +6,10 @@
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
 #include "GA_Shield.generated.h"
 
+class APDDamageableSkillActor;
+class UMaterialInterface;
+class UStaticMesh;
+
 /**
  * 
  */
@@ -29,12 +33,30 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Shield")
-	TSubclassOf<AActor> ShieldClass;
+	TSubclassOf<APDDamageableSkillActor> ShieldClass;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Shield")
+	TObjectPtr<APDDamageableSkillActor> SpawnedShield = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield")
-	AActor* SpawnedShield = nullptr;
+	bool bAttachShieldToOwner = true;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Shield")
 	FVector ShieldRelativeLocation = FVector(100.f, 0.f, 0.f);
-};
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	FRotator ShieldRelativeRotation = FRotator(0.f, -90.f, 0.f);
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	FVector ShieldScaleVector = FVector(1,1,1);
 
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	float ShieldMaxHealth = 200.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	TObjectPtr<UStaticMesh> ShieldStaticMesh = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	TObjectPtr<UMaterialInterface> ShieldBaseMaterial = nullptr;
+};
