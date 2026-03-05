@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Actor.h"
+#include "Interface/PDTeamInterface.h"
 #include "PDDamageableSkillActor.generated.h"
 
 
@@ -13,8 +14,15 @@ class UStaticMeshComponent;
 class UMaterialInterface;
 class UAbilitySystemComponent;
 
+UENUM(BlueprintType)
+enum class EPDShieldType : uint8
+{
+	Wall = 0 UMETA(DisplayName = "Wall"),
+	Circle UMETA(DisplayName = "Circle")
+};
+
 UCLASS()
-class APDDamageableSkillActor : public AActor, public IAbilitySystemInterface
+class APDDamageableSkillActor : public AActor, public IAbilitySystemInterface ,public IPDTeamInterface
 {
 	GENERATED_BODY()
 	
@@ -26,9 +34,11 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category="Shield")
-	void InitializeShieldSettings(float InMaxHealth, UStaticMesh* InStaticMesh, UMaterialInterface* InBaseMaterial);
+	void InitializeShieldSettings(float InMaxHealth, UStaticMesh* InStaticMesh, UMaterialInterface* InBaseMaterial, ETeamType InOwnerTeamID, EPDShieldType InDamageableType);
 
-
+	virtual ETeamType GetTeamID() const override { return OwnerTeamID; };
+	UFUNCTION(BlueprintPure, Category="Shield")
+	EPDShieldType GetDamageableType() const { return DamageableType; }
 protected:
 	virtual void BeginPlay() override;
 
@@ -58,5 +68,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,ReplicatedUsing=OnRep_ShieldVisuals)
 	TObjectPtr<UMaterialInterface> ShieldBaseMaterial = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category="Shield")
+	ETeamType OwnerTeamID = ETeamType::None;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category="Shield")
+	EPDShieldType DamageableType = EPDShieldType::Wall;
 
 };

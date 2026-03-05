@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "Components/SceneComponent.h"
 #include "Skill/PDDamageableSkillActor.h"
+#include "PlayerState/PDPlayerState.h"
 
 
 UGA_Shield::UGA_Shield()
@@ -48,7 +49,19 @@ void UGA_Shield::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 
 			if (SpawnedShield)
 			{
-				SpawnedShield->InitializeShieldSettings(ShieldMaxHealth, ShieldStaticMesh, ShieldBaseMaterial);
+				ETeamType OwnerTeamID = ETeamType::None;
+				if (const APDPlayerState* PS = OwnerPawn->GetPlayerState<APDPlayerState>())
+				{
+					OwnerTeamID = PS->GetTeamID();
+				}
+
+				SpawnedShield->InitializeShieldSettings(
+					ShieldMaxHealth,
+					ShieldStaticMesh,
+					ShieldBaseMaterial,
+					OwnerTeamID,
+					ShieldDamageableType
+				);
 				
 				if (bAttachShieldToOwner && AttachTarget)
 				{
