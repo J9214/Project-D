@@ -32,10 +32,6 @@ void APDGameModeBase::BeginPlay()
         Pool->InitPool(PoolSize);
     }
 
-    UClass* Cls = UMassProxyAssignmentProcessor::StaticClass();
-    UE_LOG(LogTemp, Warning, TEXT("ProxyAssign Class=%s"), *GetNameSafe(Cls));
-
-
 	StartRound();
 }
 
