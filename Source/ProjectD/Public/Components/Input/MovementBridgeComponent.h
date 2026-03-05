@@ -10,6 +10,7 @@ enum class EMoveRequestType : uint8
 	MoveTo,
 	LinearVelocityDash,
 	MoveLaunch,
+	JumpTo,
 };
 
 USTRUCT(BlueprintType)
@@ -27,16 +28,28 @@ struct FMoveRequest
 	FVector Target = FVector::ZeroVector;  
 
 	UPROPERTY(BlueprintReadWrite)
-	FVector LaunchVelocity = FVector::ZeroVector;  
+	FVector LaunchVelocity = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadWrite)
+	FRotator JumpRotation = FRotator::ZeroRotator;
 	
 	UPROPERTY(BlueprintReadWrite)
 	FName ForceMovementMode = EName::None;
 
 	UPROPERTY(BlueprintReadWrite)
-	float DurationMs = 0.f;  
+	float DurationMs = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float JumpHeight = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float JumpDistance = 0.f;
 	
 	UPROPERTY(BlueprintReadWrite)
 	uint8 Priority = 10;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool bUseActorRotation = false;
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bCancelExisting = false; // if true cancel existing move request
