@@ -66,19 +66,9 @@ protected:
 	
 	void PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon);
 	
-	void BindServerTargetDataDelegate();
-	void UnbindServerTargetDataDelegate();
-	void OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag);
-	
-	void HandleServerReceivedTargetData_Internal(const FGameplayAbilityTargetDataHandle& Data);
-	
 protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitDelay> WaitDelayTask = nullptr;
 	
 	bool bKeepFiring = false;
-	
-	FDelegateHandle ServerTDDelegateHandle;
-
-	bool bServerDelegateBound = false;
 };

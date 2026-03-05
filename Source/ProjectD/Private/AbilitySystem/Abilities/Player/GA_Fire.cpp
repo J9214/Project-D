@@ -32,28 +32,10 @@ void UGA_Fire::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	// bKeepFiring = true;
-	//
-	// if (IsLocallyControlled())
-	// {
-	// 	StartFireNow();
-	// }
-	
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	if (ActorInfo && ActorInfo->IsNetAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::ActivateAbility - Binding server target data delegate"));
-		BindServerTargetDataDelegate();
-	}
+	bKeepFiring = true;
 
 	if (IsLocallyControlled())
 	{
-		bKeepFiring = true;
 		StartFireNow();
 	}
 }
@@ -72,11 +54,6 @@ void UGA_Fire::EndAbility(
 	{
 		WaitDelayTask->EndTask();
 		WaitDelayTask = nullptr;
-	}
-	
-	if (ActorInfo && ActorInfo->IsNetAuthority())
-	{
-		UnbindServerTargetDataDelegate();
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -246,68 +223,51 @@ void UGA_Fire::FireOneShot()
 	
 	PlayLocalFireFX(OwnerPawn, Weapon);
 
-	// const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	// if (!WeaponDA)
-	// {
-	// 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	// 	return;
-	// }
-	//
-	// const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
-	//
-	// UAbilityTask_PlayMontageAndWait* PlayTask =
-	// 	UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-	// 		this,
-	// 		TEXT("FireMontageTask"),
-	// 		Entry.Montage,
-	// 		1.f,
-	// 		NAME_None,
-	// 		Entry.bStopWhenAbilityEnds
-	// 	);
-	// if (IsValid(PlayTask))
-	// {
-	// 	PlayTask->ReadyForActivation();
-	// }
+	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
+	if (!WeaponDA)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		return;
+	}
 	
-	// {
-	// 	FScopedPredictionWindow PW(ASC, true);
-	// 	const FPredictionKey PredictKey = ASC->ScopedPredictionKey;
-	//
-	// 	UWeaponStateComponent* WSC = OwnerPawn->GetWeaponStateComponent();
-	// 	if (WSC)
-	// 	{
-	// 		WSC->ServerRPC_RegisterFireShotKey(PDGameplayTags::InputTag_Weapon_Fire, PredictKey);
-	// 	}
-	//
-	// 	const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
-	// 	const FVector AimPoint = CalcLocalAimPoint(OwnerPawn, Weapon);
-	// 	const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
-	//
-	// 	ASC->CallServerSetReplicatedTargetData(
-	// 		CurrentSpecHandle,
-	// 		PredictKey,
-	// 		TargetData,
-	// 		FGameplayTag(),
-	// 		PredictKey
-	// 	);
-	// }
-	
-	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::FireOneShot - ActivationKey: %s"), *ActivationKey.ToString());
+	const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
 
-	FScopedPredictionWindow PW(ASC, ActivationKey);
+	UAbilityTask_PlayMontageAndWait* PlayTask =
+		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this,
+			TEXT("FireMontageTask"),
+			Entry.Montage,
+			1.f,
+			NAME_None,
+			Entry.bStopWhenAbilityEnds
+		);
+	if (IsValid(PlayTask))
+	{
+		PlayTask->ReadyForActivation();
+	}
 
-	const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
-	const FVector AimPoint  = CalcLocalAimPoint(OwnerPawn, Weapon);
-	const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
+	{
+		FScopedPredictionWindow PW(ASC, true);
+		const FPredictionKey PredictKey = ASC->ScopedPredictionKey;
 
-	ASC->CallServerSetReplicatedTargetData(
-		CurrentSpecHandle,
-		ActivationKey,
-		TargetData,
-		FGameplayTag(),
-		ActivationKey
-	);
+		UWeaponStateComponent* WSC = OwnerPawn->GetWeaponStateComponent();
+		if (WSC)
+		{
+			WSC->ServerRPC_RegisterFireShotKey(PDGameplayTags::InputTag_Weapon_Fire, PredictKey);
+		}
+
+		const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
+		const FVector AimPoint = CalcLocalAimPoint(OwnerPawn, Weapon);
+		const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
+
+		ASC->CallServerSetReplicatedTargetData(
+			CurrentSpecHandle,
+			PredictKey,
+			TargetData,
+			FGameplayTag(),
+			ASC->ScopedPredictionKey
+		);
+	}
 }
 
 bool UGA_Fire::GetOwnerPawnWeapon(
@@ -624,114 +584,4 @@ FGameplayAbilityTargetDataHandle UGA_Fire::MakeAimPointTargetData(const FVector&
 	Handle.Add(Loc);
 
 	return Handle;
-}
-
-void UGA_Fire::BindServerTargetDataDelegate()
-{
-	if (bServerDelegateBound)
-	{
-		return;
-	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
-	{
-		return;
-	}
-
-	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::BindServerTargetDataDelegate - Retrieved ASC and ActivationKey. ActivationKey: %s"), *ActivationKey.ToString());
-
-	auto& Delegate = ASC->AbilityTargetDataSetDelegate(CurrentSpecHandle, ActivationKey);
-	if (Delegate.IsBound())
-	{
-		bServerDelegateBound = true;
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::BindServerTargetDataDelegate - Binding server target data delegate."));
-	ServerTDDelegateHandle = Delegate.AddUObject(this, &UGA_Fire::OnServerTargetDataReceived);
-	bServerDelegateBound = true;
-
-	ASC->CallReplicatedTargetDataDelegatesIfSet(CurrentSpecHandle, ActivationKey);
-}
-
-void UGA_Fire::UnbindServerTargetDataDelegate()
-{
-	if (!bServerDelegateBound)
-	{
-		return;
-	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (ASC)
-	{
-		const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-		UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Retrieved ASC and ActivationKey for unbinding. ActivationKey: %s"), *ActivationKey.ToString());
-		ASC->AbilityTargetDataSetDelegate(CurrentSpecHandle, ActivationKey).Remove(ServerTDDelegateHandle);
-	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Unbound server target data delegate."));
-
-	bServerDelegateBound = false;
-	ServerTDDelegateHandle.Reset();
-}
-
-void UGA_Fire::OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
-{
-	if (!CurrentActorInfo || !CurrentActorInfo->IsNetAuthority())
-	{
-		return;
-	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
-	{
-		return;
-	}
-
-	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::OnServerTargetDataReceived - Retrieved ASC and ActivationKey for processing received data. ActivationKey: %s"), *ActivationKey.ToString());
-	ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, ActivationKey);
-
-	HandleServerReceivedTargetData_Internal(Data);
-}
-
-void UGA_Fire::HandleServerReceivedTargetData_Internal(const FGameplayAbilityTargetDataHandle& Data)
-{
-	UAbilitySystemComponent* OwnerASC = nullptr;
-	APDPawnBase* OwnerPawn = nullptr;
-	APDWeaponBase* Weapon = nullptr;
-	if (!GetOwnerPawnWeapon(OwnerASC, OwnerPawn, Weapon))
-	{
-		return;
-	}
-
-	const FGameplayAbilityTargetData* Raw = Data.Get(0);
-	if (!Raw || Raw->GetScriptStruct() != FGameplayAbilityTargetData_LocationInfo::StaticStruct())
-	{
-		return;
-	}
-
-	const auto* LocationInfo = static_cast<const FGameplayAbilityTargetData_LocationInfo*>(Raw);
-	const FVector AimPoint = LocationInfo->TargetLocation.GetTargetingTransform().GetLocation();
-
-	if (!Weapon->CanFire())
-	{
-		return;
-	}
-
-	if (Weapon->WeaponData && Weapon->WeaponData->FireCueTag.IsValid())
-	{
-		FGameplayCueParameters Params;
-		Params.SourceObject = Weapon->WeaponData;
-		Params.EffectCauser = Weapon;
-		Params.Instigator   = OwnerPawn;
-		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::HandleServerReceivedTargetData_Internal - Firing weapon. AimPoint: %s"), *AimPoint.ToString());
-	Weapon->ConsumeAmmo(1);
-	ApplyFireCooldownToOwner(Weapon);
-	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
 }
