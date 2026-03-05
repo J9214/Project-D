@@ -36,7 +36,7 @@ void UDroneExplosionSubsystem::ApplyExplosionDamage(const FVector& Location, flo
 	TArray<FOverlapResult> OverlappedResults;
 
 	FCollisionObjectQueryParams ObjectQuery;
-	ObjectQuery.AddObjectTypesToQuery(ECC_Pawn);
+	ObjectQuery.AddObjectTypesToQuery(LineOfSightTraceChannel);
 
 	const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
 
