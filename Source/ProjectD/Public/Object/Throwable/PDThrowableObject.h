@@ -72,4 +72,5 @@ protected:
 
 private:
 	static TSet<FName> PDANameSet;
+	static TSet<FName> PDAExplosionNameSet;
 };
