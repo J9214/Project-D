@@ -38,7 +38,7 @@ protected:
 	FName PDAName;
 
 protected:
-	TSharedPtr<FLayeredMove_JumpTo> SPJump;
+	//TSharedPtr<FLayeredMove_JumpTo> SPJump;
 	UPDJumpPadDataAsset* JumpData;
 
 private:

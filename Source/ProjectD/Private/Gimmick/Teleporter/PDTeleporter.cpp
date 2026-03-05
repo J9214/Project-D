@@ -20,6 +20,11 @@ APDTeleporter::APDTeleporter()
 
 void APDTeleporter::OnInteract_Implementation(AActor* Interactor)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	if (!TeleportDest.IsValid())
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Invalid Destination!"));

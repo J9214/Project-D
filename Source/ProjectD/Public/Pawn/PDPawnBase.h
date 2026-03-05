@@ -21,6 +21,7 @@ class UGameplayEffect;
 class UCapsuleComponent;
 class UMoverComponent;
 class APDCarriableObjectBase;
+class UInteractionComponent;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -84,6 +85,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
 	TObjectPtr<UMoverComponent> MoverComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
+	TObjectPtr<UInteractionComponent> InteractionComponent;
 	
 #pragma region FirstPerson
 
