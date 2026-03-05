@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,12 +5,10 @@
 #include "MassBoidsProcessor.generated.h"
 
 struct FMassBoidsFragment;
+struct FDroneExplosionFragment;
 struct FTransformFragment;
 struct FMassVelocityFragment;
 
-/**
- * 
- */
 UCLASS()
 class PROJECTD_API UMassBoidsProcessor : public UMassProcessor
 {
@@ -32,6 +28,8 @@ private:
     FVector ComputeObstacleAvoidance(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& Settings, const UWorld* World) const;
 
     FVector SteerTowards(const FVector& DesiredDirection, const FVector& CurrentVel, const FMassBoidsFragment& Settings) const;
+
+    bool ShouldExplodeOnObstacle(const FVector& MyPos, const FVector& MyVel, const FMassBoidsFragment& BoidsSettings, const FDroneExplosionFragment& ExpSettings, const UWorld* World, const float DT) const;
 
 private:
     FMassEntityQuery EntityQuery;

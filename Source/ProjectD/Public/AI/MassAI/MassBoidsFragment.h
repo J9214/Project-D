@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,9 +5,6 @@
 #include "MassEntityHandle.h"
 #include "MassBoidsFragment.generated.h"
 
-/**
- * PROJECTD_API
- */
 USTRUCT()
 struct PROJECTD_API FMassBoidsFragment : public FMassSharedFragment
 {

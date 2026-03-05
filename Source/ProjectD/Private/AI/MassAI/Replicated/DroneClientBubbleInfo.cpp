@@ -10,8 +10,8 @@ ADroneClientBubbleInfo::ADroneClientBubbleInfo(const FObjectInitializer& ObjectI
 
 	bReplicates = true;
 
-	NetUpdateFrequency = 30.0f;
-	MinNetUpdateFrequency = 15.0f;
+	SetNetUpdateFrequency(30.0f);
+	SetMinNetUpdateFrequency(15.0f);
 	NetPriority = 2.0f;
 }
 
