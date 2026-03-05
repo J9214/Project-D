@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
+#include "Skill/PDDamageableSkillActor.h"
 #include "GA_Shield.generated.h"
 
-class APDDamageableSkillActor;
 class UMaterialInterface;
 class UStaticMesh;
 
@@ -53,6 +53,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Shield")
 	float ShieldMaxHealth = 200.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield")
+	EPDShieldType ShieldDamageableType = EPDShieldType::Wall;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Shield")
 	TObjectPtr<UStaticMesh> ShieldStaticMesh = nullptr;

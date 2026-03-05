@@ -52,14 +52,18 @@ void APDDamageableSkillActor::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(APDDamageableSkillActor, CurrentHealth);
 	DOREPLIFETIME(APDDamageableSkillActor, ShieldStaticMesh);
 	DOREPLIFETIME(APDDamageableSkillActor, ShieldBaseMaterial);
+	DOREPLIFETIME(APDDamageableSkillActor, OwnerTeamID);
+	DOREPLIFETIME(APDDamageableSkillActor, DamageableType);
 }
 
-void APDDamageableSkillActor::InitializeShieldSettings(float InMaxHealth, UStaticMesh* InStaticMesh, UMaterialInterface* InBaseMaterial)
+void APDDamageableSkillActor::InitializeShieldSettings(float InMaxHealth, UStaticMesh* InStaticMesh, UMaterialInterface* InBaseMaterial, ETeamType InOwnerTeamID, EPDShieldType InDamageableType)
 {
 	MaxHealth = FMath::Max(1.f, InMaxHealth);
 	CurrentHealth = MaxHealth;
 	ShieldStaticMesh = InStaticMesh;
 	ShieldBaseMaterial = InBaseMaterial;
+	OwnerTeamID = InOwnerTeamID;
+	DamageableType = InDamageableType;
 
 	OnRep_ShieldVisuals();
 }
