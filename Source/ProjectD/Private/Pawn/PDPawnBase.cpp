@@ -28,7 +28,7 @@
 
 APDPawnBase::APDPawnBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
@@ -138,16 +138,6 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
 		}
 	}
-}
-
-void APDPawnBase::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-	
-	// if (bIsFirstPerson)
-	// {
-	// 	UpdateFirstPersonCamera(DeltaSeconds);
-	// }
 }
 
 void APDPawnBase::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
