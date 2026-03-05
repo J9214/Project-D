@@ -24,7 +24,6 @@
 #include "GameFramework/PawnMovementComponent.h"
 #include "MoverComponent.h"
 #include "Object/Throwable/PDThrowableObject.h"
-#include "Weapon/PDWeaponBase.h"
 #include "CollisionShape.h"
 #include "Components/InteractionComponent.h"
 
@@ -37,6 +36,7 @@ APDPawnBase::APDPawnBase()
 	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
+	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -226,11 +226,22 @@ AActor* APDPawnBase::FindInteractTarget() const
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
-	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+	constexpr float InteractTraceRadius = 30.f;
+	const bool bHit = GetWorld()->SweepSingleByChannel(
+		Hit,
+		Start,
+		End,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeSphere(InteractTraceRadius),
+		Params
+	);
 
 	FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-	//DrawDebugLine(GetWorld(),Start,End,DebugColor,false,2.0f,0,2.0f);
+	/*DrawDebugLine(GetWorld(), Start, End, DebugColor, false, 2.0f, 0, 1.5f);
+	DrawDebugSphere(GetWorld(), Start, InteractTraceRadius, 16, FColor::Cyan, false, 2.0f, 0, 1.0f);
+	DrawDebugSphere(GetWorld(), bHit ? Hit.ImpactPoint : End, InteractTraceRadius, 16, DebugColor, false, 2.0f, 0, 1.0f);*/
 
 	return Hit.GetActor();
 }

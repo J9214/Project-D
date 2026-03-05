@@ -124,24 +124,3 @@ EPDWeaponFireMode APDWeaponBase::GetNextFireMode() const
 	
 	return Modes[Index];
 }
-
-FTransform APDWeaponBase::GetSightCameraWorldTransform() const
-{
-	TArray<USceneComponent*> SceneComps;
-	GetComponents<USceneComponent>(SceneComps);
-
-	for (USceneComponent* Comp : SceneComps)
-	{
-		if (!Comp)
-		{
-			continue;
-		}
-		
-		if (Comp->GetFName() == SightAnchorComponentName)
-		{
-			return Comp->GetComponentTransform();
-		}
-	}
-
-	return GetActorTransform();
-}

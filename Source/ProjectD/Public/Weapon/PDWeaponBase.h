@@ -37,9 +37,6 @@ public:
 
 	EPDWeaponFireMode GetNextFireMode() const;
 	
-	UFUNCTION(BlueprintCallable, Category="Weapon|Aim")
-	FTransform GetSightCameraWorldTransform() const;
-	
 protected:
 	UFUNCTION()
 	void OnRep_AmmoChanged();
@@ -66,7 +63,4 @@ protected:
 
 	UPROPERTY(ReplicatedUsing=OnRep_AmmoChanged, VisibleAnywhere, BlueprintReadOnly, Category="Weapon")
 	int32 CurrentAmmo = 0;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon|Aim")
-	FName SightAnchorComponentName = TEXT("SightCameraAnchor");
 };

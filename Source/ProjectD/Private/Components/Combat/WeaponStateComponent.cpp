@@ -76,25 +76,20 @@ void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
 	FPredictionKey ShotKey
 )
 {
-	UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - FireTag: %s, ShotKey: %s"), *FireTag.ToString(), *ShotKey.ToString());
-	
 	UAbilitySystemComponent* ASC = GetASC();
 	if (!ASC)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - ASC is not valid"));
 		return;
 	}
 	
 	if (!FireTag.IsValid() || !ShotKey.IsValidKey())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Invalid FireTag or ShotKey"));
 		return;
 	}
 	
 	FGameplayAbilitySpec* Spec = FindSpecByTag(ASC, FireTag);
 	if (!Spec)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - No Ability Spec found with Tag: %s"), *FireTag.ToString());
 		return;
 	}
 	
@@ -103,7 +98,6 @@ void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
 	auto& Delegate = ASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey);
 	if (Delegate.IsBound())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Delegate already bound for Handle: %s, ShotKey: %s"), *ServerHandle.ToString(), *ShotKey.ToString());
 		return;
 	}
 
@@ -112,11 +106,8 @@ void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
 
 	Delegate.AddLambda([WeakThis, WeakASC, ServerHandle, ShotKey](const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Delegate Lambda Invoked for Handle: %s, ShotKey: %s"), *ServerHandle.ToString(), *ShotKey.ToString());
-		
 		if (!WeakThis.IsValid() || !WeakASC.IsValid())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Weak Pointers are not valid"));
 			return;
 		}
 
@@ -125,7 +116,6 @@ void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
 
 		if (!LocalASC->FindAbilitySpecFromHandle(ServerHandle))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Ability Spec not found for handle: %s"), *ServerHandle.ToString());
 			return;
 		}
 
