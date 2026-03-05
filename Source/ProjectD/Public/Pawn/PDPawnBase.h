@@ -92,7 +92,6 @@ protected:
 #pragma region FirstPerson
 
 protected:
-	virtual void Tick(float DeltaSeconds) override;
 	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
 
 	UPROPERTY(BlueprintReadOnly, Category="Anim")
