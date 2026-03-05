@@ -1,4 +1,4 @@
-#include "Components/InteractionComponent.h"
+﻿#include "Components/InteractionComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
@@ -13,14 +13,19 @@ void UInteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	BuildInteractionCapsule();
+	AActor* OwnerActor = GetOwner();
+	if (IsValid(OwnerActor) && OwnerActor->HasAuthority())
+	{
+		BuildInteractionCapsule();
+	}
+
 	RefreshInteractState();
 }
 
 void UInteractionComponent::BuildInteractionCapsule()
 {
 	AActor* OwnerActor = GetOwner();
-	if (!IsValid(OwnerActor))
+	if (!IsValid(OwnerActor) || !OwnerActor->HasAuthority())
 	{
 		return;
 	}
