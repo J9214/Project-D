@@ -56,6 +56,9 @@ protected:
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnHitEvent(float DamageAmount,const FHitResult& Hit);
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetShieldMesh();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category="Shield")
 	float MaxHealth = 200.f;

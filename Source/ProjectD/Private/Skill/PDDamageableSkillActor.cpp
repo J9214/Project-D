@@ -41,7 +41,7 @@ void APDDamageableSkillActor::BeginPlay()
 	Super::BeginPlay();
 
 	CurrentHealth = MaxHealth;
-	OnRep_ShieldVisuals();
+	//OnRep_ShieldVisuals();
 }
 
 void APDDamageableSkillActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -79,6 +79,13 @@ void APDDamageableSkillActor::OnRep_ShieldVisuals()
 	{
 		ShieldMeshComponent->SetStaticMesh(ShieldStaticMesh);
 	}
+	
+	if (ShieldBaseMaterial)
+	{
+		ShieldMeshComponent->SetMaterial(0, ShieldBaseMaterial);
+	}
+	
+	SetShieldMesh();
 	
 }
 
