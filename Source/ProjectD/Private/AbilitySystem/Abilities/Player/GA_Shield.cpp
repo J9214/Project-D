@@ -3,7 +3,9 @@
 #include "AbilitySystem/Abilities/Player/GA_Shield.h"
 #include "Pawn/PDPawnBase.h"
 #include "AbilitySystemComponent.h"
-
+#include "Components/SceneComponent.h"
+#include "Skill/PDDamageableSkillActor.h"
+#include "PlayerState/PDPlayerState.h"
 
 
 UGA_Shield::UGA_Shield()
@@ -30,23 +32,44 @@ void UGA_Shield::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 	{
 		if (SpawnedShield == nullptr)
 		{
+			USceneComponent* AttachTarget = OwnerPawn->GetSkeletalMeshComponent();
+			if (!AttachTarget)
+			{
+				AttachTarget = OwnerPawn->GetRootComponent();
+			}
+
+			const FTransform AttachTransform = AttachTarget ? AttachTarget->GetComponentTransform() : OwnerPawn->GetActorTransform();
+			const FVector ShieldSpawnLocation = AttachTransform.TransformPosition(ShieldRelativeLocation);
+			const FRotator ShieldSpawnRotation = OwnerPawn->GetActorRotation() + ShieldRelativeRotation;
+
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = OwnerPawn;
-			SpawnedShield = GetWorld()->SpawnActor<AActor>(ShieldClass, OwnerPawn->GetActorLocation(),
-														   OwnerPawn->GetActorRotation(), SpawnParams);
+			SpawnedShield = GetWorld()->SpawnActor<APDDamageableSkillActor>(ShieldClass, ShieldSpawnLocation,
+														   ShieldSpawnRotation, SpawnParams);
 
 			if (SpawnedShield)
 			{
-				FAttachmentTransformRules AttachRules(
-					EAttachmentRule::SnapToTarget,
-					EAttachmentRule::SnapToTarget,
-					EAttachmentRule::KeepWorld,
-					false
-				);
+				ETeamType OwnerTeamID = ETeamType::None;
+				if (const APDPlayerState* PS = OwnerPawn->GetPlayerState<APDPlayerState>())
+				{
+					OwnerTeamID = PS->GetTeamID();
+				}
 
-				SpawnedShield->AttachToComponent(OwnerPawn->GetSkeletalMeshComponent(), AttachRules);
-				SpawnedShield->SetActorRelativeLocation(ShieldRelativeLocation);
-				SpawnedShield->SetActorRelativeRotation(FRotator::ZeroRotator);
+				SpawnedShield->InitializeShieldSettings(
+					ShieldMaxHealth,
+					ShieldStaticMesh,
+					ShieldBaseMaterial,
+					OwnerTeamID,
+					ShieldDamageableType
+				);
+				
+				if (bAttachShieldToOwner && AttachTarget)
+				{
+					SpawnedShield->AttachToComponent(AttachTarget, FAttachmentTransformRules::KeepRelativeTransform);
+					SpawnedShield->SetActorRelativeLocation(ShieldRelativeLocation);
+					SpawnedShield->SetActorRotation(OwnerPawn->GetActorRotation() + ShieldRelativeRotation);
+					SpawnedShield->SetActorRelativeScale3D(ShieldScaleVector);
+				}
 			}
 		}
 	}
