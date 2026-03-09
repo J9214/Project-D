@@ -1,4 +1,4 @@
-﻿#include "AbilitySystem/Abilities/Player/GA_Fire.h"
+#include "AbilitySystem/Abilities/Player/GA_Fire.h"
 #include "Components/Combat/WeaponManageComponent.h"
 #include "Components/Combat/WeaponStateComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
@@ -38,7 +38,7 @@ void UGA_Fire::ActivateAbility(
 	// {
 	// 	StartFireNow();
 	// }
-
+	
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -73,7 +73,7 @@ void UGA_Fire::EndAbility(
 		WaitDelayTask->EndTask();
 		WaitDelayTask = nullptr;
 	}
-
+	
 	if (ActorInfo && ActorInfo->IsNetAuthority())
 	{
 		UnbindServerTargetDataDelegate();
@@ -134,13 +134,13 @@ void UGA_Fire::HandleServerReceivedTargetData(
 	{
 		return;
 	}
-
+	
 	if (Weapon->WeaponData->FireCueTag.IsValid())
 	{
 		FGameplayCueParameters Params;
 		Params.SourceObject = Weapon->WeaponData;
 		Params.EffectCauser = Weapon;
-		Params.Instigator = OwnerPawn;
+		Params.Instigator   = OwnerPawn;
 
 		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
 	}
@@ -237,13 +237,13 @@ void UGA_Fire::FireOneShot()
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
-
+	
 	if (!Weapon->CanFire())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 		return;
 	}
-
+	
 	PlayLocalFireFX(OwnerPawn, Weapon);
 
 	// const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
@@ -268,7 +268,7 @@ void UGA_Fire::FireOneShot()
 	// {
 	// 	PlayTask->ReadyForActivation();
 	// }
-
+	
 	// {
 	// 	FScopedPredictionWindow PW(ASC, true);
 	// 	const FPredictionKey PredictKey = ASC->ScopedPredictionKey;
@@ -291,14 +291,14 @@ void UGA_Fire::FireOneShot()
 	// 		PredictKey
 	// 	);
 	// }
-
+	
 	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
 	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::FireOneShot - ActivationKey: %s"), *ActivationKey.ToString());
 
 	FScopedPredictionWindow PW(ASC, ActivationKey);
 
 	const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
-	const FVector AimPoint = CalcLocalAimPoint(OwnerPawn, Weapon);
+	const FVector AimPoint  = CalcLocalAimPoint(OwnerPawn, Weapon);
 	const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
 
 	ASC->CallServerSetReplicatedTargetData(
@@ -321,7 +321,7 @@ bool UGA_Fire::GetOwnerPawnWeapon(
 	{
 		return false;
 	}
-
+	
 	OutPawn = GetPlayerPawnFromActorInfo();
 	if (!OutPawn)
 	{
@@ -387,8 +387,8 @@ FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 	}
 
 	const FVector Start = WorldOrigin;
-	const FVector End = Start + WorldDirection.GetSafeNormal() * MaxRange;
-
+	const FVector End   = Start + WorldDirection.GetSafeNormal() * MaxRange;
+	
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
 	Params.AddIgnoredActor(Weapon);
 
@@ -407,7 +407,7 @@ void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weap
 	{
 		return;
 	}
-
+	
 	const float MaxRange = Weapon->WeaponData->MaxRange;
 
 	const FVector MuzzleStart = GetChestShotStart(OwnerPawn);
@@ -561,15 +561,15 @@ void UGA_Fire::PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon)
 	{
 		return;
 	}
-
+	
 	const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-
+	
 	USceneComponent* MuzzleComp = Weapon->GetMuzzleComponent();
 	if (!MuzzleComp)
 	{
 		return;
 	}
-
+	
 	if (WeaponDA->FireSound)
 	{
 		UGameplayStatics::SpawnSoundAttached(
@@ -577,7 +577,7 @@ void UGA_Fire::PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon)
 			MuzzleComp
 		);
 	}
-
+	
 	if (WeaponDA->MuzzleFlashFX)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAttached(
@@ -603,7 +603,7 @@ FVector UGA_Fire::GetChestShotStart(APDPawnBase* OwnerPawn) const
 			return ChestLocation + OwnerPawn->GetActorForwardVector() * 30.f;
 		}
 	}
-
+	
 	const float HalfHeight = OwnerPawn->GetSimpleCollisionHalfHeight();
 	const FVector Base = OwnerPawn->GetActorLocation();
 	const FVector Chest = Base + FVector::UpVector * (HalfHeight * 0.7f);
@@ -628,7 +628,6 @@ FGameplayAbilityTargetDataHandle UGA_Fire::MakeAimPointTargetData(const FVector&
 
 void UGA_Fire::BindServerTargetDataDelegate()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::BindServerTargetDataDelegate - Attempting to bind server target data delegate. CurrentSpecHandle: %s"), *CurrentSpecHandle.ToString());
 	if (bServerDelegateBound)
 	{
 		return;
@@ -659,7 +658,6 @@ void UGA_Fire::BindServerTargetDataDelegate()
 
 void UGA_Fire::UnbindServerTargetDataDelegate()
 {
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Attempting to unbind server target data delegate. CurrentSpecHandle: %s"), *CurrentSpecHandle.ToString());
 	if (!bServerDelegateBound)
 	{
 		return;
@@ -672,7 +670,7 @@ void UGA_Fire::UnbindServerTargetDataDelegate()
 		UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Retrieved ASC and ActivationKey for unbinding. ActivationKey: %s"), *ActivationKey.ToString());
 		ASC->AbilityTargetDataSetDelegate(CurrentSpecHandle, ActivationKey).Remove(ServerTDDelegateHandle);
 	}
-
+	
 	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Unbound server target data delegate."));
 
 	bServerDelegateBound = false;
@@ -681,7 +679,6 @@ void UGA_Fire::UnbindServerTargetDataDelegate()
 
 void UGA_Fire::OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
 {
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::OnServerTargetDataReceived - Received target data from server. Data Num: %d, Tag: %s"), Data.Num(), *Tag.ToString());
 	if (!CurrentActorInfo || !CurrentActorInfo->IsNetAuthority())
 	{
 		return;
@@ -702,7 +699,6 @@ void UGA_Fire::OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle
 
 void UGA_Fire::HandleServerReceivedTargetData_Internal(const FGameplayAbilityTargetDataHandle& Data)
 {
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::HandleServerReceivedTargetData_Internal - Processing server received target data. Data Num: %d"), Data.Num());
 	UAbilitySystemComponent* OwnerASC = nullptr;
 	APDPawnBase* OwnerPawn = nullptr;
 	APDWeaponBase* Weapon = nullptr;
@@ -730,7 +726,7 @@ void UGA_Fire::HandleServerReceivedTargetData_Internal(const FGameplayAbilityTar
 		FGameplayCueParameters Params;
 		Params.SourceObject = Weapon->WeaponData;
 		Params.EffectCauser = Weapon;
-		Params.Instigator = OwnerPawn;
+		Params.Instigator   = OwnerPawn;
 		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
 	}
 

@@ -1,4 +1,4 @@
-﻿#include "Components/Combat/WeaponStateComponent.h"
+#include "Components/Combat/WeaponStateComponent.h"
 #include "Pawn/PDPawnBase.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/Player/GA_Fire.h"
@@ -70,67 +70,70 @@ FGameplayAbilitySpec* UWeaponStateComponent::FindSpecByTag(
 	
 	return nullptr;
 }
+
 void UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation(
-    FGameplayTag FireTag,
-    FPredictionKey ShotKey
+	FGameplayTag FireTag,
+	FPredictionKey ShotKey
 )
 {
-    UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - FireTag: %s, ShotKey: %s"), *FireTag.ToString(), *ShotKey.ToString());
+	UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - FireTag: %s, ShotKey: %s"), *FireTag.ToString(), *ShotKey.ToString());
+	
+	UAbilitySystemComponent* ASC = GetASC();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - ASC is not valid"));
+		return;
+	}
+	
+	if (!FireTag.IsValid() || !ShotKey.IsValidKey())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Invalid FireTag or ShotKey"));
+		return;
+	}
+	
+	FGameplayAbilitySpec* Spec = FindSpecByTag(ASC, FireTag);
+	if (!Spec)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - No Ability Spec found with Tag: %s"), *FireTag.ToString());
+		return;
+	}
+	
+	const FGameplayAbilitySpecHandle ServerHandle = Spec->Handle;
 
-    UAbilitySystemComponent* ASC = GetASC();
-    if (!ASC)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - ASC is not valid"));
-        return;
-    }
+	auto& Delegate = ASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey);
+	if (Delegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Delegate already bound for Handle: %s, ShotKey: %s"), *ServerHandle.ToString(), *ShotKey.ToString());
+		return;
+	}
 
-    if (!FireTag.IsValid() || !ShotKey.IsValidKey())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Invalid FireTag or ShotKey"));
-        return;
-    }
+	TWeakObjectPtr<UWeaponStateComponent> WeakThis(this);
+	TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
 
-    FGameplayAbilitySpec* Spec = FindSpecByTag(ASC, FireTag);
-    if (!Spec)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - No Ability Spec found with Tag: %s"), *FireTag.ToString());
-        return;
-    }
+	Delegate.AddLambda([WeakThis, WeakASC, ServerHandle, ShotKey](const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Delegate Lambda Invoked for Handle: %s, ShotKey: %s"), *ServerHandle.ToString(), *ShotKey.ToString());
+		
+		if (!WeakThis.IsValid() || !WeakASC.IsValid())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Weak Pointers are not valid"));
+			return;
+		}
 
-    const FGameplayAbilitySpecHandle ServerHandle = Spec->Handle;
+		UWeaponStateComponent* This = WeakThis.Get();
+		UAbilitySystemComponent* LocalASC = WeakASC.Get();
 
-    auto& Delegate = ASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey);
-    if (Delegate.IsBound())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Delegate already bound for Handle: %s, ShotKey: %s"), *ServerHandle.ToString(), *ShotKey.ToString());
-        return;
-    }
+		if (!LocalASC->FindAbilitySpecFromHandle(ServerHandle))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Ability Spec not found for handle: %s"), *ServerHandle.ToString());
+			return;
+		}
 
-    TWeakObjectPtr<UWeaponStateComponent> WeakThis(this);
-    TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
+		LocalASC->ConsumeClientReplicatedTargetData(ServerHandle, ShotKey);
+		LocalASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey).Clear();
 
-    Delegate.AddLambda([WeakThis, WeakASC, ServerHandle, ShotKey](const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag)
-        {
-            if (!WeakThis.IsValid() || !WeakASC.IsValid())
-            {
-                UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Weak Pointers are not valid"));
-                return;
-            }
+		This->ForwardTargetDataToFireGA(Data, Tag, ServerHandle, ShotKey);
+	});
 
-            UWeaponStateComponent* This = WeakThis.Get();
-            UAbilitySystemComponent* LocalASC = WeakASC.Get();
-
-            if (!LocalASC->FindAbilitySpecFromHandle(ServerHandle))
-            {
-                UE_LOG(LogTemp, Warning, TEXT("UWeaponStateComponent::ServerRPC_RegisterFireShotKey_Implementation - Ability Spec not found for handle: %s"), *ServerHandle.ToString());
-                return;
-            }
-
-            LocalASC->ConsumeClientReplicatedTargetData(ServerHandle, ShotKey);
-            LocalASC->AbilityTargetDataSetDelegate(ServerHandle, ShotKey).Clear();
-
-            This->ForwardTargetDataToFireGA(Data, Tag, ServerHandle, ShotKey);
-        });
-
-    ASC->CallReplicatedTargetDataDelegatesIfSet(ServerHandle, ShotKey);
+	ASC->CallReplicatedTargetDataDelegatesIfSet(ServerHandle, ShotKey);
 }

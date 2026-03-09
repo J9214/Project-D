@@ -13,11 +13,15 @@ class UMovementBridgeComponent;
 class UDataAsset_InputConfig;
 class UDataAsset_StartUpBase;
 class USkeletalMeshComponent;
+class UCameraComponent;
+class USpringArmComponent;
+class APDWeaponBase;
 class AGoalPost;
 class UGameplayEffect;
 class UCapsuleComponent;
 class UMoverComponent;
 class APDCarriableObjectBase;
+class UInteractionComponent;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -81,6 +85,62 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
 	TObjectPtr<UMoverComponent> MoverComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
+	TObjectPtr<UInteractionComponent> InteractionComponent;
+	
+#pragma region FirstPerson
+
+protected:
+	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
+
+	UPROPERTY(BlueprintReadOnly, Category="Anim")
+	bool bIsFirstPerson = false;
+
+	UPROPERTY(BlueprintReadOnly, Category="Anim")
+	bool bAimHoldDown = false;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCameraComponent> CachedCamera = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USpringArmComponent> CachedSpringArm = nullptr;
+
+	UPROPERTY(Transient)
+	float SavedArmLength = 0.f;
+
+	UPROPERTY(Transient)
+	bool bSavedDoCollisionTest = true;
+
+	UPROPERTY(EditDefaultsOnly, Category="Camera|FirstPerson")
+	float FirstPersonInterpSpeed = 18.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Camera|FirstPerson")
+	float FirstPersonFOV = 85.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Camera|FirstPerson")
+	float ThirdPersonFOV = 90.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Camera|FirstPerson")
+	FVector FirstPersonOffsetLocal = FVector::ZeroVector;
+
+protected:
+	UFUNCTION(BlueprintCallable)
+	void OnAimHoldStarted(const FInputActionValue& Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void OnAimHoldEnded(const FInputActionValue& Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void OnFirstPersonToggle(const FInputActionValue& Value);
+
+	void EnterFirstPerson();
+	void ExitFirstPerson();
+	void UpdateFirstPersonCamera(float DeltaSeconds);
+
+	APDWeaponBase* GetEquippedWeapon() const;
+	
+#pragma endregion FirstPerson
 	
 #pragma region Ball
 public:

@@ -9,5 +9,5 @@ enum class EMassEntityCueId : uint8
 
 	// Drone
 	Drone_Death = 1,
-	Drone_Attack = 2,
+	Drone_Explode = 2,
 };

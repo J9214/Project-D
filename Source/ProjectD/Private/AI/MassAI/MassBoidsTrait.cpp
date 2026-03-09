@@ -16,4 +16,5 @@ void UMassBoidsTrait::BuildTemplate(FMassEntityTemplateBuildContext& BuildContex
 	BuildContext.AddFragment<FMassTargetFragment>();
 
 	BuildContext.AddSharedFragment(FSharedStruct::Make(BoidsSettings));
+	BuildContext.AddSharedFragment(FSharedStruct::Make(ExplosionSettings));
 }

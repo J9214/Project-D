@@ -8,6 +8,8 @@
 #include "MassEntityView.h"
 #include "MassReplicationFragments.h"
 #include "AI/MassAI/Replicated/DeathScheduleFragment.h"
+#include "AI/MassAI/DroneExplosionFragment.h"
+#include "AI/MassAI/DroneExplosionSubsystem.h"
 #include "ProjectD/ProjectD.h"
 
 UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
@@ -25,6 +27,8 @@ void UMassBoidsDestructionProcessor::ConfigureQueries(const TSharedRef<FMassEnti
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FDeathScheduleFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
+
+	EntityQuery.AddSharedRequirement<FDroneExplosionFragment>(EMassFragmentAccess::ReadOnly);
 
 	EntityQuery.RegisterWithProcessor(*this);
 }
@@ -81,6 +85,8 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 			const TConstArrayView<FTransformFragment> Transforms = ExecContext.GetFragmentView<FTransformFragment>();
 			TArrayView<FDeathScheduleFragment> Schedules = ExecContext.GetMutableFragmentView<FDeathScheduleFragment>();
 
+			const FDroneExplosionFragment& ExplodeSettings = ExecContext.GetSharedFragment<FDroneExplosionFragment>();
+
 			const uint32 NowFrame = (uint32)GFrameCounter;
 
 			constexpr uint32 RemoveDelayFrames = 2;
@@ -107,19 +113,44 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 				Schedule.DeathLoc = Transforms[i].GetTransform().GetLocation();
 				Schedule.bMarkedForRemoval = false;
 
+
+				const bool bIsSuicideChunk = ExecContext.DoesArchetypeHaveTag<FMassEntitySuicideTag>();
+				const bool bExplosionSpawnedChunk = ExecContext.DoesArchetypeHaveTag<FMassEntityExplosionSpawnedTag>();
+
+				if (Schedule.DeathCueId == EMassEntityCueId::None)
+				{
+					Schedule.DeathCueId = (bIsSuicideChunk == true) ? 
+						EMassEntityCueId::Drone_Explode : EMassEntityCueId::Drone_Death;
+				}
+
+				if (bIsSuicideChunk == true &&
+					bExplosionSpawnedChunk == false)
+				{
+					UWorld* World = GetWorld();
+					if (IsValid(World) == true)
+					{
+						UDroneExplosionSubsystem* ExplosionSub = World->GetSubsystem<UDroneExplosionSubsystem>();
+						if (IsValid(ExplosionSub) == true)
+						{
+							// SharedFragment에서 읽은 설정(폭발 반경/데미지/GE)을 전달
+							ExplosionSub->ApplyExplosionDamage(
+								Schedule.DeathLoc,
+								ExplodeSettings.ExplosionRadius,
+								ExplodeSettings.Damage,
+								ExplodeSettings.ExplosionDamageGE
+							);
+						}
+					}
+
+					ExecContext.Defer().AddTag<FMassEntityExplosionSpawnedTag>(Entity);
+				}
+
 				ExecContext.Defer().AddTag<FMassEntityDyingTag>(Entity);
 
 				if (IsValid(Pool) == true)
 				{
 					Pool->Release(Entity);
 				}
-
-				UE_LOG(LogProjectD, Warning, TEXT("[F=%u][DeathSchedule] Entity=%d RemoveAt=%u DestroyAt=%u Loc=%s"),
-					(uint32)GFrameCounter,
-					Entity.Index,
-					Schedule.RemoveAtFrame,
-					Schedule.DestroyAtFrame,
-					*FVector(Schedule.DeathLoc).ToString());
 			}
 		});
 }

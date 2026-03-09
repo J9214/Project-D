@@ -9,6 +9,7 @@
 #include "Components/Combat/SkillManageComponent.h"
 #include "Components/Input/MovementBridgeComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "DataAssets/Input/DataAsset_InputConfig.h"
 #include "GameplayTagContainer.h"
 #include "PDGameplayTags.h"
@@ -21,9 +22,11 @@
 #include "Gimmick/PDInteractableObject.h"
 #include "DrawDebugHelpers.h"
 #include "Components/PrimitiveComponent.h" 
-#include "GameFramework/PawnMovementComponent.h"
 #include "MoverComponent.h"
 #include "Object/Throwable/PDThrowableObject.h"
+#include "CollisionShape.h"
+#include "Components/InteractionComponent.h"
+#include "Weapon/PDWeaponBase.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -34,6 +37,7 @@ APDPawnBase::APDPawnBase()
 	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
+	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -72,6 +76,25 @@ void APDPawnBase::BeginPlay()
 	Super::BeginPlay();
 
 	MoverComponent = FindComponentByClass<UMoverComponent>();
+	
+	CachedCamera = FindComponentByClass<UCameraComponent>();
+	CachedSpringArm = FindComponentByClass<USpringArmComponent>();
+
+	if (CachedCamera)
+	{
+		CachedCamera->SetFieldOfView(ThirdPersonFOV);
+	}
+
+	if (CachedSpringArm)
+	{
+		SavedArmLength = CachedSpringArm->TargetArmLength;
+		bSavedDoCollisionTest = CachedSpringArm->bDoCollisionTest;
+	}
+	
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ViewTarget=%s"), *GetNameSafe(PC->GetViewTarget()));
+	}
 }
 
 void APDPawnBase::PossessedBy(AController* NewController)
@@ -118,6 +141,30 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
 		}
 	}
+}
+
+void APDPawnBase::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
+{
+	if (!bIsFirstPerson)
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+		return;
+	}
+
+	APDWeaponBase* Weapon = GetEquippedWeapon();
+	if (!Weapon)
+	{
+		Super::CalcCamera(DeltaTime, OutResult);
+		return;
+	}
+
+	const FTransform AnchorWorld = Weapon->GetSightCameraWorldTransform();
+
+	const FRotator ViewRot = (Controller ? Controller->GetControlRotation() : AnchorWorld.Rotator());
+
+	OutResult.Location = AnchorWorld.GetLocation() + AnchorWorld.GetRotation().RotateVector(FirstPersonOffsetLocal);
+	OutResult.Rotation = ViewRot;
+	OutResult.FOV = FirstPersonFOV;
 }
 
 void APDPawnBase::InitAbilityActorInfo()
@@ -200,6 +247,112 @@ void APDPawnBase::Input_AbilityInputReleased(FGameplayTag InputTag)
 	}
 }
 
+void APDPawnBase::OnAimHoldStarted(const FInputActionValue& Value)
+{
+	bAimHoldDown = true;
+	
+	if (bIsFirstPerson)
+	{
+		SetIsAiming(true);
+		return;
+	}
+
+	SetIsAiming(true);
+}
+
+void APDPawnBase::OnAimHoldEnded(const FInputActionValue& Value)
+{
+	bAimHoldDown = false;
+	
+	if (bIsFirstPerson)
+	{
+		SetIsAiming(true);   // 1인칭은 무조건 견착 유지
+		return;
+	}
+	
+	SetIsAiming(false);
+}
+
+void APDPawnBase::OnFirstPersonToggle(const FInputActionValue& Value)
+{
+	if (!bIsFirstPerson)
+	{
+		EnterFirstPerson();
+	}
+	else
+	{
+		ExitFirstPerson();
+	}
+}
+
+void APDPawnBase::EnterFirstPerson()
+{
+	bIsFirstPerson = true;
+	SetIsAiming(true);
+
+	if (USkeletalMeshComponent* Body = GetSkeletalMeshComponent())
+	{
+		Body->SetOwnerNoSee(true);
+	}
+}
+
+void APDPawnBase::ExitFirstPerson()
+{
+	bIsFirstPerson = false;
+	SetIsAiming(bAimHoldDown);
+
+	if (USkeletalMeshComponent* Body = GetSkeletalMeshComponent())
+	{
+		Body->SetOwnerNoSee(false);
+	}
+}
+
+void APDPawnBase::UpdateFirstPersonCamera(float DeltaSeconds)
+{
+	if (!CachedCamera)
+	{
+		CachedCamera = FindComponentByClass<UCameraComponent>();
+		if (!CachedCamera)
+		{
+			return;
+		}
+	}
+
+	APDWeaponBase* Weapon = GetEquippedWeapon();
+	if (!Weapon)
+	{
+		return;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::UpdateFirstPersonCamera - Updating camera location for first-person view."));
+	
+	const FTransform AnchorWorld = Weapon->GetSightCameraWorldTransform();
+
+	const FVector OffsetWorld = AnchorWorld.GetRotation().RotateVector(FirstPersonOffsetLocal);
+	const FVector TargetLoc = AnchorWorld.GetLocation() + OffsetWorld;
+
+	const FVector NewLocation = FMath::VInterpTo(
+		CachedCamera->GetComponentLocation(),
+		TargetLoc,
+		DeltaSeconds,
+		FirstPersonInterpSpeed
+	);
+	
+	UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::UpdateFirstPersonCamera - Target Location: %s, New Location: %s"), *TargetLoc.ToString(), *NewLocation.ToString());
+
+	CachedCamera->SetWorldLocation(NewLocation);
+}
+
+APDWeaponBase* APDPawnBase::GetEquippedWeapon() const
+{
+	if (!WeaponManageComponent)
+	{
+		return nullptr;
+	}
+	
+	return WeaponManageComponent->GetEquippedWeapon();
+}
+
 void APDPawnBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -223,11 +376,22 @@ AActor* APDPawnBase::FindInteractTarget() const
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
-	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+	constexpr float InteractTraceRadius = 30.f;
+	const bool bHit = GetWorld()->SweepSingleByChannel(
+		Hit,
+		Start,
+		End,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeSphere(InteractTraceRadius),
+		Params
+	);
 
 	FColor DebugColor = bHit ? FColor::Green : FColor::Red;
 
-	//DrawDebugLine(GetWorld(),Start,End,DebugColor,false,2.0f,0,2.0f);
+	/*DrawDebugLine(GetWorld(), Start, End, DebugColor, false, 2.0f, 0, 1.5f);
+	DrawDebugSphere(GetWorld(), Start, InteractTraceRadius, 16, FColor::Cyan, false, 2.0f, 0, 1.0f);
+	DrawDebugSphere(GetWorld(), bHit ? Hit.ImpactPoint : End, InteractTraceRadius, 16, DebugColor, false, 2.0f, 0, 1.0f);*/
 
 	return Hit.GetActor();
 }
