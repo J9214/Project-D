@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
@@ -15,17 +15,17 @@ UCLASS()
 class PROJECTD_API UGA_Fire : public UPDPlayerGameplayAbility
 {
 	GENERATED_BODY()
-	
+
 public:
 	UGA_Fire();
-	
+
 	void HandleServerReceivedTargetData(
 		const FGameplayAbilityTargetDataHandle& Data,
 		FGameplayTag ActivationTag,
 		FGameplayAbilitySpecHandle Handle,
 		FPredictionKey ShotKey
 	);
-	
+
 protected:
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
@@ -33,7 +33,7 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData
 	) override;
-	
+
 	virtual void EndAbility(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
@@ -41,13 +41,13 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled
 	) override;
-	
+
 	virtual void InputReleased(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo
 	) override;
-	
+
 	UFUNCTION()
 	void OnWaitDelayFinished();
 
@@ -59,16 +59,26 @@ protected:
 	FVector CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon) const;
 	FVector GetChestShotStart(APDPawnBase* OwnerPawn) const;
 	FGameplayAbilityTargetDataHandle MakeAimPointTargetData(const FVector& CameraStart, const FVector& AimPoint);
-	
+
 	void MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint);
 	void ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon);
 	void ApplyFireCooldownToOwner(const APDWeaponBase* Weapon);
-	
+
 	void PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon);
-	
+
+	void BindServerTargetDataDelegate();
+	void UnbindServerTargetDataDelegate();
+	void OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag);
+
+	void HandleServerReceivedTargetData_Internal(const FGameplayAbilityTargetDataHandle& Data);
+
 protected:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_WaitDelay> WaitDelayTask = nullptr;
-	
+
 	bool bKeepFiring = false;
+
+	FDelegateHandle ServerTDDelegateHandle;
+
+	bool bServerDelegateBound = false;
 };

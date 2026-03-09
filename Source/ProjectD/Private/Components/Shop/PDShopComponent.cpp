@@ -35,35 +35,35 @@ void UPDShopComponent::AcceptanceBuy_Implementation(FName ItemId)
     UGameInstance* GI = GetWorld()->GetGameInstance();
     if (!GI)
     {
-        UE_LOG(LogTemp, Warning, TEXT("1"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation GI Null"));
         return;
     }
 
     UPDItemInfoSubsystem* ItemSubsystem = GI->GetSubsystem<UPDItemInfoSubsystem>();
     if (!ItemSubsystem)
     {
-        UE_LOG(LogTemp, Warning, TEXT("2"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation ItemSubsystem Null"));
         return;
     }
 
     const FPDItemInfo* ItemData = ItemSubsystem->GetItemInfoByName(ItemId);
     if (!ItemData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("3"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation ItemData Null"));
         return;
     }
 
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC)
     {
-        UE_LOG(LogTemp, Warning, TEXT("4"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation PC Null"));
         return;
     }
 
     APDPlayerState* PS = PC->GetPlayerState<APDPlayerState>();
     if (!PS)
     {
-        UE_LOG(LogTemp, Warning, TEXT("5"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation PS Null"));
         return;
     }
 
@@ -71,7 +71,7 @@ void UPDShopComponent::AcceptanceBuy_Implementation(FName ItemId)
 
     if (!Inventory)
     {
-        UE_LOG(LogTemp, Warning, TEXT("6"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation Inventory Null"));
         return;
     }
 
@@ -79,13 +79,13 @@ void UPDShopComponent::AcceptanceBuy_Implementation(FName ItemId)
 
     if (!Inventory->CheckGold(TotalCost))
     {
-        UE_LOG(LogTemp, Warning, TEXT("7"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation CheckGold Fail"));
         return;
     }
 
     if (!Inventory->AddItem(ItemData))
     {
-        UE_LOG(LogTemp, Warning, TEXT("8"));
+        UE_LOG(LogTemp, Error, TEXT("UPDShopComponent::AcceptanceBuy_Implementation AddItem Fail"));
         return;
     }
 
