@@ -7,23 +7,48 @@
 #include "GameState/PDGameStateBase.h"
 #include "Controller/PDPlayerController.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
-#include "AI/MassAI/MassProxyAssignmentProcessor.h"
+#include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+#include "Object/BallCore.h"
+#include "Object/GoalPost.h"
+#include "ProjectD/ProjectD.h"
 
 APDGameModeBase::APDGameModeBase()
 {
+    RoundDurationSec = 10;
+    MaxRoundCount = 3;
+    NextRoundDelaySec = 3.0f;
+
+    TeamRespawnRadiusFromBall = 900.0f;
+    RespawnHeightOffset = 50.0f;
+
+    CurrentRoundIndex = 0;
+    RoundPhase = ERoundPhase::Waiting;
+    CurrentRoundBallSpawnLocation = FVector::ZeroVector;
+
+    CachedBallCore = nullptr;
+    BallCoreClass = nullptr;
 }
 
 void APDGameModeBase::BeginPlay()
 {
-	Super::BeginPlay();
-	
-	const UWorld* World = GetWorld();
-	UE_LOG(LogTemp, Warning, TEXT("[Server GM] Map=%s GM=%s DefaultPawnClass=%s"),
-		World ? *World->GetMapName() : TEXT("None"),
-		*GetNameSafe(GetClass()),
-		*GetNameSafe(DefaultPawnClass));
+    Super::BeginPlay();
 
-	RoundDurationSec = 10;
+    const UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] BeginPlay failed. World is nullptr."));
+        return;
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] BeginPlay. Map=%s GM=%s DefaultPawnClass=%s"),
+        *World->GetMapName(),
+        *GetNameSafe(GetClass()),
+        *GetNameSafe(DefaultPawnClass)
+    );
 
     UMassProxyPoolSubsystem* Pool = World->GetSubsystem<UMassProxyPoolSubsystem>();
     if (IsValid(Pool) == true)
@@ -31,18 +56,20 @@ void APDGameModeBase::BeginPlay()
         const int32 PoolSize = 512;
         Pool->InitPool(PoolSize);
     }
+    else
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] MassProxyPoolSubsystem is invalid."));
+    }
 
-    UClass* Cls = UMassProxyAssignmentProcessor::StaticClass();
-    UE_LOG(LogTemp, Warning, TEXT("ProxyAssign Class=%s"), *GetNameSafe(Cls));
-
-
-	StartRound();
+    CacheRoundActors();
+    StartMatchFlow();
 }
 
 void APDGameModeBase::PlayerDied(AController* Controller)
 {
-    if (!Controller) 
+    if (IsValid(Controller) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerDied failed. Controller is invalid."));
         return;
     }
 
@@ -50,21 +77,31 @@ void APDGameModeBase::PlayerDied(AController* Controller)
     {
         PS->SetDeadState();
     }
+    else
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerDied. PlayerState is invalid."));
+    }
 
     FTimerHandle TimerHandle;
     FTimerDelegate TimerDel;
     TimerDel.BindUObject(this, &APDGameModeBase::PlayerRespawn, Controller);
+
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().SetTimer(TimerHandle, TimerDel, 5.0f, false);
+    }
+    else
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] PlayerDied failed. World is invalid."));
     }
 }
 
 void APDGameModeBase::StartOvertime()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (!GS) 
+    if (IsValid(GS) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartOvertime failed. GameState is invalid."));
         return;
     }
 
@@ -75,42 +112,160 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
 
-    if(!GS) 
+    if (IsValid(GS) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] FinishGame failed. GameState is invalid."));
         return;
-	}
+    }
 
     if (GS->WinnerTeamId != INDEX_NONE)
     {
+        UE_LOG(
+            LogProjectD,
+            Warning,
+            TEXT("[GameMode] FinishGame skipped. Winner already decided. WinnerTeamId=%d"),
+            GS->WinnerTeamId
+        );
         return;
     }
-    
+
     GS->WinnerTeamId = WinnerTeamId;
     GS->bOvertime = false;
+    RoundPhase = ERoundPhase::GameEnded;
+
+    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
+    GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Game finished. WinnerTeamId=%d CurrentRoundIndex=%d MaxRoundCount=%d"),
+        WinnerTeamId,
+        CurrentRoundIndex,
+        MaxRoundCount
+    );
+}
+
+void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball)
+{
+    if (RoundPhase != ERoundPhase::InRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp skipped. RoundPhase is not InRound."));
+        return;
+    }
+
+    if (IsValid(HolderPlayerState) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp failed. HolderPlayerState is invalid."));
+        return;
+    }
+
+    if (IsValid(Ball) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp failed. Ball is invalid."));
+        return;
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Ball picked up. TeamId=%d, Round=%d / %d"),
+        static_cast<int32>(HolderPlayerState->GetTeamID()),
+        CurrentRoundIndex,
+        MaxRoundCount
+    );
+}
+
+void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
+{
+    if (RoundPhase != ERoundPhase::InRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalScored skipped. RoundPhase is not InRound."));
+        return;
+    }
+
+    if (IsValid(GoalPost) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalScored failed. GoalPost is invalid."));
+        return;
+    }
+
+    if (IsValid(Ball) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalScored failed. Ball is invalid."));
+        return;
+    }
+
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalScored failed. GameState is invalid."));
+        return;
+    }
+
+    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
+
+    GS->GoalScored();
+    RoundPhase = ERoundPhase::RoundEnded;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d / %d"),
+        CurrentRoundIndex,
+        MaxRoundCount
+    );
+
+    if (IsLastRound() == true)
+    {
+        bool bTie = false;
+        const int32 BestTeamId = CalculateBestTeamId(bTie);
+
+        if (bTie == true)
+        {
+            StartOvertime();
+            return;
+        }
+
+        FinishGame(BestTeamId);
+        return;
+    }
+
+    PrepareNextRound();
 }
 
 void APDGameModeBase::PlayerRespawn(AController* Controller)
 {
-    if (!Controller) 
+    if (IsValid(Controller) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn failed. Controller is invalid."));
         return;
     }
 
     APawn* Pawn = Controller->GetPawn();
-    if (!Pawn) 
+    if (IsValid(Pawn) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn failed. Pawn is invalid."));
         return;
     }
 
-    AActor* StartSpot = FindPlayerStart(Controller);
-    if (StartSpot)
+    const FVector RespawnLocation = BuildRespawnLocationForController(Controller);
+    if (RespawnLocation == FVector::ZeroVector)
     {
-        Pawn->TeleportTo(StartSpot->GetActorLocation(), StartSpot->GetActorRotation());
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn failed. RespawnLocation is zero vector."));
+        return;
     }
+
+    const FRotator RespawnRotation = (CurrentRoundBallSpawnLocation - RespawnLocation).Rotation();
+    Pawn->TeleportTo(RespawnLocation, RespawnRotation);
 
     if (APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>())
     {
-		PS->SetReviveState();
+        PS->SetReviveState();
+    }
+    else
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn. PlayerState is invalid."));
     }
 }
 
@@ -118,30 +273,75 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    if (IsValid(NewPlayer) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. NewPlayer is invalid."));
+        return;
+    }
+
     if (APDPlayerState* PS = NewPlayer->GetPlayerState<APDPlayerState>())
     {
         if (UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase())
         {
             AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
         }
+        else
+        {
+            UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. AttributeSet is invalid."));
+        }
+    }
+    else
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. PlayerState is invalid."));
     }
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
 {
+    if (IsValid(VictimController) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnPlayerOutOfHealth failed. VictimController is invalid."));
+        return;
+    }
+
     PlayerDied(VictimController);
 }
 
 void APDGameModeBase::StartRound()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (!GS) 
+    if (IsValid(GS) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartRound failed. GameState is invalid."));
         return;
     }
 
-    GS->RemainingTimeSec = RoundDurationSec;
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartRound skipped. RoundPhase is GameEnded."));
+        return;
+    }
 
+    ResetRoundState();
+    ResetPlacedGoalPostsForRound();
+    ResetBallForRound();
+
+    GS->RemainingTimeSec = RoundDurationSec;
+    RoundPhase = ERoundPhase::InRound;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Round started. CurrentRoundIndex=%d / %d, RoundDurationSec=%d, BallSpawn=(%.2f, %.2f, %.2f)"),
+        CurrentRoundIndex,
+        MaxRoundCount,
+        RoundDurationSec,
+        CurrentRoundBallSpawnLocation.X,
+        CurrentRoundBallSpawnLocation.Y,
+        CurrentRoundBallSpawnLocation.Z
+    );
+
+    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         RoundTimerHandle,
         this,
@@ -154,7 +354,13 @@ void APDGameModeBase::StartRound()
 void APDGameModeBase::OnRoundTick()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (!GS) 
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnRoundTick failed. GameState is invalid."));
+        return;
+    }
+
+    if (RoundPhase != ERoundPhase::InRound)
     {
         return;
     }
@@ -171,38 +377,428 @@ void APDGameModeBase::OnRoundTick()
 void APDGameModeBase::HandleRoundEnd()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (!GS) 
+    if (IsValid(GS) == false)
     {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleRoundEnd failed. GameState is invalid."));
         return;
+    }
+
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleRoundEnd skipped. Game already ended."));
+        return;
+    }
+
+    RoundPhase = ERoundPhase::RoundEnded;
+
+    bool bTie = false;
+    const int32 BestTeamId = CalculateBestTeamId(bTie);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Round ended. CurrentRoundIndex=%d / %d, BestTeamId=%d, bTie=%d"),
+        CurrentRoundIndex,
+        MaxRoundCount,
+        BestTeamId,
+        bTie == true ? 1 : 0
+    );
+
+    if (IsLastRound() == true)
+    {
+        if (bTie == true)
+        {
+            StartOvertime();
+            return;
+        }
+
+        FinishGame(BestTeamId);
+        return;
+    }
+
+    PrepareNextRound();
+}
+
+void APDGameModeBase::StartMatchFlow()
+{
+    if (MaxRoundCount <= 0)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] StartMatchFlow failed. MaxRoundCount must be greater than 0."));
+        return;
+    }
+
+    CurrentRoundIndex = 1;
+    RoundPhase = ERoundPhase::Waiting;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Match start. MaxRoundCount=%d"),
+        MaxRoundCount
+    );
+
+    StartRound();
+}
+
+void APDGameModeBase::PrepareNextRound()
+{
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PrepareNextRound skipped. Game already ended."));
+        return;
+    }
+
+    CurrentRoundIndex++;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Preparing next round. NextRoundIndex=%d / %d, Delay=%.2f"),
+        CurrentRoundIndex,
+        MaxRoundCount,
+        NextRoundDelaySec
+    );
+
+    GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        NextRoundTimerHandle,
+        this,
+        &APDGameModeBase::StartRound,
+        NextRoundDelaySec,
+        false
+    );
+}
+
+int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
+{
+    bOutTie = false;
+
+    const APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CalculateBestTeamId failed. GameState is invalid."));
+        return INDEX_NONE;
+    }
+
+    if (GS->TeamScores.Num() <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CalculateBestTeamId failed. TeamScores is empty."));
+        return INDEX_NONE;
     }
 
     int32 BestTeamId = INDEX_NONE;
     int32 BestScore = MIN_int32;
-    bool bTie = false;
-
-    const int32 TeamCount = static_cast<int32>(ETeamType::MAX);
 
     for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
     {
         const int32 Score = GS->TeamScores[TeamId];
+
         if (Score > BestScore)
         {
             BestScore = Score;
             BestTeamId = TeamId;
-            bTie = false;
+            bOutTie = false;
         }
         else if (Score == BestScore)
         {
-            bTie = true;
+            bOutTie = true;
         }
     }
 
-    if (bTie)
+    return BestTeamId;
+}
+
+bool APDGameModeBase::IsLastRound() const
+{
+    return CurrentRoundIndex >= MaxRoundCount;
+}
+
+void APDGameModeBase::CacheRoundActors()
+{
+    CachePlacedGoalPosts();
+    SpawnAndCacheBallCore();
+}
+
+void APDGameModeBase::CachePlacedGoalPosts()
+{
+    CachedGoalPosts.Empty();
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
     {
-        StartOvertime();
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CachePlacedGoalPosts failed. World is nullptr."));
+        return;
+    }
+
+    for (TActorIterator<AGoalPost> It(World); It; ++It)
+    {
+        AGoalPost* GoalPost = *It;
+        if (IsValid(GoalPost) == true)
+        {
+            CachedGoalPosts.Add(GoalPost);
+        }
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] CachePlacedGoalPosts completed. GoalPostCount=%d"),
+        CachedGoalPosts.Num()
+    );
+}
+
+void APDGameModeBase::SpawnAndCacheBallCore()
+{
+    if (IsValid(CachedBallCore) == true)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] SpawnAndCacheBallCore skipped. BallCore already exists."));
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SpawnAndCacheBallCore failed. World is nullptr."));
+        return;
+    }
+
+    if (BallCoreClass == nullptr)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] SpawnAndCacheBallCore failed. BallCoreClass is nullptr."));
+        return;
+    }
+
+    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    const FRotator BallSpawnRotation = FRotator::ZeroRotator;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+    ABallCore* SpawnedBallCore = World->SpawnActor<ABallCore>(
+        BallCoreClass,
+        BallSpawnLocation,
+        BallSpawnRotation,
+        SpawnParams
+    );
+
+    if (IsValid(SpawnedBallCore) == false)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] SpawnAndCacheBallCore failed. SpawnedBallCore is invalid."));
+        return;
+    }
+
+    CachedBallCore = SpawnedBallCore;
+    CurrentRoundBallSpawnLocation = BallSpawnLocation;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] SpawnAndCacheBallCore completed. SpawnLocation=(%.2f, %.2f, %.2f)"),
+        BallSpawnLocation.X,
+        BallSpawnLocation.Y,
+        BallSpawnLocation.Z
+    );
+}
+
+void APDGameModeBase::ResetRoundState()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetRoundState failed. GameState is invalid."));
+        return;
+    }
+
+    GS->CurrentBallHolder = nullptr;
+    GS->GoalInstigator = nullptr;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Round state reset. CurrentRoundIndex=%d"),
+        CurrentRoundIndex
+    );
+}
+
+void APDGameModeBase::ResetPlacedGoalPostsForRound()
+{
+    for (AGoalPost* GoalPost : CachedGoalPosts)
+    {
+        if (IsValid(GoalPost) == false)
+        {
+            UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetPlacedGoalPostsForRound skipped invalid GoalPost."));
+            continue;
+        }
+
+        /*
+        TODO:
+        AGoalPost::ResetGoalPost();
+        */
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] ResetPlacedGoalPostsForRound completed. Count=%d"),
+        CachedGoalPosts.Num()
+    );
+}
+
+void APDGameModeBase::ResetBallForRound()
+{
+    if (IsValid(CachedBallCore) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetBallForRound failed. CachedBallCore is invalid."));
+        return;
+    }
+
+    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    if (BallSpawnLocation == FVector::ZeroVector)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetBallForRound failed. BallSpawnLocation is zero vector."));
+        return;
+    }
+
+    CurrentRoundBallSpawnLocation = BallSpawnLocation;
+
+    /*
+    TODO:
+    CachedBallCore->ResetBallForRound(CurrentRoundBallSpawnLocation);
+    */
+
+    CachedBallCore->SetActorLocation(CurrentRoundBallSpawnLocation);
+    CachedBallCore->SetActorRotation(FRotator::ZeroRotator);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Ball reset for round. SpawnLocation=(%.2f, %.2f, %.2f)"),
+        CurrentRoundBallSpawnLocation.X,
+        CurrentRoundBallSpawnLocation.Y,
+        CurrentRoundBallSpawnLocation.Z
+    );
+}
+
+FVector APDGameModeBase::CalculateBallSpawnLocationFromGoals() const
+{
+    if (CachedGoalPosts.Num() < 3)
+    {
+        UE_LOG(
+            LogProjectD,
+            Warning,
+            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Need at least 3 GoalPosts. Count=%d"),
+            CachedGoalPosts.Num()
+        );
+
+        return FVector::ZeroVector;
+    }
+
+    // Select 3 Idx
+    int32 IndexA = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
+
+    int32 IndexB = INDEX_NONE;
+
+    do
+    {
+        IndexB = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
+    } while (IndexB == IndexA);
+
+    int32 IndexC = INDEX_NONE;
+
+    do
+    {
+        IndexC = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
+    } while (IndexC == IndexA || IndexC == IndexB);
+
+    AGoalPost* GoalPostA = CachedGoalPosts[IndexA];
+    AGoalPost* GoalPostB = CachedGoalPosts[IndexB];
+    AGoalPost* GoalPostC = CachedGoalPosts[IndexC];
+
+    if (IsValid(GoalPostA) == false || IsValid(GoalPostB) == false || IsValid(GoalPostC) == false)
+    {
+        UE_LOG(
+            LogProjectD,
+            Warning,
+            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Selected GoalPost is invalid. IndexA=%d IndexB=%d IndexC=%d"),
+            IndexA,
+            IndexB,
+            IndexC
+        );
+
+        return FVector::ZeroVector;
+    }
+
+    const FVector GoalLocationA = GoalPostA->GetActorLocation();
+    const FVector GoalLocationB = GoalPostB->GetActorLocation();
+    const FVector GoalLocationC = GoalPostC->GetActorLocation();
+
+    const FVector CenterLocation = (GoalLocationA + GoalLocationB + GoalLocationC) / 3.0f;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] CalculateBallSpawnLocationFromGoals selected random indices. A=%d B=%d C=%d Center=(%.2f, %.2f, %.2f)"),
+        IndexA,
+        IndexB,
+        IndexC,
+        CenterLocation.X,
+        CenterLocation.Y,
+        CenterLocation.Z
+    );
+
+    return CenterLocation;
+}
+
+FVector APDGameModeBase::BuildRespawnLocationForController(AController* Controller) const
+{
+    if (IsValid(Controller) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BuildRespawnLocationForController failed. Controller is invalid."));
+        return FVector::ZeroVector;
+    }
+
+    APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>();
+    if (IsValid(PS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BuildRespawnLocationForController failed. PlayerState is invalid."));
+        return FVector::ZeroVector;
+    }
+
+    const int32 TeamId = static_cast<int32>(PS->GetTeamID());
+    return BuildRespawnLocationFromTeam(TeamId);
+}
+
+FVector APDGameModeBase::BuildRespawnLocationFromTeam(int32 TeamId) const
+{
+    if (CurrentRoundBallSpawnLocation == FVector::ZeroVector)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BuildRespawnLocationFromTeam failed. CurrentRoundBallSpawnLocation is zero vector."));
+        return FVector::ZeroVector;
+    }
+
+    float BaseAngleDeg = 0.0f;
+
+    if (TeamId == 0)
+    {
+        BaseAngleDeg = 90.0f;
+    }
+    else if (TeamId == 1)
+    {
+        BaseAngleDeg = 210.0f;
+    }
+    else if (TeamId == 2)
+    {
+        BaseAngleDeg = 330.0f;
     }
     else
     {
-        FinishGame(BestTeamId);
+        BaseAngleDeg = 90.0f;
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BuildRespawnLocationFromTeam used fallback angle. Invalid TeamId=%d"), TeamId);
     }
+
+    const float BaseAngleRad = FMath::DegreesToRadians(BaseAngleDeg);
+    const FVector Direction = FVector(FMath::Cos(BaseAngleRad), FMath::Sin(BaseAngleRad), 0.0f);
+
+    return CurrentRoundBallSpawnLocation + (Direction * TeamRespawnRadiusFromBall) + FVector(0.0f, 0.0f, RespawnHeightOffset);
 }
