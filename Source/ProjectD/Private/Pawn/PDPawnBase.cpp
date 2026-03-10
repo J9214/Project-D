@@ -64,7 +64,7 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 	const FVector& HitPoint
 )
 {
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 1.f);
+	DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 1.f, 0, 1.f);
 	if (bHit)
 	{
 		DrawDebugPoint(GetWorld(), HitPoint, 8.f, FColor::Yellow, false, 1.f);
