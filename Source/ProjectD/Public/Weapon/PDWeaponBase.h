@@ -40,6 +40,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon|Aim")
 	FTransform GetSightCameraWorldTransform() const;
 	
+	bool IsMultiBulletWeapon() const;
+	int32 GetBulletsPerShot() const;
+	float GetSpreadHalfAngleDeg() const;
+	
 protected:
 	UFUNCTION()
 	void OnRep_AmmoChanged();

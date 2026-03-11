@@ -162,7 +162,11 @@ void UGA_Throw::InputReleased(
 		ASC->ScopedPredictionKey
 	);
 	
-	CachedTA->Destroy();
+	if (CachedTA)
+	{
+		CachedTA->Destroy();
+	}
+	
 	CachedTA = nullptr;
 	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
