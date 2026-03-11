@@ -1,10 +1,11 @@
-﻿#include "Object/BallCore.h"
+#include "Object/BallCore.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
 #include "Components/StaticMeshComponent.h"
 #include "Pawn/PDPawnBase.h" 
 #include "GameState/PDGameStateBase.h"
 #include "PlayerState/PDPlayerState.h"
+#include "ProjectD/ProjectD.h"
 
 ABallCore::ABallCore()
 {
@@ -27,8 +28,60 @@ void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse,
 {
 	Super::DropPhysics(DropLocation, Impulse, InCamDirection);
 
+	if (IsValid(StaticMesh) == false)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] DropPhysics failed. StaticMesh is invalid."));
+		return;
+	}
+
 	StaticMesh->WakeAllRigidBodies();
 	StaticMesh->AddImpulse(Impulse, NAME_None, true);
+}
+
+void ABallCore::ResetBallForRound(const FVector& SpawnLocation)
+{
+	if (SpawnLocation == FVector::ZeroVector)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ResetBallForRound failed. SpawnLocation is zero vector."));
+		return;
+	}
+
+	if (IsValid(StaticMesh) == false)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ResetBallForRound failed. StaticMesh is invalid."));
+		return;
+	}
+
+	if (IsValid(CarrierPawn.Get()) == true)
+	{
+		ClearCarrier();
+	}
+
+	StaticMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+
+	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+	StaticMesh->SetEnableGravity(true);
+	StaticMesh->SetSimulatePhysics(true);
+
+	StaticMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	StaticMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+
+	SetActorLocation(SpawnLocation);
+	SetActorRotation(FRotator::ZeroRotator);
+
+	StaticMesh->WakeAllRigidBodies();
+
+	UE_LOG(
+		LogProjectD,
+		Log,
+		TEXT("[BallCore] ResetBallForRound completed. SpawnLocation=(%.2f, %.2f, %.2f)"),
+		SpawnLocation.X,
+		SpawnLocation.Y,
+		SpawnLocation.Z
+	);
 }
 
 void ABallCore::HandleCarrierChanged()

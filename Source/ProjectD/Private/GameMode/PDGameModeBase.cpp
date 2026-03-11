@@ -662,13 +662,7 @@ void APDGameModeBase::ResetBallForRound()
 
     CurrentRoundBallSpawnLocation = BallSpawnLocation;
 
-    /*
-    TODO:
     CachedBallCore->ResetBallForRound(CurrentRoundBallSpawnLocation);
-    */
-
-    CachedBallCore->SetActorLocation(CurrentRoundBallSpawnLocation);
-    CachedBallCore->SetActorRotation(FRotator::ZeroRotator);
 
     UE_LOG(
         LogProjectD,

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Object/PDCarriableObjectBase.h"
@@ -18,6 +18,8 @@ public:
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 
 	void DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection);
+
+	void ResetBallForRound(const FVector& SpawnLocation);
 
 	UStaticMeshComponent* GetStaticMesh() const { return StaticMesh; }
 
