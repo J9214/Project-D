@@ -110,4 +110,6 @@ void AGoalPost::OnHoldComplete()
 	{
 		GM->HandleGoalScored(this, PlacedBall);
 	}
+
+	PlacedBall = nullptr;
 }
