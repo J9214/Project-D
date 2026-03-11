@@ -6,6 +6,7 @@
 #include "GameState/PDGameStateBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "ProjectD/ProjectD.h"
+#include "GameMode/PDGameModeBase.h"
 
 AGoalPost::AGoalPost()
 {
@@ -99,16 +100,14 @@ void AGoalPost::StartHoldTimer()
 
 void AGoalPost::OnHoldComplete()
 {
-	if (PlacedBall)
+	if (IsValid(PlacedBall) == false)
 	{
-		PlacedBall->Destroy();
-		PlacedBall = nullptr;
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] OnHoldComplete skipped. PlacedBall is invalid."));
+		return;
 	}
 
-	APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>();
-
-	if (GS)
+	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
 	{
-		GS->GoalScored();
+		GM->HandleGoalScored(this, PlacedBall);
 	}
 }

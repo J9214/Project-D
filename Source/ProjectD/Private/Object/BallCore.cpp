@@ -6,6 +6,7 @@
 #include "GameState/PDGameStateBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "ProjectD/ProjectD.h"
+#include "GameMode/PDGameModeBase.h"
 
 ABallCore::ABallCore()
 {
@@ -98,6 +99,12 @@ void ABallCore::HandleCarrierChanged()
 				if (MyPS)
 				{
 					GS->SetBallHolder(MyPS);
+
+					APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>();
+					if (IsValid(GM) == true)
+					{
+						GM->HandleBallPickedUp(MyPS, this);
+					}
 				}
 			}
 		}
