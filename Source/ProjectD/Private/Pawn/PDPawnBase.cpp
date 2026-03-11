@@ -27,6 +27,7 @@
 #include "CollisionShape.h"
 #include "Components/InteractionComponent.h"
 #include "Weapon/PDWeaponBase.h"
+#include "Structs/FSpeedUpModifier.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -223,12 +224,6 @@ void APDPawnBase::BindAttributeChangeDelegates()
 
 void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
-	UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::OnHealthChanged - New Health: %f"), Data.NewValue);
-}
-
-void APDPawnBase::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
-{
-	UE_LOG(LogTemp, Warning, TEXT("APDPawnBase::OnMoveSpeedChanged - New Move Speed: %f"), Data.NewValue);
 }
 
 void APDPawnBase::Input_AbilityInputPressed(FGameplayTag InputTag)
@@ -580,6 +575,23 @@ void APDPawnBase::CancelMovementGA()
 			}
 		}
 	}
+}
+
+float APDPawnBase::GetActiveSpeedUpMultiplier() const
+{
+	const UMoverComponent* MoverComp = FindComponentByClass<UMoverComponent>();
+	if (!MoverComp)
+	{
+		return 1.0f;
+	}
+
+	const FSpeedUpModifier* SpeedUpMod = MoverComp->FindMovementModifierByType<FSpeedUpModifier>();
+	if (!SpeedUpMod)
+	{
+		return 1.0f;
+	}
+
+	return SpeedUpMod->SpeedMultiplier;
 }
 
 void APDPawnBase::SetIsAiming(bool bNewAiming)
