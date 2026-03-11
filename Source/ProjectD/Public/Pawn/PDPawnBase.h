@@ -59,7 +59,6 @@ protected:
 	
 private:
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
-	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	
 	void Input_AbilityInputPressed(FGameplayTag InputTag);
 	void Input_AbilityInputReleased(FGameplayTag InputTag);
@@ -196,6 +195,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Mover")
 	void CancelMovementGA();
+	
+	UFUNCTION(BlueprintPure, Category="Movement")
+	float GetActiveSpeedUpMultiplier() const;
 	
 #pragma endregion mover
 	

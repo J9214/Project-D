@@ -33,7 +33,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_Dash, "Player.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");
     UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_Shield, "Player.Ability.Skill.Shield");
-
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_SpeedUp, "Player.Ability.Skill.SpeedUp");
 
 	/** Player State Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
@@ -50,7 +50,6 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_ReloadRequest, "Event.Weapon.ReloadRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Throwable_ThrowRequest, "Event.Throwable.ThrowRequest");
-
 	
 	/** GameplayCue Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");
