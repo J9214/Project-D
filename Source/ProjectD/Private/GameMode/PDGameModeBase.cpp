@@ -631,18 +631,8 @@ void APDGameModeBase::ResetPlacedGoalPostsForRound()
             continue;
         }
 
-        /*
-        TODO:
-        AGoalPost::ResetGoalPost();
-        */
+        GoalPost->ResetGoalPost();
     }
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] ResetPlacedGoalPostsForRound completed. Count=%d"),
-        CachedGoalPosts.Num()
-    );
 }
 
 void APDGameModeBase::ResetBallForRound()

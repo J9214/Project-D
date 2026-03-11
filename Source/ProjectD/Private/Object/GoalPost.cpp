@@ -1,9 +1,11 @@
-﻿#include "Object/GoalPost.h"
+#include "Object/GoalPost.h"
 #include "Object/BallCore.h"
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "GameState/PDGameStateBase.h"
+#include "PlayerState/PDPlayerState.h"
+#include "ProjectD/ProjectD.h"
 
 AGoalPost::AGoalPost()
 {
@@ -27,6 +29,19 @@ void AGoalPost::OnInteract_Implementation(AActor* Interactor)
 	{
 		StealBall(PDPawn);
 	}
+}
+
+void AGoalPost::ResetGoalPost()
+{
+	if (GetWorld() == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] ResetGoalPost failed. World is nullptr."));
+		return;
+	}
+
+	GetWorld()->GetTimerManager().ClearTimer(HoldTimer);
+
+	PlacedBall = nullptr;
 }
 
 bool AGoalPost::CanPlaceBall(APawn* Pawn, ABallCore* Ball) const

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
@@ -17,6 +17,9 @@ public:
 	AGoalPost();
 
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
+
+public:
+	void ResetGoalPost();
 
 protected:
 	bool CanPlaceBall(APawn* Pawn, ABallCore* Ball) const;
