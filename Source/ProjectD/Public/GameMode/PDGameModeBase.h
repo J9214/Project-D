@@ -40,13 +40,13 @@ protected:
 	void PlayerRespawn(AController* Controller);
 
 	void StartRound();
-	void OnRoundTick();
-	void HandleRoundEnd();
 	void StartMatchFlow();
 	void PrepareNextRound();
 
+	void OnGameTick();
+	void HandleGameTimeExpired();
+
 	int32 CalculateBestTeamId(bool& bOutTie) const;
-	bool IsLastRound() const;
 
 	void CacheRoundActors();
 	void CachePlacedGoalPosts();
@@ -60,6 +60,8 @@ protected:
 	FVector BuildRespawnLocationForController(AController* Controller) const;
 	FVector BuildRespawnLocationFromTeam(int32 TeamId) const;
     
+	bool TryFinishGameByScoreCondition();
+
 	void TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayerState);
 	void TriggerDroneExplosionOnGoal();
 
@@ -67,14 +69,14 @@ protected:
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 
 protected:
-	FTimerHandle RoundTimerHandle;
+	FTimerHandle GameTimerHandle;
 	FTimerHandle NextRoundTimerHandle;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
-	int32 RoundDurationSec;
+	int32 TargetScoreToWin;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
-	int32 MaxRoundCount;
+	int32 TotalGameDurationSec;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	float NextRoundDelaySec;

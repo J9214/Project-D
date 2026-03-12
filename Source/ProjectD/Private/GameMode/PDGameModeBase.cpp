@@ -15,8 +15,10 @@
 
 APDGameModeBase::APDGameModeBase()
 {
-    RoundDurationSec = 10;
-    MaxRoundCount = 3;
+    TotalGameDurationSec = 1800;
+
+    TargetScoreToWin = 1000;
+
     NextRoundDelaySec = 3.0f;
 
     TeamRespawnRadiusFromBall = 900.0f;
@@ -105,7 +107,15 @@ void APDGameModeBase::StartOvertime()
         return;
     }
 
+    if (GS->bOvertime == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartOvertime skipped. Already overtime."));
+        return;
+    }
+
     GS->bOvertime = true;
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Overtime started."));
 }
 
 void APDGameModeBase::FinishGame(int32 WinnerTeamId)
@@ -133,17 +143,9 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
     GS->bOvertime = false;
     RoundPhase = ERoundPhase::GameEnded;
 
-    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
+    GetWorldTimerManager().ClearTimer(GameTimerHandle);
     GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
 
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Game finished. WinnerTeamId=%d CurrentRoundIndex=%d MaxRoundCount=%d"),
-        WinnerTeamId,
-        CurrentRoundIndex,
-        MaxRoundCount
-    );
 }
 
 void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball)
@@ -166,14 +168,6 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Ball picked up. TeamId=%d, Round=%d / %d"),
-        static_cast<int32>(HolderPlayerState->GetTeamID()),
-        CurrentRoundIndex,
-        MaxRoundCount
-    );
 
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
 }
@@ -205,36 +199,35 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         return;
     }
 
-    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
-
     GS->GoalScored();
-    RoundPhase = ERoundPhase::RoundEnded;
 
     UE_LOG(
         LogProjectD,
         Log,
-        TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d / %d"),
-        CurrentRoundIndex,
-        MaxRoundCount
+        TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d"),
+        CurrentRoundIndex
     );
 
     TriggerDroneExplosionOnGoal();
 
-    if (IsLastRound() == true)
+    if (GS->bOvertime == true)
     {
         bool bTie = false;
         const int32 BestTeamId = CalculateBestTeamId(bTie);
 
-        if (bTie == true)
+        if (bTie == false && BestTeamId != INDEX_NONE)
         {
-            StartOvertime();
+            FinishGame(BestTeamId);
             return;
         }
+    }
 
-        FinishGame(BestTeamId);
+    if (TryFinishGameByScoreCondition() == true)
+    {
         return;
     }
 
+    RoundPhase = ERoundPhase::RoundEnded;
     PrepareNextRound();
 }
 
@@ -330,115 +323,38 @@ void APDGameModeBase::StartRound()
     ResetPlacedGoalPostsForRound();
     ResetBallForRound();
 
-    GS->RemainingTimeSec = RoundDurationSec;
     RoundPhase = ERoundPhase::InRound;
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Round started. CurrentRoundIndex=%d / %d, RoundDurationSec=%d, BallSpawn=(%.2f, %.2f, %.2f)"),
-        CurrentRoundIndex,
-        MaxRoundCount,
-        RoundDurationSec,
-        CurrentRoundBallSpawnLocation.X,
-        CurrentRoundBallSpawnLocation.Y,
-        CurrentRoundBallSpawnLocation.Z
-    );
-
-    GetWorldTimerManager().ClearTimer(RoundTimerHandle);
-    GetWorldTimerManager().SetTimer(
-        RoundTimerHandle,
-        this,
-        &APDGameModeBase::OnRoundTick,
-        1.0f,
-        true
-    );
-}
-
-void APDGameModeBase::OnRoundTick()
-{
-    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (IsValid(GS) == false)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnRoundTick failed. GameState is invalid."));
-        return;
-    }
-
-    if (RoundPhase != ERoundPhase::InRound)
-    {
-        return;
-    }
-
-    GS->RemainingTimeSec = FMath::Max(0, GS->RemainingTimeSec - 1);
-
-    if (GS->RemainingTimeSec <= 0)
-    {
-        GetWorldTimerManager().ClearTimer(RoundTimerHandle);
-        HandleRoundEnd();
-    }
-}
-
-void APDGameModeBase::HandleRoundEnd()
-{
-    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (IsValid(GS) == false)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleRoundEnd failed. GameState is invalid."));
-        return;
-    }
-
-    if (RoundPhase == ERoundPhase::GameEnded)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleRoundEnd skipped. Game already ended."));
-        return;
-    }
-
-    RoundPhase = ERoundPhase::RoundEnded;
-
-    bool bTie = false;
-    const int32 BestTeamId = CalculateBestTeamId(bTie);
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Round ended. CurrentRoundIndex=%d / %d, BestTeamId=%d, bTie=%d"),
-        CurrentRoundIndex,
-        MaxRoundCount,
-        BestTeamId,
-        bTie == true ? 1 : 0
-    );
-
-    if (IsLastRound() == true)
-    {
-        if (bTie == true)
-        {
-            StartOvertime();
-            return;
-        }
-
-        FinishGame(BestTeamId);
-        return;
-    }
-
-    PrepareNextRound();
 }
 
 void APDGameModeBase::StartMatchFlow()
 {
-    if (MaxRoundCount <= 0)
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
     {
-        UE_LOG(LogProjectD, Error, TEXT("[GameMode] StartMatchFlow failed. MaxRoundCount must be greater than 0."));
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartMatchFlow failed. GameState is invalid."));
         return;
     }
 
     CurrentRoundIndex = 1;
     RoundPhase = ERoundPhase::Waiting;
 
+    GS->RemainingTimeSec = TotalGameDurationSec;
+
     UE_LOG(
         LogProjectD,
         Log,
-        TEXT("[GameMode] Match start. MaxRoundCount=%d"),
-        MaxRoundCount
+        TEXT("[GameMode] Match start. TotalGameDurationSec=%d TargetScoreToWin=%d"),
+        TotalGameDurationSec,
+        TargetScoreToWin
+    );
+
+    GetWorldTimerManager().ClearTimer(GameTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        GameTimerHandle,
+        this,
+        &APDGameModeBase::OnGameTick,
+        1.0f,
+        true
     );
 
     StartRound();
@@ -454,15 +370,6 @@ void APDGameModeBase::PrepareNextRound()
 
     CurrentRoundIndex++;
 
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Preparing next round. NextRoundIndex=%d / %d, Delay=%.2f"),
-        CurrentRoundIndex,
-        MaxRoundCount,
-        NextRoundDelaySec
-    );
-
     GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         NextRoundTimerHandle,
@@ -471,6 +378,66 @@ void APDGameModeBase::PrepareNextRound()
         NextRoundDelaySec,
         false
     );
+}
+
+void APDGameModeBase::OnGameTick()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnGameTick failed. GameState is invalid."));
+        return;
+    }
+
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        return;
+    }
+
+    GS->RemainingTimeSec = FMath::Max(0, GS->RemainingTimeSec - 1);
+
+    if (GS->RemainingTimeSec <= 0)
+    {
+        GetWorldTimerManager().ClearTimer(GameTimerHandle);
+        HandleGameTimeExpired();
+    }
+}
+
+void APDGameModeBase::HandleGameTimeExpired()
+{
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] HandleGameTimeExpired called."));
+
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        return;
+    }
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] HandleGameTimeExpired called."));
+
+    bool bTie = false;
+    const int32 BestTeamId = CalculateBestTeamId(bTie);
+
+    if (BestTeamId == INDEX_NONE)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGameTimeExpired failed. BestTeamId is INDEX_NONE."));
+        return;
+    }
+
+    if (bTie == true)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] Game time expired. Start overtime."));
+        StartOvertime();
+        return;
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] Game time expired. Finish game. WinnerTeamId=%d"),
+        BestTeamId
+    );
+
+    FinishGame(BestTeamId);
 }
 
 int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
@@ -510,11 +477,6 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
     }
 
     return BestTeamId;
-}
-
-bool APDGameModeBase::IsLastRound() const
-{
-    return CurrentRoundIndex >= MaxRoundCount;
 }
 
 void APDGameModeBase::CacheRoundActors()
@@ -789,6 +751,44 @@ FVector APDGameModeBase::BuildRespawnLocationFromTeam(int32 TeamId) const
     const FVector Direction = FVector(FMath::Cos(BaseAngleRad), FMath::Sin(BaseAngleRad), 0.0f);
 
     return CurrentRoundBallSpawnLocation + (Direction * TeamRespawnRadiusFromBall) + FVector(0.0f, 0.0f, RespawnHeightOffset);
+}
+
+bool APDGameModeBase::TryFinishGameByScoreCondition()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TryFinishGameByScoreCondition failed. GameState is invalid."));
+        return false;
+    }
+
+    if (TargetScoreToWin <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TryFinishGameByScoreCondition skipped. TargetScoreToWin must be greater than 0."));
+        return false;
+    }
+
+    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    {
+        const int32 TeamScore = GS->TeamScores[TeamId];
+
+        if (TeamScore >= TargetScoreToWin)
+        {
+            UE_LOG(
+                LogProjectD,
+                Log,
+                TEXT("[GameMode] Score win condition reached. TeamId=%d Score=%d TargetScoreToWin=%d"),
+                TeamId,
+                TeamScore,
+                TargetScoreToWin
+            );
+
+            FinishGame(TeamId);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayerState)
