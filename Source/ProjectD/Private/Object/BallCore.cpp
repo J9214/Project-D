@@ -10,6 +10,7 @@
 
 ABallCore::ABallCore()
 {
+	bReplicates = true;
 }
 
 void ABallCore::OnInteract_Implementation(AActor* Interactor)

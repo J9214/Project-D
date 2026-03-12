@@ -17,7 +17,7 @@ public:
 
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 
-	void DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection);
+	virtual void DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection) override;
 
 	void ResetBallForRound(const FVector& SpawnLocation);
 
