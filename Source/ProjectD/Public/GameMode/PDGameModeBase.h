@@ -60,6 +60,9 @@ protected:
 	FVector BuildRespawnLocationForController(AController* Controller) const;
 	FVector BuildRespawnLocationFromTeam(int32 TeamId) const;
     
+	void TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayerState);
+	void TriggerDroneExplosionOnGoal();
+
 	UFUNCTION()
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 

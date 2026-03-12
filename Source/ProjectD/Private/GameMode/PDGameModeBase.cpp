@@ -174,6 +174,8 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         CurrentRoundIndex,
         MaxRoundCount
     );
+
+    TriggerDroneSpawnOnBallPickup(HolderPlayerState);
 }
 
 void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
@@ -215,6 +217,8 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         CurrentRoundIndex,
         MaxRoundCount
     );
+
+    TriggerDroneExplosionOnGoal();
 
     if (IsLastRound() == true)
     {
@@ -785,4 +789,29 @@ FVector APDGameModeBase::BuildRespawnLocationFromTeam(int32 TeamId) const
     const FVector Direction = FVector(FMath::Cos(BaseAngleRad), FMath::Sin(BaseAngleRad), 0.0f);
 
     return CurrentRoundBallSpawnLocation + (Direction * TeamRespawnRadiusFromBall) + FVector(0.0f, 0.0f, RespawnHeightOffset);
+}
+
+void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayerState)
+{
+    if (IsValid(HolderPlayerState) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneSpawnOnBallPickup failed. HolderPlayerState is invalid."));
+        return;
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] TriggerDroneSpawnOnBallPickup called. TeamId=%d"),
+        static_cast<int32>(HolderPlayerState->GetTeamID())
+    );
+
+    // TODO - Drone Spawner
+}
+
+void APDGameModeBase::TriggerDroneExplosionOnGoal()
+{
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
+
+    // TODO - Drone Spawner
 }
