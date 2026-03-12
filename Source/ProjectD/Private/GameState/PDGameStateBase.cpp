@@ -102,7 +102,7 @@ void APDGameStateBase::GoalScored()
         return;
     }
 
-	ETeamType Team = CurrentBallHolder->GetTeamID();
+	ETeamType Team = GoalInstigator->GetTeamID();
 
 	AddScore(Team, GoalHoldScore);
 }
