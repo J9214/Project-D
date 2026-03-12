@@ -71,6 +71,15 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 		PD->Server_ForceClearCarriedBall();
 	}
 
+	if (APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>())
+	{
+		APDPlayerState* PS = Pawn->GetPlayerState<APDPlayerState>();
+		if (IsValid(PS) == true)
+		{
+			GS->SetGoalInstigator(PS);
+		}
+	}
+
 	Ball->GetStaticMesh()->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	StartHoldTimer();
 }
