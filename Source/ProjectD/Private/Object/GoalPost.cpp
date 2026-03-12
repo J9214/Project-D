@@ -11,6 +11,7 @@
 AGoalPost::AGoalPost()
 {
 	bReplicates = true;
+	GoalHoldTime = 10.0f;
 }
 
 void AGoalPost::OnInteract_Implementation(AActor* Interactor)
@@ -95,7 +96,7 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 void AGoalPost::StartHoldTimer()
 {
-	GetWorld()->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, 10.f, false);
+	GetWorld()->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, GoalHoldTime, false);
 }
 
 void AGoalPost::OnHoldComplete()

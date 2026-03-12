@@ -29,9 +29,13 @@ protected:
 	void StartHoldTimer();
 	void OnHoldComplete();
 
+
+protected:
 	UPROPERTY()
 	TObjectPtr<ABallCore> PlacedBall = nullptr;
 
 	FTimerHandle HoldTimer;
 
+	UPROPERTY(BlueprintReadWrite)
+	float GoalHoldTime;
 };
