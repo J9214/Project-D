@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/PawnExtensionComponentBase.h"
+#include "Mover/Public/MovementMode.h"
 #include "MovementBridgeComponent.generated.h"
 
 UENUM(BlueprintType)
