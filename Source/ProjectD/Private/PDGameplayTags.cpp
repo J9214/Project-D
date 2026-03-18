@@ -34,6 +34,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");
     UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_Shield, "Player.Ability.Skill.Shield");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_SpeedUp, "Player.Ability.Skill.SpeedUp");
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_Flash, "Player.Ability.Skill.Flash");
 
 	/** Player State Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
@@ -44,6 +45,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_DashAvailable, "Player.State.DashAvailable");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Throwing, "Player.State.Throwing");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Shielding, "Player.State.Shielding");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_CC_SkillBlocked, "Player.State.CC.SkillBlocked");
 	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");
@@ -56,6 +58,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Fragment, "GameplayCue.Throwable.Explosion.Fragment");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Flame, "GameplayCue.Throwable.Explosion.Flame");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Smoke, "GameplayCue.Throwable.Explosion.Smoke");
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Throwable_Explosion_Flash, "GameplayCue.Throwable.Explosion.Flash");	
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Skill_Shield, "GameplayCue.Skill.Shield");
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Movement_Dash, "GameplayCue.Movement.Dash");
 
@@ -65,6 +68,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Data_Weapon_FireInterval, "Data.Weapon.FireInterval");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Fragment_Damage, "Data.Throwable.Fragment.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Flame_Damage, "Data.Throwable.Flame.Damage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_Throwable_Flash_Duration, "Data.Throwable.Flash.Duration");
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ExplodeDamage, "Data.ThrowableObject.ExplodeDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_ContinuousDamage, "Data.ThrowableObject.ContinuousDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_ThrowableObject_DestructDamage, "Data.ThrowableObject.DestructDamage");
