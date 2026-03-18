@@ -1,5 +1,5 @@
 #include "AI/MassAI/DroneAllExplodeProcessor.h"
-#include "AI/MassAI/CheckDroneAllExploseSubsystem.h"
+#include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
 #include "MassExecutionContext.h"
 
