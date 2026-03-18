@@ -13,9 +13,7 @@ public:
 	ADroneSpawner();
 	
 public:
-	UFUNCTION(BlueprintCallable)
-	virtual void SpawnDrones();
+	void SpawnDrones();
 
-	UFUNCTION(BlueprintCallable)
-	virtual void DeSpawnDrones();
+	void DeSpawnDrones();
 };
