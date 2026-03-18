@@ -9,6 +9,7 @@
 class UBoxComponent;
 class UCableComponent;
 class APDPawnBase;
+class UMovementBridgeComponent;
 
 USTRUCT(BlueprintType)
 struct FLayeredMove_ZipLineVelocity : public FLayeredMove_LinearVelocity
@@ -26,8 +27,10 @@ struct FZipLineInfo
 {
 	GENERATED_BODY()
 
+	UMovementBridgeComponent* BridgeComp;
+	FTimerHandle Timer;
+	FVector LastVelocity;
 	bool bIsZiplining = false;
-	TSharedPtr<FLayeredMove_LinearVelocity> LinearVelocity = nullptr;
 };
 
 UCLASS()
@@ -40,6 +43,7 @@ public:
 
 public:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(EEndPlayReason::Type EndReason) override;
 
 public:
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
@@ -47,6 +51,7 @@ public:
 
 protected:
 	FVector CalcRealDirection(APawn* User);
+	float MoveUser(APawn* User);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Gimmick|Component")
