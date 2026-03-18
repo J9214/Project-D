@@ -61,7 +61,7 @@ protected:
 	FGameplayAbilityTargetDataHandle MakeAimPointTargetData(const FVector& CameraStart, const FVector& AimPoint);
 	
 	void MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint);
-	void ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon);
+	void ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon, float DamageValue);
 	void ApplyFireCooldownToOwner(const APDWeaponBase* Weapon);
 	
 	void PlayLocalFireFX(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon);
@@ -71,6 +71,18 @@ protected:
 	void OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle& Data, FGameplayTag Tag);
 	
 	void HandleServerReceivedTargetData_Internal(const FGameplayAbilityTargetDataHandle& Data);
+	
+	void TraceSingleShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint);
+	void TraceMultiBulletShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint);
+	
+	TArray<FVector> BuildBulletDirections(
+		const FVector& BaseDir,
+		int32 BulletCount,
+		float SpreadHalfAngleDeg,
+		bool bIncludeCenterBullet
+	) const;
+
+	float GetDamagePerBullet(const APDWeaponBase* Weapon) const;
 	
 protected:
 	UPROPERTY()

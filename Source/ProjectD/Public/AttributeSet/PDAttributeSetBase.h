@@ -41,6 +41,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
 	mutable FOutOfHealthDelegate OnOutOfHealth;
+	
 private:
 	UFUNCTION()
 	void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth);

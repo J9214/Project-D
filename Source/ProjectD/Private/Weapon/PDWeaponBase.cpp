@@ -145,3 +145,28 @@ FTransform APDWeaponBase::GetSightCameraWorldTransform() const
 
 	return GetActorTransform();
 }
+
+bool APDWeaponBase::IsMultiBulletWeapon() const
+{
+	return WeaponData && WeaponData->SpreadConfig.BulletsPerShot > 1;
+}
+
+int32 APDWeaponBase::GetBulletsPerShot() const
+{
+	if (!WeaponData)
+	{
+		return 1;
+	}
+
+	return FMath::Max(1, WeaponData->SpreadConfig.BulletsPerShot);
+}
+
+float APDWeaponBase::GetSpreadHalfAngleDeg() const
+{
+	if (!WeaponData)
+	{
+		return 0.f;
+	}
+
+	return FMath::Max(0.f, WeaponData->SpreadConfig.SpreadHalfAngleDeg);
+}

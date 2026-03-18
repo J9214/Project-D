@@ -32,13 +32,6 @@ void UGA_Fire::ActivateAbility(
 	const FGameplayEventData* TriggerEventData
 )
 {
-	// bKeepFiring = true;
-	//
-	// if (IsLocallyControlled())
-	// {
-	// 	StartFireNow();
-	// }
-	
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -47,7 +40,6 @@ void UGA_Fire::ActivateAbility(
 
 	if (ActorInfo && ActorInfo->IsNetAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::ActivateAbility - Binding server target data delegate"));
 		BindServerTargetDataDelegate();
 	}
 
@@ -245,56 +237,8 @@ void UGA_Fire::FireOneShot()
 	}
 	
 	PlayLocalFireFX(OwnerPawn, Weapon);
-
-	// const UDataAsset_Weapon* WeaponDA = Weapon->WeaponData;
-	// if (!WeaponDA)
-	// {
-	// 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-	// 	return;
-	// }
-	//
-	// const FPDWeaponMontageEntry& Entry = WeaponDA->WeaponMontages.Get(EPDWeaponMontageAction::Fire);
-	//
-	// UAbilityTask_PlayMontageAndWait* PlayTask =
-	// 	UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-	// 		this,
-	// 		TEXT("FireMontageTask"),
-	// 		Entry.Montage,
-	// 		1.f,
-	// 		NAME_None,
-	// 		Entry.bStopWhenAbilityEnds
-	// 	);
-	// if (IsValid(PlayTask))
-	// {
-	// 	PlayTask->ReadyForActivation();
-	// }
-	
-	// {
-	// 	FScopedPredictionWindow PW(ASC, true);
-	// 	const FPredictionKey PredictKey = ASC->ScopedPredictionKey;
-	//
-	// 	UWeaponStateComponent* WSC = OwnerPawn->GetWeaponStateComponent();
-	// 	if (WSC)
-	// 	{
-	// 		WSC->ServerRPC_RegisterFireShotKey(PDGameplayTags::InputTag_Weapon_Fire, PredictKey);
-	// 	}
-	//
-	// 	const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
-	// 	const FVector AimPoint = CalcLocalAimPoint(OwnerPawn, Weapon);
-	// 	const FGameplayAbilityTargetDataHandle TargetData = MakeAimPointTargetData(ViewStart, AimPoint);
-	//
-	// 	ASC->CallServerSetReplicatedTargetData(
-	// 		CurrentSpecHandle,
-	// 		PredictKey,
-	// 		TargetData,
-	// 		FGameplayTag(),
-	// 		PredictKey
-	// 	);
-	// }
 	
 	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::FireOneShot - ActivationKey: %s"), *ActivationKey.ToString());
-
 	FScopedPredictionWindow PW(ASC, ActivationKey);
 
 	const FVector ViewStart = OwnerPawn->GetPawnViewLocation();
@@ -395,71 +339,40 @@ FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 	FHitResult Hit;
 	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_GameTraceChannel1, Params);
 
-	//DrawDebugLine(World, Start, bHit ? Hit.ImpactPoint : End, FColor::Cyan, false, 1.f, 0, 1.f);
-
 	return bHit ? Hit.ImpactPoint : End;
 }
 
 void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
 {
-	UWorld* World = GetWorld();
-	if (!World)
+	if (!OwnerPawn || !Weapon || !Weapon->WeaponData)
 	{
 		return;
 	}
-	
-	const float MaxRange = Weapon->WeaponData->MaxRange;
 
-	const FVector MuzzleStart = GetChestShotStart(OwnerPawn);
-	FVector FireDir = (AimPoint - MuzzleStart).GetSafeNormal();
-	if (FireDir.IsNearlyZero())
+	if (Weapon->IsMultiBulletWeapon())
 	{
-		FireDir = OwnerPawn->GetActorForwardVector();
+		TraceMultiBulletShot(OwnerPawn, Weapon, AimPoint);
 	}
-
-	const FVector MuzzleEnd = MuzzleStart + FireDir * MaxRange;
-
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_MuzzleTrace_Server), false, OwnerPawn);
-	Params.AddIgnoredActor(Weapon);
-
-	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(
-		Hit,
-		MuzzleStart,
-		MuzzleEnd,
-		ECC_GameTraceChannel1,
-		Params
-	);
-
+	else
 	{
-		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
-		if (IsValid(Perception) == true)
-		{
-			const FVector TubeEnd = (bHit == true) ? Hit.ImpactPoint : MuzzleEnd;
-			const float TubeLen = (TubeEnd - MuzzleStart).Size();
-
-			Perception->SubmitAimTubeRequest(MuzzleStart, FireDir, TubeLen);
-		}
+		TraceSingleShot(OwnerPawn, Weapon, AimPoint);
 	}
-
-	ApplyWeaponDamageGE(Hit, Weapon);
-
-	OwnerPawn->ClientDrawFireDebug(MuzzleStart, bHit ? Hit.ImpactPoint : MuzzleEnd, bHit, Hit.ImpactPoint);
 }
 
-void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon)
+void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* Weapon, float DamageValue)
 {
 	if (!Weapon || !Weapon->WeaponData || !Weapon->WeaponData->WeaponDamageGE)
 	{
 		return;
 	}
 
-	AActor* TargetActor = Hit.GetActor();
-	if (!IsValid(TargetActor))
+	AActor* HitActor = Hit.GetActor();
+	if (!IsValid(HitActor))
 	{
 		return;
 	}
-
+	
+	// Mass AI
 	{
 		UWorld* World = GetWorld();
 		if (IsValid(World) == true)
@@ -468,7 +381,7 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 			if (IsValid(Bridge) == true)
 			{
 				const float Damage = Weapon->WeaponData->WeaponDamage;
-
+	
 				if (Bridge->TryApplyDamageFromProxyHit(Hit, Damage) == true)
 				{
 					return;
@@ -483,45 +396,43 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 		return;
 	}
 
-	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
 	if (!TargetASC)
 	{
 		return;
 	}
 
-	const float Damage = Weapon->WeaponData->WeaponDamage;
-	const int32 Level = GetAbilityLevel();
-
-	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
-	Context.AddHitResult(Hit);
+	FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
+	ContextHandle.AddHitResult(Hit);
 
 	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
 		Weapon->WeaponData->WeaponDamageGE,
-		Level,
-		Context
+		GetAbilityLevel(),
+		ContextHandle
 	);
+
 	if (!SpecHandle.IsValid())
 	{
 		return;
 	}
 
-	SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_Damage, Damage);
+	SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_Damage, DamageValue);
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-
+	
 	if (IsValid(Weapon->WeaponData->DestructDamageGE))
 	{
 		const float DestructDamage = Weapon->WeaponData->DestructDamage;
-
+	
 		SpecHandle = SourceASC->MakeOutgoingSpec(
 			Weapon->WeaponData->DestructDamageGE,
-			Level,
-			Context
+			GetAbilityLevel(),
+			ContextHandle
 		);
 		if (!SpecHandle.IsValid())
 		{
 			return;
 		}
-
+	
 		SpecHandle.Data->SetSetByCallerMagnitude(PDGameplayTags::Data_Weapon_DestructDamage, DestructDamage);
 		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	}
@@ -640,7 +551,6 @@ void UGA_Fire::BindServerTargetDataDelegate()
 	}
 
 	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::BindServerTargetDataDelegate - Retrieved ASC and ActivationKey. ActivationKey: %s"), *ActivationKey.ToString());
 
 	auto& Delegate = ASC->AbilityTargetDataSetDelegate(CurrentSpecHandle, ActivationKey);
 	if (Delegate.IsBound())
@@ -649,7 +559,6 @@ void UGA_Fire::BindServerTargetDataDelegate()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::BindServerTargetDataDelegate - Binding server target data delegate."));
 	ServerTDDelegateHandle = Delegate.AddUObject(this, &UGA_Fire::OnServerTargetDataReceived);
 	bServerDelegateBound = true;
 
@@ -667,12 +576,9 @@ void UGA_Fire::UnbindServerTargetDataDelegate()
 	if (ASC)
 	{
 		const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-		UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Retrieved ASC and ActivationKey for unbinding. ActivationKey: %s"), *ActivationKey.ToString());
 		ASC->AbilityTargetDataSetDelegate(CurrentSpecHandle, ActivationKey).Remove(ServerTDDelegateHandle);
 	}
 	
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::UnbindServerTargetDataDelegate - Unbound server target data delegate."));
-
 	bServerDelegateBound = false;
 	ServerTDDelegateHandle.Reset();
 }
@@ -691,7 +597,6 @@ void UGA_Fire::OnServerTargetDataReceived(const FGameplayAbilityTargetDataHandle
 	}
 
 	const FPredictionKey& ActivationKey = CurrentActivationInfo.GetActivationPredictionKey();
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::OnServerTargetDataReceived - Retrieved ASC and ActivationKey for processing received data. ActivationKey: %s"), *ActivationKey.ToString());
 	ASC->ConsumeClientReplicatedTargetData(CurrentSpecHandle, ActivationKey);
 
 	HandleServerReceivedTargetData_Internal(Data);
@@ -730,8 +635,192 @@ void UGA_Fire::HandleServerReceivedTargetData_Internal(const FGameplayAbilityTar
 		OwnerASC->ExecuteGameplayCue(Weapon->WeaponData->FireCueTag, Params);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Fire::HandleServerReceivedTargetData_Internal - Firing weapon. AimPoint: %s"), *AimPoint.ToString());
 	Weapon->ConsumeAmmo(1);
 	ApplyFireCooldownToOwner(Weapon);
 	MuzzleTraceAndApplyGE(OwnerPawn, Weapon, AimPoint);
+}
+
+void UGA_Fire::TraceSingleShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
+{
+	UWorld* World = GetWorld();
+	if (!World || !OwnerPawn || !Weapon || !Weapon->WeaponData)
+	{
+		return;
+	}
+
+	const FVector TraceStart = GetChestShotStart(OwnerPawn);
+	FVector FireDir = (AimPoint - TraceStart).GetSafeNormal();
+	if (FireDir.IsNearlyZero())
+	{
+		FireDir = OwnerPawn->GetActorForwardVector();
+	}
+
+	const float MaxRange = Weapon->WeaponData->MaxRange;
+	const FVector TraceEnd = TraceStart + FireDir * MaxRange;
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(FireSingleTrace), false, OwnerPawn);
+	Params.AddIgnoredActor(Weapon);
+
+	FHitResult Hit;
+	const bool bHit = World->LineTraceSingleByChannel(
+		Hit,
+		TraceStart,
+		TraceEnd,
+		ECC_GameTraceChannel1,
+		Params
+	);
+
+	if (bHit)
+	{
+		ApplyWeaponDamageGE(Hit, Weapon, Weapon->WeaponData->WeaponDamage);
+	}
+	
+	{
+		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
+		if (IsValid(Perception) == true)
+		{
+			const FVector TubeEnd = (bHit == true) ? Hit.ImpactPoint : TraceEnd;
+			const float TubeLen = (TubeEnd - TraceStart).Size();
+
+			Perception->SubmitAimTubeRequest(TraceStart, FireDir, TubeLen);
+		}
+	}
+	
+#if ENABLE_DRAW_DEBUG
+	OwnerPawn->ClientDrawFireDebug(TraceStart, bHit ? Hit.ImpactPoint : TraceEnd, bHit, Hit.ImpactPoint);
+#endif
+}
+
+void UGA_Fire::TraceMultiBulletShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
+{
+	UWorld* World = GetWorld();
+	if (!World || !OwnerPawn || !Weapon || !Weapon->WeaponData)
+	{
+		return;
+	}
+
+	const FVector TraceStart = GetChestShotStart(OwnerPawn);
+
+	FVector BaseDir = (AimPoint - TraceStart).GetSafeNormal();
+	if (BaseDir.IsNearlyZero())
+	{
+		BaseDir = OwnerPawn->GetActorForwardVector();
+	}
+
+	const int32 BulletCount = Weapon->GetBulletsPerShot();
+	const float SpreadHalfAngleDeg = Weapon->GetSpreadHalfAngleDeg();
+	const bool bIncludeCenterBullet = Weapon->WeaponData->SpreadConfig.bIncludeCenterBullet;
+
+	const TArray<FVector> BulletDirs = BuildBulletDirections(
+		BaseDir,
+		BulletCount,
+		SpreadHalfAngleDeg,
+		bIncludeCenterBullet
+	);
+
+	const float MaxRange = Weapon->WeaponData->MaxRange;
+	const float BulletDamage = GetDamagePerBullet(Weapon);
+
+	for (const FVector& Dir : BulletDirs)
+	{
+		const FVector TraceEnd = TraceStart + Dir * MaxRange;
+
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(FireShotgunTrace), false, OwnerPawn);
+		Params.AddIgnoredActor(Weapon);
+
+		FHitResult Hit;
+		const bool bHit = World->LineTraceSingleByChannel(
+			Hit,
+			TraceStart,
+			TraceEnd,
+			ECC_GameTraceChannel1,
+			Params
+		);
+
+		if (bHit)
+		{
+			ApplyWeaponDamageGE(Hit, Weapon, BulletDamage);
+		}
+		
+#if ENABLE_DRAW_DEBUG
+		OwnerPawn->ClientDrawFireDebug(TraceStart, bHit ? Hit.ImpactPoint : TraceEnd, bHit, Hit.ImpactPoint);
+#endif
+	}
+}
+
+TArray<FVector> UGA_Fire::BuildBulletDirections(
+	const FVector& BaseDir,
+	int32 BulletCount,
+	float SpreadHalfAngleDeg,
+	bool bIncludeCenterBullet
+) const
+{
+	TArray<FVector> Result;
+	Result.Reserve(BulletCount);
+
+	if (BulletCount <= 0)
+	{
+		return Result;
+	}
+
+	FVector Forward = BaseDir.GetSafeNormal();
+	if (Forward.IsNearlyZero())
+	{
+		return Result;
+	}
+
+	FVector Right = FVector::CrossProduct(Forward, FVector::UpVector);
+	if (Right.IsNearlyZero())
+	{
+		Right = FVector::CrossProduct(Forward, FVector::RightVector);
+	}
+	Right.Normalize();
+
+	const FVector Up = FVector::CrossProduct(Right, Forward).GetSafeNormal();
+
+	const float HalfAngleRad = FMath::DegreesToRadians(FMath::Max(0.f, SpreadHalfAngleDeg));
+	const float DiscRadius = FMath::Tan(HalfAngleRad);
+
+	int32 StartIndex = 0;
+
+	if (bIncludeCenterBullet && BulletCount > 0)
+	{
+		Result.Add(Forward);
+		StartIndex = 1;
+	}
+
+	const int32 RemainingCount = BulletCount - StartIndex;
+	if (RemainingCount <= 0)
+	{
+		return Result;
+	}
+
+	const float GoldenAngle = PI * (3.f - FMath::Sqrt(5.f));
+
+	for (int32 i = 0; i < RemainingCount; ++i)
+	{
+		const float t = (i + 0.5f) / RemainingCount;
+		const float Radius = FMath::Sqrt(t);
+		const float Theta = i * GoldenAngle;
+
+		const float X = Radius * FMath::Cos(Theta);
+		const float Y = Radius * FMath::Sin(Theta);
+
+		const FVector Offset = (Right * X + Up * Y) * DiscRadius;
+		const FVector BulletDir = (Forward + Offset).GetSafeNormal();
+
+		Result.Add(BulletDir);
+	}
+
+	return Result;
+}
+
+float UGA_Fire::GetDamagePerBullet(const APDWeaponBase* Weapon) const
+{
+	if (!Weapon || !Weapon->WeaponData)
+	{
+		return 0.f;
+	}
+
+	return Weapon->WeaponData->WeaponDamage;
 }
