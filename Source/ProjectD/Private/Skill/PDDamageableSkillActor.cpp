@@ -6,7 +6,6 @@
 #include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
 
-
 APDDamageableSkillActor::APDDamageableSkillActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -29,7 +28,6 @@ void APDDamageableSkillActor::PostInitializeComponents()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		
 		AbilitySystemComponent->OnGameplayEffectAppliedDelegateToSelf.AddUObject(
 			this, &ThisClass::OnEffectApplied
 		);
@@ -39,9 +37,7 @@ void APDDamageableSkillActor::PostInitializeComponents()
 void APDDamageableSkillActor::BeginPlay()
 {
 	Super::BeginPlay();
-
 	CurrentHealth = MaxHealth;
-	//OnRep_ShieldVisuals();
 }
 
 void APDDamageableSkillActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -52,19 +48,24 @@ void APDDamageableSkillActor::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(APDDamageableSkillActor, CurrentHealth);
 	DOREPLIFETIME(APDDamageableSkillActor, ShieldStaticMesh);
 	DOREPLIFETIME(APDDamageableSkillActor, ShieldBaseMaterial);
-	DOREPLIFETIME(APDDamageableSkillActor, OwnerTeamID);
 	DOREPLIFETIME(APDDamageableSkillActor, DamageableType);
 }
 
-void APDDamageableSkillActor::InitializeShieldSettings(float InMaxHealth, UStaticMesh* InStaticMesh, UMaterialInterface* InBaseMaterial, ETeamType InOwnerTeamID, EPDShieldType InDamageableType)
+void APDDamageableSkillActor::InitializeShieldSettings(
+	float InMaxHealth,
+	UStaticMesh* InStaticMesh,
+	UMaterialInterface* InBaseMaterial,
+	ETeamType InOwnerTeamID,
+	EPDShieldType InDamageableType
+)
 {
 	MaxHealth = FMath::Max(1.f, InMaxHealth);
 	CurrentHealth = MaxHealth;
 	ShieldStaticMesh = InStaticMesh;
 	ShieldBaseMaterial = InBaseMaterial;
-	OwnerTeamID = InOwnerTeamID;
 	DamageableType = InDamageableType;
 
+	SetOwnerTeamID(InOwnerTeamID);
 	OnRep_ShieldVisuals();
 }
 
@@ -86,15 +87,14 @@ void APDDamageableSkillActor::OnRep_ShieldVisuals()
 	}
 	
 	SetShieldMesh();
-	
 }
 
 void APDDamageableSkillActor::OnEffectApplied(UAbilitySystemComponent* ASC, const FGameplayEffectSpec& Spec,
-                                              FActiveGameplayEffectHandle Handle)
+	FActiveGameplayEffectHandle Handle)
 {
-	FGameplayTag DamageTag = PDGameplayTags::Data_Weapon_Damage;
+	const FGameplayTag DamageTag = PDGameplayTags::Data_Weapon_Damage;
 
-	float DamageAmount = Spec.GetSetByCallerMagnitude(DamageTag, false, 0.f);
+	const float DamageAmount = Spec.GetSetByCallerMagnitude(DamageTag, false, 0.f);
 	const FGameplayEffectContextHandle& Context = Spec.GetContext();
 	const FHitResult* Hit = Context.GetHitResult();
 
@@ -108,4 +108,9 @@ void APDDamageableSkillActor::OnEffectApplied(UAbilitySystemComponent* ASC, cons
 	CurrentHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.f, MaxHealth);
 	
 	OnHitEvent(DamageAmount, Hit ? *Hit : EmptyHitResult);
+
+	if (CurrentHealth <= 0.f)
+	{
+		Destroy();
+	}
 }
