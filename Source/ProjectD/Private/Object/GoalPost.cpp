@@ -47,7 +47,10 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 
 	PlacedBall = Ball;
 
+	Ball->SetPlacedInGoal(true);
+
 	Ball->ClearCarrier();
+
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Pawn))
 	{
@@ -70,6 +73,11 @@ void AGoalPost::StealBall(APawn* Stealer)
 	ABallCore* BallToSteal = PlacedBall;
 
 	PlacedBall = nullptr;
+
+	if (BallToSteal)
+	{
+		BallToSteal->SetPlacedInGoal(false);
+	}
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Stealer))
 	{
