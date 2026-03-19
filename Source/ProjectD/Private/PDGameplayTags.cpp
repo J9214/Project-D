@@ -74,4 +74,15 @@ namespace PDGameplayTags
 
 	/** Gimmick Tags **/
 	PROJECTD_API UE_DEFINE_GAMEPLAY_TAG(Gimmick_Interactable_ZipLine, "Gimmick.Interactable.ZipLine");
+	
+	
+	/** Placement Input Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Mouse_Left, "InputTag.Mouse.Left");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Mouse_Right, "InputTag.Mouse.Right");
+
+	/** Placement Ability Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_PlaceSpawn, "Player.Ability.Skill.PlaceSpawn");
+
+	/** Placement State Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Placing, "Player.State.Placing");
 }

@@ -1,4 +1,4 @@
-﻿#include "Pawn/PDPawnBase.h"
+#include "Pawn/PDPawnBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
@@ -227,10 +227,66 @@ void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
 }
 
+bool APDPawnBase::IsPlacementModeActive() const
+{
+	return SkillManageComponent && SkillManageComponent->IsInPlacementMode();
+}
+
+bool APDPawnBase::ShouldBlockFirstPersonToggleInput() const
+{
+	if (IsPlacementModeActive())
+	{
+		return true;
+	}
+
+	if (const UWorld* World = GetWorld())
+	{
+		return World->GetTimeSeconds() <= FirstPersonToggleSuppressUntilTime;
+	}
+
+	return false;
+}
+
+bool APDPawnBase::TryConsumePlacementFirstPersonToggleInput()
+{
+	if (IsPlacementModeActive())
+	{
+		if (UWorld* World = GetWorld())
+		{
+			FirstPersonToggleSuppressUntilTime = World->GetTimeSeconds() + 0.05;
+		}
+
+		if (SkillManageComponent)
+		{
+			SkillManageComponent->OnPlacementCancelInput();
+		}
+
+		return true;
+	}
+
+	return ShouldBlockFirstPersonToggleInput();
+}
+
 void APDPawnBase::Input_AbilityInputPressed(FGameplayTag InputTag)
 {
 	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
 	{
+		if (ASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_Placing) && SkillManageComponent)
+		{
+			if (InputTag.MatchesTagExact(PDGameplayTags::InputTag_Weapon_Fire) ||
+				InputTag.MatchesTagExact(PDGameplayTags::InputTag_Mouse_Left))
+			{
+				SkillManageComponent->OnPlacementConfirmInput();
+				return;
+			}
+
+			if (InputTag.MatchesTagExact(PDGameplayTags::InputTag_Weapon_ADS) ||
+				InputTag.MatchesTagExact(PDGameplayTags::InputTag_Mouse_Right))
+			{
+				return;
+			}
+		}
+
 		ASC->OnAbilityInputPressed(InputTag);
 	}
 }
@@ -239,12 +295,28 @@ void APDPawnBase::Input_AbilityInputReleased(FGameplayTag InputTag)
 {
 	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
 	{
+		if (ASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_Placing))
+		{
+			if (InputTag.MatchesTagExact(PDGameplayTags::InputTag_Weapon_Fire) ||
+				InputTag.MatchesTagExact(PDGameplayTags::InputTag_Weapon_ADS) ||
+				InputTag.MatchesTagExact(PDGameplayTags::InputTag_Mouse_Left) ||
+				InputTag.MatchesTagExact(PDGameplayTags::InputTag_Mouse_Right))
+			{
+				return;
+			}
+		}
+
 		ASC->OnAbilityInputReleased(InputTag);
 	}
 }
 
 void APDPawnBase::OnAimHoldStarted(const FInputActionValue& Value)
 {
+	if (IsPlacementModeActive())
+	{
+		return;
+	}
+
 	bAimHoldDown = true;
 	
 	if (bIsFirstPerson)
@@ -258,6 +330,11 @@ void APDPawnBase::OnAimHoldStarted(const FInputActionValue& Value)
 
 void APDPawnBase::OnAimHoldEnded(const FInputActionValue& Value)
 {
+	if (IsPlacementModeActive())
+	{
+		return;
+	}
+
 	bAimHoldDown = false;
 	
 	if (bIsFirstPerson)
@@ -271,6 +348,23 @@ void APDPawnBase::OnAimHoldEnded(const FInputActionValue& Value)
 
 void APDPawnBase::OnFirstPersonToggle(const FInputActionValue& Value)
 {
+	if (UWorld* World = GetWorld())
+	{
+		if (World->GetTimeSeconds() <= FirstPersonToggleSuppressUntilTime)
+		{
+			FirstPersonToggleSuppressUntilTime = -1.0;
+			return;
+		}
+	}
+
+	if (UPDAbilitySystemComponent* ASC = Cast<UPDAbilitySystemComponent>(GetAbilitySystemComponent()))
+	{
+		if (ASC->HasMatchingGameplayTag(PDGameplayTags::Player_State_Placing))
+		{
+			return;
+		}
+	}
+
 	if (!bIsFirstPerson)
 	{
 		EnterFirstPerson();
