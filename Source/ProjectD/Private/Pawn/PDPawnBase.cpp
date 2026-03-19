@@ -28,6 +28,7 @@
 #include "Components/InteractionComponent.h"
 #include "Weapon/PDWeaponBase.h"
 #include "Structs/FSpeedUpModifier.h"
+#include "Gimmick/ZipLine/PDZipLine.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -542,7 +543,14 @@ void APDPawnBase::TryInteract()
 
 	if (bIsInteractable)
 	{
-		Server_TryInteract(Target);
+		if (Target->IsA(APDZipLine::StaticClass()))
+		{
+			IPDInteractableObject::Execute_OnInteract(Target, this);
+		}
+		else
+		{
+			Server_TryInteract(Target);
+		}
 	}
 	else
 	{
