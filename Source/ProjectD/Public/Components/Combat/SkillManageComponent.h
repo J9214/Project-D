@@ -5,12 +5,17 @@
 #include "GameplayTagContainer.h"
 #include "GameplayAbilitySpec.h"
 #include "Abilities/GameplayAbility.h"
+#include "Structs/SpawnPlacementData.h"
 #include "SkillManageComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FOnSkillSlotsChanged);
 
 class UGameplayAbility;
 class UAbilitySystemComponent;
+class UGA_PlaceSpawnBase;
+class APDSkillPlacementPreviewActor;
+class UAbilitySystemComponent;
+
 
 UENUM(BlueprintType)
 enum class ESkillDragSourceType : uint8
@@ -73,6 +78,25 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	
+	UPROPERTY()
+	TObjectPtr<APDSkillPlacementPreviewActor> PreviewActor = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UGA_PlaceSpawnBase> CurrentPlacementAbility = nullptr;
+
+	UPROPERTY()
+	FSpawnPlacementData CurrentPlacementData;
+
+	UPROPERTY()
+	bool bIsInPlacementMode = false;
+
+	UPROPERTY()
+	bool bCanPlaceCurrentLocation = false;
+
+	UPROPERTY()
+	FTransform CachedPlacementTransform;
 
 private:
 	UFUNCTION()
@@ -102,4 +126,31 @@ private:
 	TArray<FSkillSlot> Slots;
 
 	TArray<FGameplayAbilitySpecHandle> SlotHandles;
+	
+public:
+	bool BeginPlacement(UGA_PlaceSpawnBase* InSourceAbility, const FSpawnPlacementData& InPlacementData);
+
+	void ConfirmPlacement();
+	void CancelPlacement();
+	void CancelPlacementFromAbility(UGA_PlaceSpawnBase* InAbility);
+
+	UFUNCTION(BlueprintPure)
+	bool IsInPlacementMode() const { return bIsInPlacementMode; }
+
+	UFUNCTION(BlueprintCallable)
+	void OnPlacementConfirmInput();
+
+	UFUNCTION(BlueprintCallable)
+	void OnPlacementCancelInput();
+
+protected:
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	void EndPlacementInternal(bool bCancelled, bool bNotifyAbility);
+	void DestroyPreviewActor();
+	void UpdatePlacementPreview();
+	bool BuildPlacementTransform(const FSpawnPlacementData& InPlacementData, FTransform& OutTransform) const;
+
+	UFUNCTION(Server, Reliable)
+	void Server_ConfirmPlacement(const FSpawnPlacementData& InPlacementData, const FTransform& InConfirmedTransform);
 };
