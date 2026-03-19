@@ -46,6 +46,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Throwing, "Player.State.Throwing");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Shielding, "Player.State.Shielding");
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_CC_SkillBlocked, "Player.State.CC.SkillBlocked");
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_CC_MovementBlocked, "Player.State.CC.MovementBlocked");
 	
 	/** Event Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_EquipRequest, "Event.Weapon.EquipRequest");

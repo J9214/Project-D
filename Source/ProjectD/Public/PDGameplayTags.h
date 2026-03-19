@@ -48,6 +48,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Dashing);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_DashAvailable);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_CC_SkillBlocked);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_CC_MovementBlocked);
 	
 	/** Event Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipRequest);
