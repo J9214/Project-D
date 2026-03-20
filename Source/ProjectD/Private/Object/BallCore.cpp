@@ -136,4 +136,17 @@ void ABallCore::HandleCarrierChanged()
 			}
 		}
 	}
+	else
+	{
+		if (!bIsPlacedInGoal)
+		{
+			StaticMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+			SetActorEnableCollision(true);
+			StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+			StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			StaticMesh->SetSimulatePhysics(true);
+			StaticMesh->SetEnableGravity(true);
+		}
+	}
 }
