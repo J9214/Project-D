@@ -160,6 +160,12 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp skipped. Goal is already processing."));
+        return;
+    }
+
     if (IsValid(HolderPlayerState) == false)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp failed. HolderPlayerState is invalid."));
@@ -172,8 +178,45 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bDroneSpawnTriggeredThisRound == true)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] HandleBallPickedUp skipped. Drone already spawned this round."));
+        return;
+    }
 
+    bDroneSpawnTriggeredThisRound = true;
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
+}
+
+void APDGameModeBase::HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball)
+{
+    if (RoundPhase != ERoundPhase::InRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. RoundPhase is not InRound."));
+        return;
+    }
+
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. Goal already processing."));
+        return;
+    }
+
+    if (IsValid(GoalPost) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. GoalPost is invalid."));
+        return;
+    }
+
+    if (IsValid(Ball) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. Ball is invalid."));
+        return;
+    }
+
+    bGoalProcessingThisRound = true;
+
+    TriggerDroneExplosionOnGoal();
 }
 
 void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
@@ -211,8 +254,6 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d"),
         CurrentRoundIndex
     );
-
-    TriggerDroneExplosionOnGoal();
 
     if (GS->bOvertime == true)
     {
@@ -609,6 +650,9 @@ void APDGameModeBase::ResetRoundState()
 
     GS->CurrentBallHolder = nullptr;
     GS->GoalInstigator = nullptr;
+
+    bDroneSpawnTriggeredThisRound = false;
+    bGoalProcessingThisRound = false;
 
     UE_LOG(
         LogProjectD,

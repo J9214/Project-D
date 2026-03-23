@@ -35,6 +35,7 @@ public:
 	void FinishGame(int32 BestTeamId);
 
 	void HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball);
+	void HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball);
 	void HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball);
 
 protected:
@@ -109,4 +110,7 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<ADroneSpawner> CachedDroneSpawner;
+
+	bool bDroneSpawnTriggeredThisRound = false;
+	bool bGoalProcessingThisRound = false;
 };
