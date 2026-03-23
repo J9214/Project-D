@@ -12,6 +12,8 @@
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
 #include "ProjectD/ProjectD.h"
+#include "AI/MassAI/DroneSpawner.h"
+#include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -63,7 +65,9 @@ void APDGameModeBase::BeginPlay()
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] MassProxyPoolSubsystem is invalid."));
     }
 
+	StartRound();
     CacheRoundActors();
+    CacheDroneSpawner();
     StartMatchFlow();
 }
 
@@ -156,6 +160,12 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp skipped. Goal is already processing."));
+        return;
+    }
+
     if (IsValid(HolderPlayerState) == false)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp failed. HolderPlayerState is invalid."));
@@ -168,8 +178,45 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bDroneSpawnTriggeredThisRound == true)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] HandleBallPickedUp skipped. Drone already spawned this round."));
+        return;
+    }
 
+    bDroneSpawnTriggeredThisRound = true;
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
+}
+
+void APDGameModeBase::HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball)
+{
+    if (RoundPhase != ERoundPhase::InRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. RoundPhase is not InRound."));
+        return;
+    }
+
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. Goal already processing."));
+        return;
+    }
+
+    if (IsValid(GoalPost) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. GoalPost is invalid."));
+        return;
+    }
+
+    if (IsValid(Ball) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. Ball is invalid."));
+        return;
+    }
+
+    bGoalProcessingThisRound = true;
+
+    TriggerDroneExplosionOnGoal();
 }
 
 void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
@@ -207,8 +254,6 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d"),
         CurrentRoundIndex
     );
-
-    TriggerDroneExplosionOnGoal();
 
     if (GS->bOvertime == true)
     {
@@ -567,6 +612,33 @@ void APDGameModeBase::SpawnAndCacheBallCore()
     );
 }
 
+void APDGameModeBase::CacheDroneSpawner()
+{
+    CachedDroneSpawner = nullptr;
+
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. World is invalid."));
+        return;
+    }
+
+    for (TActorIterator<ADroneSpawner> It(World); It; ++It)
+    {
+        ADroneSpawner* DroneSpawner = *It;
+        if (IsValid(DroneSpawner) == true)
+        {
+            CachedDroneSpawner = DroneSpawner;
+            break;
+        }
+    }
+
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. DroneSpawner not found."));
+    }
+}
+
 void APDGameModeBase::ResetRoundState()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
@@ -578,6 +650,9 @@ void APDGameModeBase::ResetRoundState()
 
     GS->CurrentBallHolder = nullptr;
     GS->GoalInstigator = nullptr;
+
+    bDroneSpawnTriggeredThisRound = false;
+    bGoalProcessingThisRound = false;
 
     UE_LOG(
         LogProjectD,
@@ -799,6 +874,12 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         return;
     }
 
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneSpawnOnBallPickup failed. CachedDroneSpawner is invalid."));
+        return;
+    }
+
     UE_LOG(
         LogProjectD,
         Log,
@@ -806,12 +887,26 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         static_cast<int32>(HolderPlayerState->GetTeamID())
     );
 
-    // TODO - Drone Spawner
+    CachedDroneSpawner->SpawnDrones();
 }
 
 void APDGameModeBase::TriggerDroneExplosionOnGoal()
 {
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. World is invalid."));
+        return;
+    }
+
+    UCheckDroneAllExplodeSubsystem* ExplodeSubsystem = World->GetSubsystem<UCheckDroneAllExplodeSubsystem>();
+    if (IsValid(ExplodeSubsystem) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. ExplodeSubsystem is invalid."));
+        return;
+    }
+
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
 
-    // TODO - Drone Spawner
+    ExplodeSubsystem->RequestExplodeAllDrones();
 }
