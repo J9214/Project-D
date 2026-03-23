@@ -1,4 +1,4 @@
-﻿#include "GameState/PDGameStateBase.h"
+#include "GameState/PDGameStateBase.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/PDPlayerState.h"
 #include "GameMode/PDGameModeBase.h"
@@ -60,19 +60,6 @@ void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
     {
         TeamScores[TeamId] += Points;
     }
-
-    if (bOvertime && Points > 0)
-    {
-        if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
-        {
-            GM->FinishGame(TeamId);
-        }
-    }
-
-    /*for(auto Score : TeamScores)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Score: %d"), Score);
-	}*/
 }
 
 void APDGameStateBase::SetBallHolder(APDPlayerState* NewHolder)
@@ -115,7 +102,7 @@ void APDGameStateBase::GoalScored()
         return;
     }
 
-	ETeamType Team = CurrentBallHolder->GetTeamID();
+	ETeamType Team = GoalInstigator->GetTeamID();
 
 	AddScore(Team, GoalHoldScore);
 }

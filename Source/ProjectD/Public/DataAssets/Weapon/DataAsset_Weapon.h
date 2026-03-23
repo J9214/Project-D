@@ -14,6 +14,21 @@ class USoundBase;
 class UNiagaraSystem;
 class UInputMappingContext;
 
+USTRUCT(BlueprintType)
+struct FPDWeaponSpreadConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Spread")
+	int32 BulletsPerShot = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Spread")
+	float SpreadHalfAngleDeg = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Spread")
+	bool bIncludeCenterBullet = true;
+};
+
 UCLASS()
 class PROJECTD_API UDataAsset_Weapon : public UPrimaryDataAsset
 {
@@ -67,6 +82,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float MaxRange = 10000.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon|Spread")
+	FPDWeaponSpreadConfig SpreadConfig;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI|Crosshair")
 	TSubclassOf<UUserWidget> AimCrosshairWidgetClass;

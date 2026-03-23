@@ -33,7 +33,7 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_Dash, "Player.Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Movement_WallJump, "Player.Ability.Movement.WallJump");
     UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_Shield, "Player.Ability.Skill.Shield");
-
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_SpeedUp, "Player.Ability.Skill.SpeedUp");
 
 	/** Player State Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(Player_State_Firinig, "Player.State.Firing");
@@ -50,7 +50,6 @@ namespace PDGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_UnequipRequest, "Event.Weapon.UnequipRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Weapon_ReloadRequest, "Event.Weapon.ReloadRequest");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Throwable_ThrowRequest, "Event.Throwable.ThrowRequest");
-
 	
 	/** GameplayCue Tags **/
 	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Weapon_Fire, "GameplayCue.Weapon.Fire");
@@ -75,4 +74,15 @@ namespace PDGameplayTags
 
 	/** Gimmick Tags **/
 	PROJECTD_API UE_DEFINE_GAMEPLAY_TAG(Gimmick_Interactable_ZipLine, "Gimmick.Interactable.ZipLine");
+	
+	
+	/** Placement Input Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Mouse_Left, "InputTag.Mouse.Left");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Mouse_Right, "InputTag.Mouse.Right");
+
+	/** Placement Ability Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_Ability_Skill_PlaceSpawn, "Player.Ability.Skill.PlaceSpawn");
+
+	/** Placement State Tags **/
+	UE_DEFINE_GAMEPLAY_TAG(Player_State_Placing, "Player.State.Placing");
 }

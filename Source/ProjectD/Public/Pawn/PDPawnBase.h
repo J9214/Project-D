@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
@@ -43,6 +43,9 @@ public:
 	FORCEINLINE UMoverComponent* GetMoverComponent() const { return MoverComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Placement")
+	bool TryConsumePlacementFirstPersonToggleInput();
 	
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawFireDebug(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
@@ -59,10 +62,11 @@ protected:
 	
 private:
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
-	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	
 	void Input_AbilityInputPressed(FGameplayTag InputTag);
 	void Input_AbilityInputReleased(FGameplayTag InputTag);
+	bool IsPlacementModeActive() const;
+	bool ShouldBlockFirstPersonToggleInput() const;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
@@ -123,6 +127,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Camera|FirstPerson")
 	FVector FirstPersonOffsetLocal = FVector::ZeroVector;
+
+	double FirstPersonToggleSuppressUntilTime = -1.0;
 
 protected:
 	UFUNCTION(BlueprintCallable)
@@ -196,6 +202,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Mover")
 	void CancelMovementGA();
+	
+	UFUNCTION(BlueprintPure, Category="Movement")
+	float GetActiveSpeedUpMultiplier() const;
 	
 #pragma endregion mover
 	

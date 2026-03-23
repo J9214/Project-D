@@ -1,13 +1,17 @@
-﻿#include "Object/GoalPost.h"
+#include "Object/GoalPost.h"
 #include "Object/BallCore.h"
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 #include "GameState/PDGameStateBase.h"
+#include "PlayerState/PDPlayerState.h"
+#include "ProjectD/ProjectD.h"
+#include "GameMode/PDGameModeBase.h"
 
 AGoalPost::AGoalPost()
 {
 	bReplicates = true;
+	GoalHoldTime = 10.0f;
 }
 
 void AGoalPost::OnInteract_Implementation(AActor* Interactor)
@@ -29,6 +33,19 @@ void AGoalPost::OnInteract_Implementation(AActor* Interactor)
 	}
 }
 
+void AGoalPost::ResetGoalPost()
+{
+	if (GetWorld() == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] ResetGoalPost failed. World is nullptr."));
+		return;
+	}
+
+	GetWorld()->GetTimerManager().ClearTimer(HoldTimer);
+
+	PlacedBall = nullptr;
+}
+
 bool AGoalPost::CanPlaceBall(APawn* Pawn, ABallCore* Ball) const
 {
 	return Pawn && Ball && !PlacedBall;
@@ -47,11 +64,23 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 
 	PlacedBall = Ball;
 
+	Ball->SetPlacedInGoal(true);
+
 	Ball->ClearCarrier();
+
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Pawn))
 	{
 		PD->Server_ForceClearCarriedBall();
+	}
+
+	if (APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>())
+	{
+		APDPlayerState* PS = Pawn->GetPlayerState<APDPlayerState>();
+		if (IsValid(PS) == true)
+		{
+			GS->SetGoalInstigator(PS);
+		}
 	}
 
 	Ball->GetStaticMesh()->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -71,6 +100,11 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 	PlacedBall = nullptr;
 
+	if (BallToSteal)
+	{
+		BallToSteal->SetPlacedInGoal(false);
+	}
+
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Stealer))
 	{
 		PD->Server_PickUpObject(BallToSteal);
@@ -79,21 +113,21 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 void AGoalPost::StartHoldTimer()
 {
-	GetWorld()->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, 10.f, false);
+	GetWorld()->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, GoalHoldTime, false);
 }
 
 void AGoalPost::OnHoldComplete()
 {
-	if (PlacedBall)
+	if (IsValid(PlacedBall) == false)
 	{
-		PlacedBall->Destroy();
-		PlacedBall = nullptr;
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] OnHoldComplete skipped. PlacedBall is invalid."));
+		return;
 	}
 
-	APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>();
-
-	if (GS)
+	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
 	{
-		GS->GoalScored();
+		GM->HandleGoalScored(this, PlacedBall);
 	}
+
+	PlacedBall = nullptr;
 }
