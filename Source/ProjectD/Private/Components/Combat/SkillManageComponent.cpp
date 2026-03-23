@@ -4,10 +4,14 @@
 #include "Pawn/PDPawnBase.h"
 #include "Net/UnrealNetwork.h"
 #include "PDGameplayTags.h"
+#include "AbilitySystem/Abilities/Skill/GA_PlaceSpawnBase.h"
+#include "PlayerState/PDPlayerState.h"
+#include "Skill/SkillActor/PDSkillPlacementPreviewActor.h"
+
 
 USkillManageComponent::USkillManageComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
 	SetIsReplicatedByDefault(true);
@@ -25,6 +29,18 @@ void USkillManageComponent::BeginPlay()
 	
 	Slots[0].SlotTag = PDGameplayTags::InputTag_Ability_SkillQ;
 	Slots[1].SlotTag = PDGameplayTags::InputTag_Ability_SkillE;
+}
+
+void USkillManageComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!bIsInPlacementMode)
+	{
+		return;
+	}
+
+	UpdatePlacementPreview();
 }
 
 void USkillManageComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -252,6 +268,276 @@ bool USkillManageComponent::IsValidOfSlotIndex(int32 SlotIndex) const
 	}
 	
 	return true;
+}
+
+bool USkillManageComponent::BeginPlacement(UGA_PlaceSpawnBase* InSourceAbility,
+	const FSpawnPlacementData& InPlacementData)
+{
+	if (!InSourceAbility || !InPlacementData.IsValidData())
+	{
+		return false;
+	}
+
+	if (bIsInPlacementMode)
+	{
+		EndPlacementInternal(true, true);
+	}
+
+	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
+	if (!OwnerPawn)
+	{
+		return false;
+	}
+
+	CurrentPlacementAbility = InSourceAbility;
+	CurrentPlacementData = InPlacementData;
+	bIsInPlacementMode = true;
+	bCanPlaceCurrentLocation = false;
+
+	if (UAbilitySystemComponent* ASC = OwnerPawn->GetAbilitySystemComponent())
+	{
+		ASC->AddLooseGameplayTag(PDGameplayTags::Player_State_Placing);
+	}
+
+	if (OwnerPawn->IsLocallyControlled())
+	{
+		if (UWorld* World = GetWorld())
+		{
+			FActorSpawnParameters Params;
+			Params.Owner = GetOwner();
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+			PreviewActor = World->SpawnActor<APDSkillPlacementPreviewActor>(
+				APDSkillPlacementPreviewActor::StaticClass(),
+				FTransform::Identity,
+				Params
+			);
+
+			if (PreviewActor)
+			{
+				PreviewActor->InitializePreview(
+					CurrentPlacementData.PreviewStaticMesh,
+					CurrentPlacementData.PreviewMaterial,
+					CurrentPlacementData.PreviewScale
+				);
+			}
+		}
+	}
+
+	SetComponentTickEnabled(true);
+	UpdatePlacementPreview();
+	return true;
+}
+
+void USkillManageComponent::ConfirmPlacement()
+{
+	if (!bIsInPlacementMode)
+	{
+		return;
+	}
+
+	if (!bCanPlaceCurrentLocation)
+	{
+		return;
+	}
+
+	Server_ConfirmPlacement(CurrentPlacementData, CachedPlacementTransform);
+	EndPlacementInternal(false, true);
+}
+
+void USkillManageComponent::CancelPlacement()
+{
+	if (!bIsInPlacementMode)
+	{
+		return;
+	}
+
+	EndPlacementInternal(true, true);
+}
+
+void USkillManageComponent::CancelPlacementFromAbility(UGA_PlaceSpawnBase* InAbility)
+{
+	if (!bIsInPlacementMode)
+	{
+		return;
+	}
+
+	if (CurrentPlacementAbility != InAbility)
+	{
+		return;
+	}
+
+	EndPlacementInternal(true, false);
+}
+
+void USkillManageComponent::OnPlacementConfirmInput()
+{
+	ConfirmPlacement();
+}
+
+void USkillManageComponent::OnPlacementCancelInput()
+{
+	CancelPlacement();
+}
+
+void USkillManageComponent::EndPlacementInternal(bool bCancelled, bool bNotifyAbility)
+{
+	DestroyPreviewActor();
+
+	SetComponentTickEnabled(false);
+	bIsInPlacementMode = false;
+	bCanPlaceCurrentLocation = false;
+	CurrentPlacementData = FSpawnPlacementData{};
+	CachedPlacementTransform = FTransform::Identity;
+
+	if (APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner()))
+	{
+		if (UAbilitySystemComponent* ASC = OwnerPawn->GetAbilitySystemComponent())
+		{
+			ASC->RemoveLooseGameplayTag(PDGameplayTags::Player_State_Placing);
+		}
+	}
+
+	if (bNotifyAbility && CurrentPlacementAbility)
+	{
+		CurrentPlacementAbility->NotifyPlacementFinished(bCancelled);
+	}
+
+	CurrentPlacementAbility = nullptr;
+}
+
+void USkillManageComponent::DestroyPreviewActor()
+{
+	if (PreviewActor)
+	{
+		PreviewActor->Destroy();
+		PreviewActor = nullptr;
+	}
+}
+
+void USkillManageComponent::UpdatePlacementPreview()
+{
+	if (!bIsInPlacementMode)
+	{
+		return;
+	}
+
+	FTransform NewTransform;
+	bCanPlaceCurrentLocation = BuildPlacementTransform(CurrentPlacementData, NewTransform);
+	CachedPlacementTransform = NewTransform;
+
+	if (PreviewActor)
+	{
+		PreviewActor->SetPreviewTransform(CachedPlacementTransform);
+		PreviewActor->SetPlacementValid(bCanPlaceCurrentLocation);
+	}
+}
+
+bool USkillManageComponent::BuildPlacementTransform(const FSpawnPlacementData& InPlacementData,
+	FTransform& OutTransform) const
+{
+	const APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
+	if (!OwnerPawn)
+	{
+		return false;
+	}
+
+	FVector ViewLocation = OwnerPawn->GetActorLocation();
+	FRotator ViewRotation = OwnerPawn->GetActorRotation();
+
+	if (const AController* OwnerController = OwnerPawn->GetController())
+	{
+		OwnerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+	}
+
+	const FVector Forward = ViewRotation.Vector().GetSafeNormal();
+	const FVector TraceBaseLocation = OwnerPawn->GetActorLocation();
+
+	const FVector TraceOrigin = TraceBaseLocation + Forward * InPlacementData.ForwardDistance;
+	const FVector TraceStart = TraceOrigin + FVector(0.f, 0.f, InPlacementData.TraceStartHeight);
+	const FVector TraceEnd = TraceOrigin - FVector(0.f, 0.f, InPlacementData.TraceDepth);
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(SkillPlacementTrace), false, OwnerPawn);
+
+	FHitResult Hit;
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		Hit,
+		TraceStart,
+		TraceEnd,
+		ECC_Visibility,
+		Params
+	);
+
+	if (InPlacementData.bRequireGroundHit && !bHit)
+	{
+		return false;
+	}
+
+	FVector FinalLocation = bHit ? Hit.ImpactPoint : TraceOrigin;
+	FinalLocation += InPlacementData.SpawnLocationOffset;
+
+	FRotator FinalRotation = InPlacementData.bUseOwnerYaw
+		? FRotator(0.f, ViewRotation.Yaw, 0.f)
+		: FRotator::ZeroRotator;
+
+	FinalRotation += InPlacementData.SpawnRotationOffset;
+
+	OutTransform = FTransform(FinalRotation, FinalLocation, InPlacementData.SpawnScale);
+	return true;
+}
+
+void USkillManageComponent::Server_ConfirmPlacement_Implementation(const FSpawnPlacementData& InPlacementData, const FTransform& InConfirmedTransform)
+{
+	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
+	if (!OwnerPawn || !OwnerPawn->HasAuthority())
+	{
+		return;
+	}
+
+	const FTransform SpawnTransform = InConfirmedTransform;
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = OwnerPawn;
+	SpawnParams.Instigator = OwnerPawn;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	AActor* SpawnedActor = GetWorld()->SpawnActor<AActor>(
+		InPlacementData.SpawnActorClass,
+		SpawnTransform,
+		SpawnParams
+	);
+
+	if (!SpawnedActor)
+	{
+		return;
+	}
+
+	ETeamType OwnerTeamID = ETeamType::None;
+	if (const APDPlayerState* PS = OwnerPawn->GetPlayerState<APDPlayerState>())
+	{
+		OwnerTeamID = PS->GetTeamID();
+	}
+
+	if (APDPlacedSkillActorBase* PlacedActor = Cast<APDPlacedSkillActorBase>(SpawnedActor))
+	{
+		PlacedActor->InitializePlacedActor(InPlacementData.LifeTime, OwnerTeamID);
+	}
+
+	if (InPlacementData.bInitializeAsDamageableSkillActor)
+	{
+		if (APDDamageableSkillActor* DamageableActor = Cast<APDDamageableSkillActor>(SpawnedActor))
+		{
+			DamageableActor->InitializeShieldSettings(
+				InPlacementData.MaxHealth,
+				InPlacementData.SpawnStaticMesh,
+				InPlacementData.SpawnBaseMaterial,
+				OwnerTeamID,
+				InPlacementData.DamageableType
+			);
+		}
+	}
+
+	SpawnedActor->SetActorScale3D(InPlacementData.SpawnScale);
 }
 
 UAbilitySystemComponent* USkillManageComponent::GetASC() const
