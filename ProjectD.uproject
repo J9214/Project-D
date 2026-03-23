@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.7",
+	"EngineAssociation": "{04F79B34-4684-35AA-EA74-22ADF599442C}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -10,6 +10,7 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine",
+				"AnimationDataController",
 				"GameplayAbilities",
 				"EnhancedInput",
 				"MassEntity",
@@ -18,7 +19,8 @@
 				"CableComponent",
 				"Mover",
 				"CommonUI",
-				"UMG"
+				"UMG",
+				"CoreUObject"
 			]
 		}
 	],
