@@ -7,6 +7,7 @@
 class APDPlayerState;
 class ABallCore;
 class AGoalPost;
+class ADroneSpawner;
 
 UENUM(BlueprintType)
 enum class ERoundPhase : uint8
@@ -51,6 +52,7 @@ protected:
 	void CacheRoundActors();
 	void CachePlacedGoalPosts();
 	void SpawnAndCacheBallCore();
+	void CacheDroneSpawner();
 
 	void ResetRoundState();
 	void ResetPlacedGoalPostsForRound();
@@ -104,4 +106,7 @@ protected:
 
 	UPROPERTY()
 	TArray<TObjectPtr<AGoalPost>> CachedGoalPosts;
+
+	UPROPERTY()
+	TObjectPtr<ADroneSpawner> CachedDroneSpawner;
 };

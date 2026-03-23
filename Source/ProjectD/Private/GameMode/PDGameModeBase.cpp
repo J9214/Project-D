@@ -12,6 +12,8 @@
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
 #include "ProjectD/ProjectD.h"
+#include "AI/MassAI/DroneSpawner.h"
+#include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -65,6 +67,7 @@ void APDGameModeBase::BeginPlay()
 
 	StartRound();
     CacheRoundActors();
+    CacheDroneSpawner();
     StartMatchFlow();
 }
 
@@ -568,6 +571,33 @@ void APDGameModeBase::SpawnAndCacheBallCore()
     );
 }
 
+void APDGameModeBase::CacheDroneSpawner()
+{
+    CachedDroneSpawner = nullptr;
+
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. World is invalid."));
+        return;
+    }
+
+    for (TActorIterator<ADroneSpawner> It(World); It; ++It)
+    {
+        ADroneSpawner* DroneSpawner = *It;
+        if (IsValid(DroneSpawner) == true)
+        {
+            CachedDroneSpawner = DroneSpawner;
+            break;
+        }
+    }
+
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. DroneSpawner not found."));
+    }
+}
+
 void APDGameModeBase::ResetRoundState()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
@@ -800,6 +830,12 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         return;
     }
 
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneSpawnOnBallPickup failed. CachedDroneSpawner is invalid."));
+        return;
+    }
+
     UE_LOG(
         LogProjectD,
         Log,
@@ -807,12 +843,26 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         static_cast<int32>(HolderPlayerState->GetTeamID())
     );
 
-    // TODO - Drone Spawner
+    CachedDroneSpawner->SpawnDrones();
 }
 
 void APDGameModeBase::TriggerDroneExplosionOnGoal()
 {
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. World is invalid."));
+        return;
+    }
+
+    UCheckDroneAllExplodeSubsystem* ExplodeSubsystem = World->GetSubsystem<UCheckDroneAllExplodeSubsystem>();
+    if (IsValid(ExplodeSubsystem) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. ExplodeSubsystem is invalid."));
+        return;
+    }
+
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
 
-    // TODO - Drone Spawner
+    ExplodeSubsystem->RequestExplodeAllDrones();
 }
