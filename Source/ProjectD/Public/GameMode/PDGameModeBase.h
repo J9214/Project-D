@@ -7,6 +7,7 @@
 class APDPlayerState;
 class ABallCore;
 class AGoalPost;
+class ADroneSpawner;
 
 UENUM(BlueprintType)
 enum class ERoundPhase : uint8
@@ -34,7 +35,13 @@ public:
 	void FinishGame(int32 BestTeamId);
 
 	void HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball);
+	void HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball);
 	void HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball);
+
+public:
+	// GM Spawn BallCore
+	// If Need To LocalSide, BallCore Move To GS
+	FORCEINLINE const ABallCore* GetBallCore_Server() const {	return CachedBallCore; }
 
 protected:
 	void PlayerRespawn(AController* Controller);
@@ -51,6 +58,7 @@ protected:
 	void CacheRoundActors();
 	void CachePlacedGoalPosts();
 	void SpawnAndCacheBallCore();
+	void CacheDroneSpawner();
 
 	void ResetRoundState();
 	void ResetPlacedGoalPostsForRound();
@@ -104,4 +112,10 @@ protected:
 
 	UPROPERTY()
 	TArray<TObjectPtr<AGoalPost>> CachedGoalPosts;
+
+	UPROPERTY()
+	TObjectPtr<ADroneSpawner> CachedDroneSpawner;
+
+	bool bDroneSpawnTriggeredThisRound = false;
+	bool bGoalProcessingThisRound = false;
 };
