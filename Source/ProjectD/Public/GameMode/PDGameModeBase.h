@@ -38,6 +38,11 @@ public:
 	void HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball);
 	void HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball);
 
+public:
+	// GM Spawn BallCore
+	// If Need To LocalSide, BallCore Move To GS
+	FORCEINLINE const ABallCore* GetBallCore_Server() const {	return CachedBallCore; }
+
 protected:
 	void PlayerRespawn(AController* Controller);
 
