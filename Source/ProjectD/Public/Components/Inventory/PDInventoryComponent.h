@@ -41,17 +41,17 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void SwapWeaponItem(int SlotIndex, FPDItemData ItemInfo);
-	void SwapSkillItem(int SlotIndex, FPDItemData ItemInfo);
-	void SwapGrenadeItem(int SlotIndex, FPDItemData ItemInfo);
-	void SwapETCItem(int SlotIndex, FPDItemData ItemInfo);
+	void SwapWeaponItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo);
+	void SwapSkillItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo);
+	void SwapGrenadeItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo);
+	void SwapETCItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo);
 
 	void ClearInventoryToDefault();
 
 	UFUNCTION(Server, Reliable)
-	void SwapItem(EItemType OriginItemType, FName OriginItemId, int32 OriginSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count);
+	void SwapItem(EItemType FromItemType, FName FromItemId, int32 FromSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count);
 
-	void UpdateSlotByType(EItemType Type, int32 SlotIndex, FPDItemData NewData);
+	void UpdateSlotByType(EItemType FromType, EItemType Type, int32 FromSlotIndex, int32 SlotIndex, FPDItemData NewData);
 
 protected:
 	virtual void BeginPlay() override;

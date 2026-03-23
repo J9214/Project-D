@@ -1,12 +1,14 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "UI/HUD/PDIngameInfo.h"
+#include "UI/Ingame/PDIngameInfo.h"
 #include "GameInstance/Subsystem/PDItemInfoSubsystem.h"
 #include "Components/Shop/FPDItemInfo.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
-#include "Weapons/PDWeaponBase.h"
-#include "Throwable/PDThrowableItemBase.h"
+#include "Weapon/PDWeaponBase.h"
+#include "Weapon/PDThrowableItemBase.h"
+#include <Pawn/PDPawnBase.h>
+#include "Components/Combat/WeaponManageComponent.h"
 
 void UPDIngameInfo::NativeOnInitialized()
 {
@@ -30,8 +32,8 @@ void UPDIngameInfo::NativeOnInitialized()
 		return;
 	}
 
-	WeaponComp->OnEquippedWeaponChanged.AddDynamic(this, &ThisClass::HandleEquippedWeaponChanged);
-	WeaponComp->OnEquippedThrowableChanged.AddDynamic(this, &ThisClass::HandleEquippedThrowableChanged);
+	WeaponComp->OnEquippedWeaponChanged.AddUObject(this, &ThisClass::HandleEquippedWeaponChanged);
+	WeaponComp->OnEquippedThrowableChanged.AddUObject(this, &ThisClass::HandleEquippedThrowableChanged);
 
 }
 
@@ -125,6 +127,7 @@ void UPDIngameInfo::HandleEquippedWeaponChanged(APDWeaponBase* NewWeapon)
 	//{
 	//	MaxBullet->SetText(FText::AsNumber(NewWeapon->GetMaxAmmo()));
 	//}
+
 }
 
 void UPDIngameInfo::HandleEquippedThrowableChanged(APDThrowableItemBase* NewThrowable)
@@ -180,4 +183,6 @@ UTexture2D* UPDIngameInfo::GetItemIconTextureByID(const FName& ItemID) const
 	//}
 
 	//return Info->IconImage.LoadSynchronous();
+
+	return nullptr;
 }

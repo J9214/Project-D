@@ -24,12 +24,12 @@ void UPDShopComponent::RequestBuy(FName ItemId)
         if (PC->IsLocalController())
         {
             UE_LOG(LogTemp, Warning, TEXT("ServerCall"));
-            AcceptanceBuy(ItemId);
+            Server_AcceptanceBuy(ItemId);
         }
     }
 }
 
-void UPDShopComponent::AcceptanceBuy_Implementation(FName ItemId)
+void UPDShopComponent::Server_AcceptanceBuy_Implementation(FName ItemId)
 {
     UGameInstance* GI = GetWorld()->GetGameInstance();
     if (!GI)

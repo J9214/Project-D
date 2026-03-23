@@ -6,6 +6,7 @@
 #include "Controller/PDPlayerController.h"
 #include "Pawn/PDPawnBase.h"
 #include "Components/Combat/WeaponManageComponent.h"
+#include "Components/Combat/SkillManageComponent.h"
 #include "GameInstance/Subsystem/PDItemInfoSubsystem.h"
 #include "Weapon/PDWeaponBase.h"
 #include "Weapon/PDThrowableItemBase.h"
@@ -196,7 +197,37 @@ bool UPDInventoryComponent::AddItem_Grenade(const FPDItemInfo* ItemInfo)
 
 bool UPDInventoryComponent::AddItem_Skill(const FPDItemInfo* ItemInfo)
 {
-	int32 TargetIndex = INDEX_NONE;
+
+	APDPlayerState* PS = Cast<APDPlayerState>(GetOwner());
+	if (!PS)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::AddItem_Weapon PS Null"));
+		return false;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(PS->GetPlayerController());
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::AddItem_Weapon PC Null"));
+		return false;
+	}
+
+	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(PC->GetPawn());
+	if (!OwnerPawn)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::AddItem_Weapon OwnerPawn Null"));
+		return false;
+	}
+
+	USkillManageComponent* SMC = OwnerPawn->GetSkillManageComponent();
+	if (!SMC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::AddItem_Grenade WMC Null"));
+		return false;
+	}
+	TSubclassOf<UGameplayAbility> AbilityClass = ItemInfo->ItemAbilityClass;
+	int32 TargetIndex = SMC->BuySkill(AbilityClass);
+
 	auto IsEmpty = [](const FPDItemData& Data) { return Data.ItemID.IsNone(); };
 
 	TargetIndex = SkillSlot.IndexOfByPredicate(IsEmpty);
@@ -204,10 +235,6 @@ bool UPDInventoryComponent::AddItem_Skill(const FPDItemInfo* ItemInfo)
 	if (TargetIndex != INDEX_NONE)
 	{
 		SkillSlot[TargetIndex].ItemID = ItemInfo->ItemID;
-	}
-	else
-	{
-		return AddItem_ETC(ItemInfo);
 	}
 
 	return true;
@@ -259,7 +286,7 @@ void UPDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(UPDInventoryComponent, ETCSlot);
 }
 
-void UPDInventoryComponent::SwapWeaponItem(int SlotIndex, FPDItemData ItemData)
+void UPDInventoryComponent::SwapWeaponItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemData)
 {
 	//if (GetOwnerRole() < ROLE_Authority || !WeaponSlot.IsValidIndex(SlotIndex))
 	//{
@@ -320,6 +347,7 @@ void UPDInventoryComponent::SwapWeaponItem(int SlotIndex, FPDItemData ItemData)
 	FEquipmentPayload Payload;
 	Payload.SourceType = EWeaponDragSourceType::External;
 	Payload.Category = EEquipmentCategory::Weapon;
+	Payload.FromSlotIndex = FromSlotIndex;
 
 	if (Info && Info->ItemClass)
 	{
@@ -328,7 +356,7 @@ void UPDInventoryComponent::SwapWeaponItem(int SlotIndex, FPDItemData ItemData)
 	}
 }
 
-void UPDInventoryComponent::SwapSkillItem(int SlotIndex, FPDItemData ItemInfo)
+void UPDInventoryComponent::SwapSkillItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo)
 {
 
 	//if (GetOwnerRole() < ROLE_Authority || !SkillSlot.IsValidIndex(SlotIndex))
@@ -336,10 +364,72 @@ void UPDInventoryComponent::SwapSkillItem(int SlotIndex, FPDItemData ItemInfo)
 	//	return;
 	//}
 
+	APDPlayerState* PS = Cast<APDPlayerState>(GetOwner());
+	if (!PS)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem PS Null"));
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(PS->GetPlayerController());
+	if (!PC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem PC Null"));
+		return;
+	}
+
+	APDPawnBase* OwnerPawn = Cast<APDPawnBase>(PC->GetPawn());
+	if (!OwnerPawn)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem OwnerPawn Null"));
+		return;
+	}
+
+	USkillManageComponent* SMC = OwnerPawn->GetSkillManageComponent();
+	if (!SMC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem WMC Null"));
+		return;
+	}
+
+	UGameInstance* GI = GetWorld()->GetGameInstance();
+	if (!GI)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem GI Null"));
+		return;
+	}
+
+	UPDItemInfoSubsystem* ItemSubsystem = GI->GetSubsystem<UPDItemInfoSubsystem>();
+	if (!ItemSubsystem)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UPDInventoryComponent::SwapSkillItem ItemSubsystem Null"));
+		return;
+	}
+
 	SkillSlot[SlotIndex] = ItemInfo;
+
+	FGameplayTag Tag = SMC->GetSlotTagFromIndex(SlotIndex);
+	FGameplayTag FromTag = SMC->GetSlotTagFromIndex(FromSlotIndex);
+	const FPDItemInfo* Info = ItemSubsystem->GetItemInfoByName(ItemInfo.ItemID);
+	if (!Info || !Info->ItemClass)
+	{
+		SMC->Server_RemoveSkillFromSlot(Tag);
+		return;
+	}
+
+	FSkillPayload Payload;
+	Payload.SourceType = ESkillDragSourceType::External;
+	Payload.FromSlotTag = FromTag;
+
+	if (Info && Info->ItemClass)
+	{
+		Payload.AbilityClass = Info->ItemAbilityClass;
+		SMC->Server_HandleSkillEquip(Payload, Tag);
+	}
+
 }
 
-void UPDInventoryComponent::SwapGrenadeItem(int SlotIndex, FPDItemData ItemInfo)
+void UPDInventoryComponent::SwapGrenadeItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo)
 {
 
 	//if (GetOwnerRole() < ROLE_Authority || !GrenadeSlot.IsValidIndex(SlotIndex))
@@ -350,7 +440,7 @@ void UPDInventoryComponent::SwapGrenadeItem(int SlotIndex, FPDItemData ItemInfo)
 	GrenadeSlot[SlotIndex] = ItemInfo;
 }
 
-void UPDInventoryComponent::SwapETCItem(int SlotIndex, FPDItemData ItemInfo)
+void UPDInventoryComponent::SwapETCItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo)
 {
 	//if (GetOwnerRole() < ROLE_Authority || !ETCSlot.IsValidIndex(SlotIndex))
 	//{
@@ -432,37 +522,37 @@ void UPDInventoryComponent::ClearInventoryToDefault()
 	}
 }
 
-void UPDInventoryComponent::SwapItem_Implementation(EItemType OriginItemType, FName OriginItemId, int32 OriginSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count)
+void UPDInventoryComponent::SwapItem_Implementation(EItemType FromItemType, FName FromItemId, int32 FromSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count)
 {
-	bool bIsSameType = (OriginItemType == ItemType);
-	bool bIsGrenadeEtcSwap = (OriginItemType == EItemType::Grenade && ItemType == EItemType::Etc) ||
-		(OriginItemType == EItemType::Etc && ItemType == EItemType::Grenade);
+	bool bIsSameType = (FromItemType == ItemType);
+	bool bIsGrenadeEtcSwap = (FromItemType == EItemType::Grenade && ItemType == EItemType::Etc) ||
+		(FromItemType == EItemType::Etc && ItemType == EItemType::Grenade);
 	if (!bIsSameType && !bIsGrenadeEtcSwap)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UPDInventoryComponent::SwapItem_Implementation SwapType"));
 		return;
 	}
 
-	TArray<FPDItemData>& OriginArray = GetItemSlot(OriginItemType);
+	TArray<FPDItemData>& FromArray = GetItemSlot(FromItemType);
 	TArray<FPDItemData>& TargetArray = GetItemSlot(ItemType);
 
-	if (!OriginArray.IsValidIndex(OriginSlot) || !TargetArray.IsValidIndex(Slot))
+	if (!FromArray.IsValidIndex(FromSlot) || !TargetArray.IsValidIndex(Slot))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UPDInventoryComponent::SwapItem_Implementation ValidIndex"));
 		return;
 	}
 
-	if (OriginArray[OriginSlot].ItemID != OriginItemId || TargetArray[Slot].ItemID != ItemId)
+	if (FromArray[FromSlot].ItemID != FromItemId || TargetArray[Slot].ItemID != ItemId)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UPDInventoryComponent::SwapItem_Implementation Data mismatch."));
 		return;
 	}
 
-	FPDItemData OriginData = OriginArray[OriginSlot];
+	FPDItemData FromData = FromArray[FromSlot];
 	FPDItemData TargetData = TargetArray[Slot];
 
-	UpdateSlotByType(OriginItemType, OriginSlot, TargetData);
-	UpdateSlotByType(ItemType, Slot, OriginData);
+	UpdateSlotByType(ItemType, FromItemType, Slot, FromSlot, TargetData);
+	UpdateSlotByType(FromItemType, ItemType, FromSlot, Slot, FromData);
 }
 
 void UPDInventoryComponent::OnRep_Gold()
@@ -548,21 +638,28 @@ TArray<FPDItemData>& UPDInventoryComponent::GetItemSlot(EItemType ItemType)
 	}
 }
 
-void UPDInventoryComponent::UpdateSlotByType(EItemType Type, int32 SlotIndex, FPDItemData NewData)
+void UPDInventoryComponent::UpdateSlotByType(EItemType FromType, EItemType Type, int32 FromSlotIndex ,int32 SlotIndex, FPDItemData NewData)
 {
 	switch (Type)
 	{
 	case EItemType::Weapon:
-		SwapWeaponItem(SlotIndex, NewData);
+		SwapWeaponItem(FromSlotIndex, SlotIndex, NewData);
 		break;
 	case EItemType::Grenade:
-		SwapGrenadeItem(SlotIndex, NewData);
+		if (FromType != Type)
+		{
+			SwapGrenadeItem(FromSlotIndex, SlotIndex, NewData);
+		}
+		else
+		{
+			SwapGrenadeItem(FromSlotIndex, SlotIndex, NewData);
+		}
 		break;
 	case EItemType::Etc:
-		SwapETCItem(SlotIndex, NewData);
+		SwapETCItem(FromSlotIndex, SlotIndex, NewData);
 		break;
 	case EItemType::Skill:
-		SwapSkillItem(SlotIndex, NewData);
+		SwapSkillItem(FromSlotIndex, SlotIndex, NewData);
 		break;
 	}
 }
