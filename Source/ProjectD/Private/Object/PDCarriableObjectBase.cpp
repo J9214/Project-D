@@ -1,4 +1,4 @@
-#include "Object/PDCarriableObjectBase.h"
+﻿#include "Object/PDCarriableObjectBase.h"
 
 #include "Pawn/PDPawnBase.h"
 
@@ -20,6 +20,7 @@ void APDCarriableObjectBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(APDCarriableObjectBase, CarrierPawn);
+	DOREPLIFETIME(APDCarriableObjectBase, bIsPlacedInGoal);
 }
 
 void APDCarriableObjectBase::SetCarrier(APawn* NewCarrier)
@@ -81,4 +82,25 @@ bool APDCarriableObjectBase::IsCanInteract(AActor* Interactor)
 	}
 
 	return !PDPawn->GetCarriedObject();
+}
+
+
+void APDCarriableObjectBase::SetPlacedInGoal(bool bInGoal)
+{
+	if (HasAuthority())
+	{
+		bIsPlacedInGoal = bInGoal;
+		OnRep_IsPlacedInGoal(); 
+	}
+}
+
+void APDCarriableObjectBase::OnRep_IsPlacedInGoal()
+{
+	if (bIsPlacedInGoal)
+	{
+		StaticMesh->SetSimulatePhysics(false);
+		StaticMesh->SetEnableGravity(false);
+		SetActorEnableCollision(false);
+		StaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	}
 }

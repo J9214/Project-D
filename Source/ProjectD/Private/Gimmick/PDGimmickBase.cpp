@@ -1,4 +1,4 @@
-#include "Gimmick/PDGimmickBase.h"
+﻿#include "Gimmick/PDGimmickBase.h"
 
 #include "Net/UnrealNetwork.h"
 
@@ -8,11 +8,11 @@ APDGimmickBase::APDGimmickBase()
 
 	bReplicates = true;
 
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	SetRootComponent(SceneRoot);
-
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	StaticMesh->SetupAttachment(RootComponent);
+	SetRootComponent(StaticMesh);
+
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SceneRoot->SetupAttachment(RootComponent);
 }
 
 void APDGimmickBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
@@ -18,6 +18,9 @@ public:
 
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 
+public:
+	void ResetGoalPost();
+
 protected:
 	bool CanPlaceBall(APawn* Pawn, ABallCore* Ball) const;
 	void PlaceBall(APawn* Pawn, ABallCore* Ball);
@@ -26,9 +29,13 @@ protected:
 	void StartHoldTimer();
 	void OnHoldComplete();
 
+
+protected:
 	UPROPERTY()
 	TObjectPtr<ABallCore> PlacedBall = nullptr;
 
 	FTimerHandle HoldTimer;
 
+	UPROPERTY(BlueprintReadWrite)
+	float GoalHoldTime;
 };
