@@ -4,9 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Components/Shop/FPDItemInfo.h"
 #include "PDInventoryComponent.generated.h"
-
-struct FPDItemInfo;
 
 USTRUCT(BlueprintType)
 struct PROJECTD_API FPDItemData
@@ -49,6 +48,10 @@ public:
 
 	void ClearInventoryToDefault();
 
+	UFUNCTION(Server, Reliable)
+	void SwapItem(EItemType OriginItemType, FName OriginItemId, int32 OriginSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count);
+
+	void UpdateSlotByType(EItemType Type, int32 SlotIndex, FPDItemData NewData);
 
 protected:
 	virtual void BeginPlay() override;

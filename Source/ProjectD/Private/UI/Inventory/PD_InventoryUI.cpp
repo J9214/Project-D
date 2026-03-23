@@ -4,6 +4,7 @@
 #include "UI/Inventory/PD_InventoryUI.h"
 #include "UI/Inventory/PD_ItemSlot.h"
 #include "Components/TextBlock.h"
+#include <Components/Inventory/PDInventoryComponent.h>
 
 void UPD_InventoryUI::NativeOnInitialized()
 {

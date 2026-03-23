@@ -31,7 +31,6 @@ void UPDShopComponent::RequestBuy(FName ItemId)
 
 void UPDShopComponent::AcceptanceBuy_Implementation(FName ItemId)
 {
-
     UGameInstance* GI = GetWorld()->GetGameInstance();
     if (!GI)
     {

@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{763D5DC8-4EA2-B292-FBCE-FF88D6A752DA}",
+	"EngineAssociation": "5.7",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -17,7 +17,8 @@
 				"AdvancedSessions",
 				"CableComponent",
 				"Mover",
-				"CommonUI"
+				"CommonUI",
+				"UMG"
 			]
 		}
 	],
