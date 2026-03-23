@@ -9,6 +9,8 @@
 #include "Weapon/PDThrowableItemBase.h"
 #include <Pawn/PDPawnBase.h>
 #include "Components/Combat/WeaponManageComponent.h"
+#include "DataAssets/Weapon/DataAsset_Weapon.h"
+#include "DataAssets/Weapon/DataAsset_Throwable.h"
 
 void UPDIngameInfo::NativeOnInitialized()
 {
@@ -83,106 +85,104 @@ void UPDIngameInfo::SetSkillIcon(int32 SkillIndex, const FSlateBrush& InBrush)
 void UPDIngameInfo::HandleEquippedWeaponChanged(APDWeaponBase* NewWeapon)
 {
 
-	//if (!NewWeapon || !NewWeapon->WeaponData)
-	//{
-	//	if (ActiveWeapon)
-	//	{
-	//		ActiveWeapon->SetBrush(FSlateBrush());
-	//	}
+	if (!NewWeapon || !NewWeapon->WeaponData)
+	{
+		if (ActiveWeapon)
+		{
+			ActiveWeapon->SetBrush(FSlateBrush());
+		}
 
-	//	if (CurrentBullet)
-	//	{
-	//		CurrentBullet->SetText(FText::GetEmpty());
-	//	}
+		if (CurrentBullet)
+		{
+			CurrentBullet->SetText(FText::GetEmpty());
+		}
 
-	//	if (MaxBullet)
-	//	{
-	//		MaxBullet->SetText(FText::GetEmpty());
-	//	}
+		if (MaxBullet)
+		{
+			MaxBullet->SetText(FText::GetEmpty());
+		}
 
-	//	return;
-	//}
+		return;
+	}
 
-	//const FName WeaponItemID = NewWeapon->WeaponData->ItemID;
+	const FName WeaponItemID = NewWeapon->WeaponData->ItemID;
 
-	//UTexture2D* IconTex = GetItemIconTextureByID(WeaponItemID);
-	//if (ActiveWeapon)
-	//{
-	//	if (IconTex)
-	//	{
-	//		ActiveWeapon->SetBrushFromTexture(IconTex, true);
-	//	}
-	//	else
-	//	{
-	//		ActiveWeapon->SetBrush(FSlateBrush());
-	//	}
-	//}
+	UTexture2D* IconTex = GetItemIconTextureByID(WeaponItemID);
+	if (ActiveWeapon)
+	{
+		if (IconTex)
+		{
+			ActiveWeapon->SetBrushFromTexture(IconTex, true);
+		}
+		else
+		{
+			ActiveWeapon->SetBrush(FSlateBrush());
+		}
+	}
 
-	//if (CurrentBullet)
-	//{
-	//	CurrentBullet->SetText(FText::AsNumber(NewWeapon->GetCurrentAmmo()));
-	//}
+	if (CurrentBullet)
+	{
+		CurrentBullet->SetText(FText::AsNumber(NewWeapon->GetCurrentAmmo()));
+	}
 
-	//if (MaxBullet)
-	//{
-	//	MaxBullet->SetText(FText::AsNumber(NewWeapon->GetMaxAmmo()));
-	//}
+	if (MaxBullet)
+	{
+		MaxBullet->SetText(FText::AsNumber(NewWeapon->GetMaxAmmo()));
+	}
 
 }
 
 void UPDIngameInfo::HandleEquippedThrowableChanged(APDThrowableItemBase* NewThrowable)
-{/*
-	if (!NewThrowable)
+{
+	if (!NewThrowable || !NewThrowable->GetThrowableData())
 	{
-		if (ActiveGrenade)
+		if (ActiveGrenada)
 		{
-			ActiveGrenade->SetBrush(FSlateBrush());
+			ActiveGrenada->SetBrush(FSlateBrush());
 		}
 		return;
 	}
 
-	const FName ThrowableItemID = NewThrowable->ItemID;
+	const FName ThrowableItemID = NewThrowable->GetThrowableData()->ItemID;
 
 	UTexture2D* IconTex = GetItemIconTextureByID(ThrowableItemID);
-	if (ActiveGrenade)
+	if (ActiveGrenada)
 	{
 		if (IconTex)
 		{
-			ActiveGrenade->SetBrushFromTexture(IconTex, true);
+			ActiveGrenada->SetBrushFromTexture(IconTex, true);
 		}
 		else
 		{
-			ActiveGrenade->SetBrush(FSlateBrush());
+			ActiveGrenada->SetBrush(FSlateBrush());
 		}
-	}*/
+	}
 }
 
 UTexture2D* UPDIngameInfo::GetItemIconTextureByID(const FName& ItemID) const
 {
-	//if (ItemID.IsNone())
-	//{
-	//	return nullptr;
-	//}
+	if (ItemID.IsNone())
+	{
+		return nullptr;
+	}
 
-	//UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
-	//if (!GI)
-	//{
-	//	return nullptr;
-	//}
+	UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+	if (!GI)
+	{
+		return nullptr;
+	}
 
-	//UPDItemInfoSubsystem* ItemSubsystem = GI->GetSubsystem<UPDItemInfoSubsystem>();
-	//if (!ItemSubsystem)
-	//{
-	//	return nullptr;
-	//}
+	UPDItemInfoSubsystem* ItemSubsystem = GI->GetSubsystem<UPDItemInfoSubsystem>();
+	if (!ItemSubsystem)
+	{
+		return nullptr;
+	}
 
-	//const FPDItemInfo* Info = ItemSubsystem->GetItemInfoByName(ItemID);
-	//if (!Info)
-	//{
-	//	return nullptr;
-	//}
+	const FPDItemInfo* Info = ItemSubsystem->GetItemInfoByName(ItemID);
+	if (!Info)
+	{
+		return nullptr;
+	}
 
-	//return Info->IconImage.LoadSynchronous();
-
-	return nullptr;
+	return Info->IconImage.LoadSynchronous();
 }
