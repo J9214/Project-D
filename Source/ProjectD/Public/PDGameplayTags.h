@@ -36,6 +36,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Movement_WallJump);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Skill_Shield);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Skill_SpeedUp);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Skill_Flash);
 	
 	/** Player State Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Firinig);
@@ -46,6 +47,8 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Shielding);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_Dashing);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_DashAvailable);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_CC_SkillBlocked);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_State_CC_MovementBlocked);
 	
 	/** Event Tags **/
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Weapon_EquipRequest);
@@ -58,6 +61,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Fragment);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Flame);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Smoke);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Throwable_Explosion_Flash);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GamePlayCue_Skill_Shield);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Movement_Dash);
 	
@@ -68,6 +72,7 @@ namespace PDGameplayTags
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Weapon_Fire);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Fragment_Damage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Flame_Damage);
+	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Throwable_Flash_Duration);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ExplodeDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_ContinuousDamage);
 	PROJECTD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_ThrowableObject_DestructDamage);

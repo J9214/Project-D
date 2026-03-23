@@ -132,6 +132,11 @@ void APDThrowableProjectile::Explode()
 			SendExplosionCueTag();
 			break;
 		
+		case EPDThrowableEffectType::Flash:
+			ApplyFlashGE();
+			SendExplosionCueTag();
+			break;
+		
 		default:
 			break;
 	}
@@ -271,6 +276,92 @@ void APDThrowableProjectile::SpawnSmokeArea()
 	{
 		SmokeArea->InitFromData(OwnerActor, ThrowableData);
 		SmokeArea->FinishSpawning(FTransform(FRotator::ZeroRotator, CachedExplosionLocation)); 
+	}
+}
+
+void APDThrowableProjectile::ApplyFlashGE()
+{
+	if (!ThrowableData || !ThrowableData->FlashGE)
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor);
+	if (!SourceASC)
+	{
+		return;
+	}
+	
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	TArray<FOverlapResult> Overlaps;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(ThrowableFlash), false, this);
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActor(OwnerActor);
+
+	FCollisionObjectQueryParams ObjParams;
+	ObjParams.AddObjectTypesToQuery(ECC_Pawn);
+	
+	const float Radius = ThrowableData->FlashRadius > 0.f ? ThrowableData->FlashRadius : 300.f;
+
+	const bool bHit = GetWorld()->OverlapMultiByObjectType(
+		Overlaps,
+		CachedExplosionLocation,
+		FQuat::Identity,
+		ObjParams,
+		FCollisionShape::MakeSphere(Radius),
+		Params
+	);
+
+	if (!bHit)
+	{
+		return;
+	}
+	
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(ThrowableData->FlashGE, 1.0f, Context);
+
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	SpecHandle.Data->SetSetByCallerMagnitude(
+		PDGameplayTags::Data_Throwable_Flash_Duration,
+		ThrowableData->FlashDuration
+	);
+	
+	TSet<AActor*> AppliedActors;
+
+	for (const FOverlapResult& Result : Overlaps)
+	{
+		APawn* Pawn = Cast<APawn>(Result.GetActor());
+		if (!Pawn)
+		{
+			continue;
+		}
+
+		if (AppliedActors.Contains(Pawn))
+		{
+			continue;
+		}
+
+		// 필요 시 팀 판정
+
+		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Pawn);
+		if (!TargetASC)
+		{
+			continue;
+		}
+
+		SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+		AppliedActors.Add(Pawn);
 	}
 }
 

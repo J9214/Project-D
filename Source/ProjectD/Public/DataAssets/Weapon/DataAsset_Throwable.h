@@ -113,4 +113,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Smoke")
 	TSubclassOf<APDThrowableSmokeArea> SmokeAreaClass;
+	
+	// Flash
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flash")
+	TSubclassOf<UGameplayEffect> FlashGE = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flash")
+	float FlashRadius = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Throwable|Flash")
+	float FlashDuration = 1.5f;
 };

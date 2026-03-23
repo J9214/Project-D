@@ -4,6 +4,7 @@
 #include "GameFramework/Pawn.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "Interface/PDTeamInterface.h"
 #include "PDPawnBase.generated.h"
 
 class UWeaponManageComponent;
@@ -26,7 +27,7 @@ struct FInputActionValue;
 struct FOnAttributeChangeData;
 
 UCLASS()
-class PROJECTD_API APDPawnBase : public APawn, public IAbilitySystemInterface
+class PROJECTD_API APDPawnBase : public APawn, public IAbilitySystemInterface, public IPDTeamInterface
 {
 	GENERATED_BODY()
 
@@ -35,6 +36,8 @@ public:
 	
 	UFUNCTION(BlueprintPure)
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+	virtual ETeamType GetTeamID() const override;
 
 	FORCEINLINE UWeaponManageComponent* GetWeaponManageComponent() const { return WeaponManageComponent; }
 	FORCEINLINE UWeaponStateComponent* GetWeaponStateComponent() const { return WeaponStateComponent; }

@@ -15,6 +15,7 @@
 #include "AI/MassAI/MassPerceptionSubsystem.h"
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
+#include "Skill/PDDamageableSkillActor.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -329,17 +330,69 @@ FVector UGA_Fire::CalcLocalAimPoint(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 		PC->GetPlayerViewPoint(CamLocation, CamRotation);
 		return CamLocation + CamRotation.Vector() * MaxRange;
 	}
-
-	const FVector Start = WorldOrigin;
-	const FVector End   = Start + WorldDirection.GetSafeNormal() * MaxRange;
 	
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
-	Params.AddIgnoredActor(Weapon);
+	const FVector Start = WorldOrigin;
+	const FVector End = Start + WorldDirection.GetSafeNormal() * MaxRange;
 
-	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_GameTraceChannel1, Params);
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(OwnerPawn);
+	IgnoredActors.Add(Weapon);
+	
+	constexpr int32 MaxRetraceCount = 8;
 
-	return bHit ? Hit.ImpactPoint : End;
+	for (int32 Count = 0; Count < MaxRetraceCount; ++Count)
+	{
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
+
+		for (AActor* IgnoredActor : IgnoredActors)
+		{
+			if (IsValid(IgnoredActor))
+			{
+				Params.AddIgnoredActor(IgnoredActor);
+			}
+		}
+
+		FHitResult Hit;
+		const bool bHit = World->LineTraceSingleByChannel(
+			Hit,
+			Start,
+			End,
+			ECC_GameTraceChannel1,
+			Params
+		);
+
+		if (!bHit)
+		{
+			return End;
+		}
+
+		AActor* HitActor = Hit.GetActor();
+		if (!IsValid(HitActor))
+		{
+			return End;
+		}
+
+		if (IsFriendlyShield(OwnerPawn, HitActor))
+		{
+			IgnoredActors.AddUnique(HitActor);
+			continue;
+		}
+
+		return Hit.ImpactPoint;
+	}
+
+	return End;
+
+	// const FVector Start = WorldOrigin;
+	// const FVector End   = Start + WorldDirection.GetSafeNormal() * MaxRange;
+	//
+	// FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Fire_CameraTrace_Client), false, OwnerPawn);
+	// Params.AddIgnoredActor(Weapon);
+	//
+	// FHitResult Hit;
+	// const bool bHit = World->LineTraceSingleByChannel(Hit, Start, End, ECC_GameTraceChannel1, Params);
+	//
+	// return bHit ? Hit.ImpactPoint : End;
 }
 
 void UGA_Fire::MuzzleTraceAndApplyGE(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, const FVector& AimPoint)
@@ -658,36 +711,90 @@ void UGA_Fire::TraceSingleShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, co
 	const float MaxRange = Weapon->WeaponData->MaxRange;
 	const FVector TraceEnd = TraceStart + FireDir * MaxRange;
 
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(FireSingleTrace), false, OwnerPawn);
-	Params.AddIgnoredActor(Weapon);
+	TArray<AActor*> IgnoredActors;
+	IgnoredActors.Add(OwnerPawn);
+	IgnoredActors.Add(Weapon);
 
-	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(
-		Hit,
-		TraceStart,
-		TraceEnd,
-		ECC_GameTraceChannel1,
-		Params
-	);
+	bool bHasBlockingHit = false;
+	FHitResult FinalHit;
 
-	if (bHit)
+	constexpr int32 MaxRetraceCount = 8;
+
+	for (int32 Count = 0; Count < MaxRetraceCount; ++Count)
 	{
-		ApplyWeaponDamageGE(Hit, Weapon, Weapon->WeaponData->WeaponDamage);
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(FireSingleTrace), false, OwnerPawn);
+
+		for (AActor* IgnoredActor : IgnoredActors)
+		{
+			if (IsValid(IgnoredActor))
+			{
+				Params.AddIgnoredActor(IgnoredActor);
+			}
+		}
+
+		FHitResult Hit;
+		const bool bHit = World->LineTraceSingleByChannel(
+			Hit,
+			TraceStart,
+			TraceEnd,
+			ECC_GameTraceChannel1,
+			Params
+		);
+
+		if (!bHit)
+		{
+			break;
+		}
+
+		AActor* HitActor = Hit.GetActor();
+		if (!IsValid(HitActor))
+		{
+			break;
+		}
+
+		if (IsFriendlyShield(OwnerPawn, HitActor))
+		{
+			IgnoredActors.AddUnique(HitActor);
+			continue;
+		}
+
+		const EBulletHitDecision Decision = EvaluateHitDecision(OwnerPawn, HitActor);
+
+		if (Decision == EBulletHitDecision::Skip)
+		{
+			IgnoredActors.AddUnique(HitActor);
+			continue;
+		}
+
+		FinalHit = Hit;
+		bHasBlockingHit = true;
+
+		if (Decision == EBulletHitDecision::BlockAndDamage)
+		{
+			ApplyWeaponDamageGE(Hit, Weapon, Weapon->WeaponData->WeaponDamage);
+		}
+
+		break;
 	}
-	
+
 	{
 		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
-		if (IsValid(Perception) == true)
+		if (IsValid(Perception))
 		{
-			const FVector TubeEnd = (bHit == true) ? Hit.ImpactPoint : TraceEnd;
+			const FVector TubeEnd = bHasBlockingHit ? FinalHit.ImpactPoint : TraceEnd;
 			const float TubeLen = (TubeEnd - TraceStart).Size();
 
 			Perception->SubmitAimTubeRequest(TraceStart, FireDir, TubeLen);
 		}
 	}
-	
+
 #if ENABLE_DRAW_DEBUG
-	OwnerPawn->ClientDrawFireDebug(TraceStart, bHit ? Hit.ImpactPoint : TraceEnd, bHit, Hit.ImpactPoint);
+	OwnerPawn->ClientDrawFireDebug(
+		TraceStart,
+		bHasBlockingHit ? FinalHit.ImpactPoint : TraceEnd,
+		bHasBlockingHit,
+		bHasBlockingHit ? FinalHit.ImpactPoint : FVector::ZeroVector
+	);
 #endif
 }
 
@@ -720,30 +827,83 @@ void UGA_Fire::TraceMultiBulletShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 
 	const float MaxRange = Weapon->WeaponData->MaxRange;
 	const float BulletDamage = GetDamagePerBullet(Weapon);
-
+	constexpr int32 MaxRetraceCount = 8;
+	
 	for (const FVector& Dir : BulletDirs)
 	{
 		const FVector TraceEnd = TraceStart + Dir * MaxRange;
 
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(FireShotgunTrace), false, OwnerPawn);
-		Params.AddIgnoredActor(Weapon);
+		TArray<AActor*> IgnoredActors;
+		IgnoredActors.Add(OwnerPawn);
+		IgnoredActors.Add(Weapon);
 
-		FHitResult Hit;
-		const bool bHit = World->LineTraceSingleByChannel(
-			Hit,
-			TraceStart,
-			TraceEnd,
-			ECC_GameTraceChannel1,
-			Params
-		);
+		bool bHasBlockingHit = false;
+		FHitResult FinalHit;
 
-		if (bHit)
+		for (int32 Count = 0; Count < MaxRetraceCount; ++Count)
 		{
-			ApplyWeaponDamageGE(Hit, Weapon, BulletDamage);
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(FireShotgunTrace), false, OwnerPawn);
+
+			for (AActor* IgnoredActor : IgnoredActors)
+			{
+				if (IsValid(IgnoredActor))
+				{
+					Params.AddIgnoredActor(IgnoredActor);
+				}
+			}
+
+			FHitResult Hit;
+			const bool bHit = World->LineTraceSingleByChannel(
+				Hit,
+				TraceStart,
+				TraceEnd,
+				ECC_GameTraceChannel1,
+				Params
+			);
+
+			if (!bHit)
+			{
+				break;
+			}
+
+			AActor* HitActor = Hit.GetActor();
+			if (!IsValid(HitActor))
+			{
+				break;
+			}
+
+			if (IsFriendlyShield(OwnerPawn, HitActor))
+			{
+				IgnoredActors.AddUnique(HitActor);
+				continue;
+			}
+
+			const EBulletHitDecision Decision = EvaluateHitDecision(OwnerPawn, HitActor);
+
+			if (Decision == EBulletHitDecision::Skip)
+			{
+				IgnoredActors.AddUnique(HitActor);
+				continue;
+			}
+
+			FinalHit = Hit;
+			bHasBlockingHit = true;
+
+			if (Decision == EBulletHitDecision::BlockAndDamage)
+			{
+				ApplyWeaponDamageGE(Hit, Weapon, BulletDamage);
+			}
+
+			break;
 		}
-		
+
 #if ENABLE_DRAW_DEBUG
-		OwnerPawn->ClientDrawFireDebug(TraceStart, bHit ? Hit.ImpactPoint : TraceEnd, bHit, Hit.ImpactPoint);
+		OwnerPawn->ClientDrawFireDebug(
+			TraceStart,
+			bHasBlockingHit ? FinalHit.ImpactPoint : TraceEnd,
+			bHasBlockingHit,
+			bHasBlockingHit ? FinalHit.ImpactPoint : FVector::ZeroVector
+		);
 #endif
 	}
 }
@@ -823,4 +983,103 @@ float UGA_Fire::GetDamagePerBullet(const APDWeaponBase* Weapon) const
 	}
 
 	return Weapon->WeaponData->WeaponDamage;
+}
+
+ETeamType UGA_Fire::GetActorTeam(AActor* Actor) const
+{
+	if (!IsValid(Actor))
+	{
+		return ETeamType::None;
+	}
+
+	if (Actor->GetClass()->ImplementsInterface(UPDTeamInterface::StaticClass()))
+	{
+		if (IPDTeamInterface* TeamActor = Cast<IPDTeamInterface>(Actor))
+		{
+			return TeamActor->GetTeamID();
+		}
+	}
+
+	return ETeamType::None;
+}
+
+bool UGA_Fire::IsSameTeamActor(AActor* SourceActor, AActor* TargetActor) const
+{
+	const ETeamType SourceTeam = GetActorTeam(SourceActor);
+	const ETeamType TargetTeam = GetActorTeam(TargetActor);
+
+	if (SourceTeam == ETeamType::None || TargetTeam == ETeamType::None)
+	{
+		return false;
+	}
+
+	return SourceTeam == TargetTeam;
+}
+
+bool UGA_Fire::IsFriendlyShield(APDPawnBase* OwnerPawn, AActor* HitActor) const
+{
+	if (!IsValid(OwnerPawn) || !IsValid(HitActor))
+	{
+		return false;
+	}
+
+	const APDDamageableSkillActor* ShieldActor = Cast<APDDamageableSkillActor>(HitActor);
+	if (!ShieldActor)
+	{
+		return false;
+	}
+
+	return IsSameTeamActor(OwnerPawn, HitActor);
+}
+
+EBulletHitDecision UGA_Fire::EvaluateHitDecision(APDPawnBase* OwnerPawn, AActor* HitActor) const
+{
+	if (!IsValid(OwnerPawn) || !IsValid(HitActor))
+	{
+		return EBulletHitDecision::Skip;
+	}
+
+	if (HitActor == OwnerPawn)
+	{
+		return EBulletHitDecision::Skip;
+	}
+
+	const bool bSameTeam = IsSameTeamActor(OwnerPawn, HitActor);
+
+	if (const APDDamageableSkillActor* ShieldActor = Cast<APDDamageableSkillActor>(HitActor))
+	{
+		if (bSameTeam)
+		{
+			return EBulletHitDecision::Skip;
+		}
+
+		return EBulletHitDecision::BlockAndDamage;
+	}
+
+	if (Cast<APawn>(HitActor))
+	{
+		if (bSameTeam)
+		{
+			return EBulletHitDecision::BlockOnly;
+		}
+
+		return EBulletHitDecision::BlockAndDamage;
+	}
+
+	if (HitActor->GetClass()->ImplementsInterface(UPDTeamInterface::StaticClass()))
+	{
+		if (bSameTeam)
+		{
+			return EBulletHitDecision::BlockOnly;
+		}
+
+		return EBulletHitDecision::BlockAndDamage;
+	}
+
+	return EBulletHitDecision::BlockOnly;
+}
+
+bool UGA_Fire::IsShieldActor(AActor* Actor) const
+{
+	return Cast<APDDamageableSkillActor>(Actor) != nullptr;
 }
