@@ -11,6 +11,7 @@
 ABallCore::ABallCore()
 {
 	bReplicates = true;
+	SetReplicateMovement(true);
 }
 
 void ABallCore::OnInteract_Implementation(AActor* Interactor)
@@ -42,48 +43,12 @@ void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse,
 
 void ABallCore::ResetBallForRound(const FVector& SpawnLocation)
 {
-	if (SpawnLocation == FVector::ZeroVector)
+	if (HasAuthority() == false)
 	{
-		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ResetBallForRound failed. SpawnLocation is zero vector."));
 		return;
 	}
 
-	if (IsValid(StaticMesh) == false)
-	{
-		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ResetBallForRound failed. StaticMesh is invalid."));
-		return;
-	}
-
-	if (IsValid(CarrierPawn.Get()) == true)
-	{
-		ClearCarrier();
-	}
-
-	StaticMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-
-	SetActorHiddenInGame(false);
-	SetActorEnableCollision(true);
-
-	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-	StaticMesh->SetEnableGravity(true);
-	StaticMesh->SetSimulatePhysics(true);
-
-	StaticMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
-	StaticMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
-
-	SetActorLocation(SpawnLocation);
-	SetActorRotation(FRotator::ZeroRotator);
-
-	StaticMesh->WakeAllRigidBodies();
-
-	UE_LOG(
-		LogProjectD,
-		Log,
-		TEXT("[BallCore] ResetBallForRound completed. SpawnLocation=(%.2f, %.2f, %.2f)"),
-		SpawnLocation.X,
-		SpawnLocation.Y,
-		SpawnLocation.Z
-	);
+	Multicast_ApplyRoundReset(SpawnLocation);
 }
 
 void ABallCore::HandleCarrierChanged()
@@ -149,4 +114,55 @@ void ABallCore::HandleCarrierChanged()
 			StaticMesh->SetEnableGravity(true);
 		}
 	}
+}
+
+void ABallCore::ApplyRoundResetLocal(const FVector& SpawnLocation)
+{
+	if (SpawnLocation == FVector::ZeroVector)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ApplyRoundResetLocal failed. SpawnLocation is zero vector."));
+		return;
+	}
+
+	if (IsValid(StaticMesh) == false)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ApplyRoundResetLocal failed. StaticMesh is invalid."));
+		return;
+	}
+
+	CarrierPawn = nullptr;
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+
+	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+	StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	StaticMesh->SetEnableGravity(true);
+	StaticMesh->SetSimulatePhysics(true);
+
+	StaticMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	StaticMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+
+	SetActorLocation(SpawnLocation);
+	SetActorRotation(FRotator::ZeroRotator);
+
+	StaticMesh->WakeAllRigidBodies();
+
+	bIsCanInteract = true;
+	bIsPlacedInGoal = false;
+
+	UE_LOG(
+		LogProjectD,
+		Log,
+		TEXT("[BallCore] ApplyRoundResetLocal completed. SpawnLocation=(%.2f, %.2f, %.2f)"),
+		SpawnLocation.X,
+		SpawnLocation.Y,
+		SpawnLocation.Z
+	);
+}
+
+void ABallCore::Multicast_ApplyRoundReset_Implementation(const FVector& SpawnLocation)
+{
+	ApplyRoundResetLocal(SpawnLocation);
 }

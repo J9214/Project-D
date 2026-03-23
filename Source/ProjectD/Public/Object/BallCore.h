@@ -26,4 +26,8 @@ public:
 protected:
 	virtual void HandleCarrierChanged() override;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ApplyRoundReset(const FVector& SpawnLocation);
+
+	void ApplyRoundResetLocal(const FVector& SpawnLocation);
 };
