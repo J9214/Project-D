@@ -14,6 +14,4 @@ public:
 	
 public:
 	void SpawnDrones();
-
-	void ExploseAllDrones();
 };

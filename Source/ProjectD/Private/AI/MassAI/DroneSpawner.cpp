@@ -1,5 +1,4 @@
 #include "AI/MassAI/DroneSpawner.h"
-#include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
 
 ADroneSpawner::ADroneSpawner()
 {
@@ -17,26 +16,4 @@ void ADroneSpawner::SpawnDrones()
 	}
 
 	DoSpawning();
-}
-
-void ADroneSpawner::ExploseAllDrones()
-{
-	if (HasAuthority() == false)
-	{
-		return;
-	}
-
-	UWorld* World = GetWorld();
-	if (IsValid(World) == false)
-	{
-		return;
-	}
-
-	UCheckDroneAllExplodeSubsystem* AllExplodeSubsystem = World->GetSubsystem<UCheckDroneAllExplodeSubsystem>();
-	if (IsValid(AllExplodeSubsystem) == false)
-	{
-		return;
-	}
-
-	AllExplodeSubsystem->RequestExplodeAllDrones();
 }
