@@ -3,6 +3,7 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/Inventory/PDInventoryComponent.h"
+#include <Controller/PDPlayerController.h>
 
 APDPlayerState::APDPlayerState()
 {
@@ -132,5 +133,16 @@ void APDPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPlayerState->TeamID = this->TeamID;
 		NewPlayerState->DisplayName = this->DisplayName;
 		NewPlayerState->CharacterCustomInfo = this->CharacterCustomInfo;
+	}
+}
+
+void APDPlayerState::OnRep_DisplayName()
+{
+	if (APDPlayerController* PC = Cast<APDPlayerController>(GetPlayerController()))
+	{
+		if (PC->IsLocalController())
+		{
+			PC->InitPlayerHPBar(DisplayName, GetPDAttributeSetBase());
+		}
 	}
 }

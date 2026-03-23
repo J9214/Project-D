@@ -95,6 +95,7 @@ void UPDAttributeSetBase::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHe
 void UPDAttributeSetBase::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPDAttributeSetBase, Health, OldHealth);
+	OnHealthChanged.Broadcast(OldHealth.GetCurrentValue(), Health.GetCurrentValue());
 }
 
 void UPDAttributeSetBase::OnRep_MoveSpeed(const FGameplayAttributeData& OldMoveSpeed)

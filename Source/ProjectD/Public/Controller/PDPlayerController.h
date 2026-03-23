@@ -11,6 +11,7 @@ class UUserWidget;
 class UWeaponManageComponent;
 class UPDShopComponent;
 class UIngameHUD;
+class UPDAttributeSetBase;
 
 UCLASS()
 class PROJECTD_API APDPlayerController : public APlayerController
@@ -38,7 +39,13 @@ public:
 
 	void InitializeHUD();
 
+	void UpdateCurrentAmmo(int32 CurrentAmmo);
+
+	void InitPlayerHPBar(const FString& DisplayName, UPDAttributeSetBase* Set);
 protected:
+
+	virtual void OnRep_PlayerState() override;
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> PlayerHUDClass;
 

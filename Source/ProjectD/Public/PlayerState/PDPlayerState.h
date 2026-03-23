@@ -44,19 +44,26 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
 
+	UFUNCTION(BlueprintPure, Category = "Team")
+	FORCEINLINE FString GetDisplayName() const { return DisplayName; }
+
 	UFUNCTION()
 	void OnRep_CharacterCustomInfo();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
+
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	ETeamType TeamID;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayName, BlueprintReadOnly, Category = "Team")
 	FString DisplayName;
+
+	UFUNCTION()
+	void OnRep_DisplayName();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<UPDAbilitySystemComponent> AbilitySystemComponent;

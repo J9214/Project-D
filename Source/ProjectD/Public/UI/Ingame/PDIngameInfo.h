@@ -24,9 +24,11 @@ public:
 
 	virtual void NativeOnInitialized() override;
 
-	void SetActiveWeapon(const FSlateBrush& InBrush, int32 InCurrentBullet, int32 InMaxBullet, int32 InSlotIndex);
+	void SetActiveWeapon(const FSlateBrush& InBrush, int32 InCurrentAmmo, int32 InMaxAmmo, int32 InSlotIndex);
 	void SetActiveGrenade(const FSlateBrush& InBrush);
 	void SetSkillIcon(int32 SkillIndex, const FSlateBrush& InBrush);
+
+	void UpdateCurrentAmmo(int32 AmmoCount);
 
 protected:
 
@@ -50,10 +52,18 @@ protected:
 	TObjectPtr<UImage> Skill2;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> CurrentBullet;
+	TObjectPtr<UTextBlock> CurrentAmmo;
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> MaxBullet;
+	TObjectPtr<UTextBlock> MaxAmmo;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> ActiveSlotIndex;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UPDIngameInfo|Visual")
+	TObjectPtr<UTexture2D> EmptyWeaponIconTexture;
+	UPROPERTY(EditDefaultsOnly, Category = "UPDIngameInfo|Visual")
+	TObjectPtr<UTexture2D> EmptyThrowIconTexture;
+	UPROPERTY(EditDefaultsOnly, Category = "UPDIngameInfo|Visual")
+	TObjectPtr<UTexture2D> EmptySkillIconTexture;
+
 };

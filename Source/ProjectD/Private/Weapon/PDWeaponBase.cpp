@@ -1,6 +1,7 @@
-#include "Weapon/PDWeaponBase.h"
+﻿#include "Weapon/PDWeaponBase.h"
 #include "DataAssets/Weapon/DataAsset_Weapon.h"
 #include "Net/UnrealNetwork.h"
+#include "Controller/PDPlayerController.h"
 
 APDWeaponBase::APDWeaponBase()
 {
@@ -89,6 +90,19 @@ void APDWeaponBase::ReloadAmmo()
 void APDWeaponBase::OnRep_AmmoChanged()
 {
 	// Update HUD
+	APawn* OwningPawn = Cast<APawn>(GetOwner());
+	if (!OwningPawn || !OwningPawn->IsLocallyControlled())
+	{
+		return;
+	}
+
+	APDPlayerController* PC = Cast<APDPlayerController>(OwningPawn->GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	PC->UpdateCurrentAmmo(CurrentAmmo);
 }
 
 void APDWeaponBase::OnRep_FireModeChanged()

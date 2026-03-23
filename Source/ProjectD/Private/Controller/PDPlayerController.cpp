@@ -261,3 +261,43 @@ void APDPlayerController::InitializeHUD()
 	}
 }
 
+void APDPlayerController::UpdateCurrentAmmo(int32 CurrentAmmo)
+{
+	if (!PlayerHUDWidget)
+	{
+		return;
+	}
+
+	PlayerHUDWidget->UpdateCurrentAmmo(CurrentAmmo);
+}
+
+void APDPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	if (PS)
+	{
+		InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
+	}
+
+}
+
+void APDPlayerController::InitPlayerHPBar(const FString& DisplayName, UPDAttributeSetBase* Set)
+{
+	if (!PlayerHUDWidget)
+	{
+		return;
+	}
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->BindSlot(DisplayName,EHPBarSlot::Player, Set);
+	}
+}
+
