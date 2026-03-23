@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/Combat/PawnCombatComponent.h"
@@ -63,8 +63,10 @@ class PROJECTD_API USkillManageComponent : public UPawnCombatComponent
 public:
 	USkillManageComponent();
 
-	UFUNCTION(Server, Reliable, BlueprintCallable, Category ="Skill")
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Skill")
 	void Server_BuySkill(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	int BuySkill(TSubclassOf<UGameplayAbility> AbilityClass);
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Skill")
 	void Server_HandleSkillEquip(const FSkillPayload& Payload, FGameplayTag ToSlotTag);
@@ -74,6 +76,8 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Skill")
 	FSkillSlot GetSlotByTag(FGameplayTag SlotTag) const;
+
+	FGameplayTag GetSlotTagFromIndex(int32 SlotIndex) const;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -109,7 +113,6 @@ private:
 	void SetSpecSlotTag(const FGameplayAbilitySpecHandle& Handle, const FGameplayTag& NewSlotTag);
 	
 	int32 GetSlotIndexByTag(FGameplayTag SlotTag) const;
-    FGameplayTag GetSlotTagFromIndex(int32 SlotIndex) const;
 	UAbilitySystemComponent* GetASC() const;
 
 	bool GiveAbilityToSlot(int32 SlotIndex, TSubclassOf<UGameplayAbility> AbilityClass);

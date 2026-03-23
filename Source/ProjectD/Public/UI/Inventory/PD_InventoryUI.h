@@ -26,6 +26,7 @@ public:
 	void InitItemSlot(int SlotIndex, const FName& NewItemID, int32 NewCount);
 
 	void InitGold(int NewGold);
+
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPD_ItemSlot> WeaponSlot1;
@@ -55,7 +56,6 @@ protected:
 	TObjectPtr<UPD_ItemSlot> ItemSlot7;
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UPD_ItemSlot> ItemSlot8;
-
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> Gold;

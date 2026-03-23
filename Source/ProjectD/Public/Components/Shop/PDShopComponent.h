@@ -32,6 +32,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION(Server, Reliable)
-	void AcceptanceBuy(FName ItemId);
+	void Server_AcceptanceBuy(FName ItemId);
 
 };

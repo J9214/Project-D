@@ -8,11 +8,11 @@ APDGimmickBase::APDGimmickBase()
 
 	bReplicates = true;
 
-	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	SetRootComponent(StaticMesh);
-
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	SceneRoot->SetupAttachment(RootComponent);
+	SetRootComponent(SceneRoot);
+
+	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	StaticMesh->SetupAttachment(RootComponent);
 }
 
 void APDGimmickBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

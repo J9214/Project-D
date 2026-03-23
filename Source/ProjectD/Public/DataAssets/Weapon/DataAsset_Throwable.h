@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
@@ -29,6 +29,10 @@ class PROJECTD_API UDataAsset_Throwable : public UPrimaryDataAsset
 	GENERATED_BODY()
 	
 public:
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "ID")
+	FName ItemID;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> ThrowableIMC = nullptr;
 

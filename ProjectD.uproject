@@ -18,7 +18,8 @@
 				"CableComponent",
 				"Mover",
 				"CommonUI",
-				"MassSpawner"
+				"MassSpawner",
+				"UMG"
 			]
 		}
 	],

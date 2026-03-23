@@ -121,3 +121,16 @@ void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(APDPlayerState, TeamID);
 	DOREPLIFETIME(APDPlayerState, DisplayName);
 }
+
+void APDPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	APDPlayerState* NewPlayerState = Cast<APDPlayerState>(PlayerState);
+	if (NewPlayerState)
+	{
+		NewPlayerState->TeamID = this->TeamID;
+		NewPlayerState->DisplayName = this->DisplayName;
+		NewPlayerState->CharacterCustomInfo = this->CharacterCustomInfo;
+	}
+}
