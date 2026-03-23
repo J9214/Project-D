@@ -10,6 +10,8 @@
 
 ABallCore::ABallCore()
 {
+	SetRootComponent(StaticMesh);
+
 	bReplicates = true;
 	SetReplicateMovement(true);
 }
