@@ -5,10 +5,8 @@
 #include "AI/MassAI/MassTargetFragment.h"
 #include "MassExecutionContext.h"
 #include "AI/MassAI/MassBoidsProcessor.h"
-
-// [Test] - To Chase Player
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/Character.h"
+#include "GameMode/PDGameModeBase.h"
+#include "Object/BallCore.h"
 
 UMassTargetProcessor::UMassTargetProcessor()
 	:EntityQuery(*this)
@@ -25,20 +23,29 @@ void UMassTargetProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>
 
 void UMassTargetProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
-    // [Test] - 현재는 0번째 플레이어가 추적 대상
-    FVector PlayerLocation = FVector::ZeroVector;
-    bool bFoundPlayer = false;
+    FVector BallLocation = FVector::ZeroVector;
+    bool bHasBall = false;
 
-    if (UWorld* World = GetWorld())
+    UWorld* World = GetWorld();
+    if (IsValid(World) == true)
     {
-        if (APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0))
+        APDGameModeBase* GM = World->GetAuthGameMode<APDGameModeBase>();
+        if (IsValid(GM) == true)
         {
-            PlayerLocation = PlayerPawn->GetActorLocation();
-            bFoundPlayer = true;
+            const ABallCore* BallCore = GM->GetBallCore_Server();
+            if (IsValid(BallCore) == true)
+            {
+                BallLocation = BallCore->GetActorLocation();
+                bHasBall = true;
+            }
+        }
+        else
+        {
+            return;
         }
     }
 
-    EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, bFoundPlayer](FMassExecutionContext& Context)
+    EntityQuery.ForEachEntityChunk(Context, [BallLocation, bHasBall](FMassExecutionContext& Context)
         {
             const int32 NumEntities = Context.GetNumEntities();
             TArrayView<FMassTargetFragment> TargetInfos = Context.GetMutableFragmentView<FMassTargetFragment>();
@@ -46,9 +53,10 @@ void UMassTargetProcessor::Execute(FMassEntityManager& EntityManager, FMassExecu
             for (int32 i = 0; i < NumEntities; ++i)
             {
                 FMassTargetFragment& TargetInfo = TargetInfos[i];
-                if (bFoundPlayer)
+
+                if (bHasBall == true)
                 {
-                    TargetInfo.TargetPosition = PlayerLocation;
+                    TargetInfo.TargetPosition = BallLocation;
                     TargetInfo.IsTargetChase = true;
                 }
                 else
