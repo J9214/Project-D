@@ -6,6 +6,7 @@
 
 class APawn;
 class UStaticMeshComponent;
+class USphereComponent;
 
 UCLASS()
 class PROJECTD_API ABallCore : public APDCarriableObjectBase
@@ -30,4 +31,8 @@ protected:
 	void Multicast_ApplyRoundReset(const FVector& SpawnLocation);
 
 	void ApplyRoundResetLocal(const FVector& SpawnLocation);
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<USphereComponent> Sphere;
 };
