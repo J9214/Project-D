@@ -54,6 +54,16 @@ UAbilitySystemComponent* APDPawnBase::GetAbilitySystemComponent() const
 	return nullptr;
 }
 
+ETeamType APDPawnBase::GetTeamID() const
+{
+	if (const APDPlayerState* PS = GetPlayerState<APDPlayerState>())
+	{
+		return PS->GetTeamID();
+	}
+
+	return ETeamType::None;
+}
+
 USkeletalMeshComponent* APDPawnBase::GetSkeletalMeshComponent() const
 {
 	return FindComponentByClass<USkeletalMeshComponent>();

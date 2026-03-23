@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/PDPlayerGameplayAbility.h"
 #include "GameplayTagContainer.h"
+#include "Interface/PDTeamInterface.h"
 #include "GA_Fire.generated.h"
 
 class APDPawnBase;
@@ -10,6 +11,14 @@ class APDWeaponBase;
 class UAbilityTask_WaitDelay;
 struct FGameplayAbilityTargetDataHandle;
 struct FHitResult;
+
+UENUM()
+enum class EBulletHitDecision : uint8
+{
+	Skip,
+	BlockOnly,
+	BlockAndDamage
+};
 
 UCLASS()
 class PROJECTD_API UGA_Fire : public UPDPlayerGameplayAbility
@@ -83,6 +92,14 @@ protected:
 	) const;
 
 	float GetDamagePerBullet(const APDWeaponBase* Weapon) const;
+	
+private:
+	ETeamType GetActorTeam(AActor* Actor) const;
+	bool IsSameTeamActor(AActor* SourceActor, AActor* TargetActor) const;
+	bool IsFriendlyShield(APDPawnBase* OwnerPawn, AActor* HitActor) const;
+	
+	EBulletHitDecision EvaluateHitDecision(APDPawnBase* OwnerPawn, AActor* HitActor) const;
+	bool IsShieldActor(AActor* Actor) const;
 	
 protected:
 	UPROPERTY()
