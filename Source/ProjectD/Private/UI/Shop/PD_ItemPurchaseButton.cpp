@@ -78,20 +78,41 @@ void UPD_ItemPurchaseButton::NativeOnListItemObjectSet(UObject* ListItemObject)
     {
         bool bCanAfford = Inventory->CheckGold(Info->Price);
         this->SetIsEnabled(bCanAfford);
+
+        if (!bCanAfford)
+        {
+            SetButtonStyle(LowGoldColor);
+        }
     }
 
+}
+
+
+void UPD_ItemPurchaseButton::NativeOnHovered()
+{
+    Super::NativeOnHovered();
+
+    SetButtonStyle(HoverColor, true);
+}
+
+void UPD_ItemPurchaseButton::NativeOnUnhovered()
+{
+    Super::NativeOnUnhovered();
+
+    SetButtonStyle(NormalColor);
 }
 
 void UPD_ItemPurchaseButton::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
+    SetIsSelectable(false);
+
     this->OnClicked().AddUObject(this, &ThisClass::HandleItemPurchase);
 }
 
 void UPD_ItemPurchaseButton::HandleItemPurchase()
 {
-    UE_LOG(LogTemp, Warning, TEXT("BuyTry1"));
     APDPlayerController* PC = GetOwningPlayer<APDPlayerController>();
     if (!IsValid(PC))
     {
@@ -104,6 +125,35 @@ void UPD_ItemPurchaseButton::HandleItemPurchase()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("BuyTry"));
     ShopComponent->RequestBuy(ItemID);
+}
+
+
+void UPD_ItemPurchaseButton::SetButtonStyle(FLinearColor& SelectColor, bool IsHover)
+{
+    if (IconImage)
+    {
+        if (IsHover)
+        {
+            IconImage->SetRenderScale(FVector2D(HoveredScale));
+        }
+        else
+        {
+            IconImage->SetRenderScale(FVector2D(NomalScale));
+        }
+    }
+
+    if (ItemDisplayName)
+    {
+        ItemDisplayName->SetColorAndOpacity(SelectColor);
+    }
+    if (Price)
+    {
+        Price->SetColorAndOpacity(SelectColor);
+    }
+    if (OutLine)
+    {
+        OutLine->SetColorAndOpacity(SelectColor);
+    }
+
 }

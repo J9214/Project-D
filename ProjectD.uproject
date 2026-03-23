@@ -17,7 +17,8 @@
 				"AdvancedSessions",
 				"CableComponent",
 				"Mover",
-				"CommonUI"
+				"CommonUI",
+				"UMG"
 			]
 		}
 	],

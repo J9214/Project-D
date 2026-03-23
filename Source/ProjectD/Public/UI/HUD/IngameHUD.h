@@ -18,7 +18,9 @@ class PROJECTD_API UIngameHUD : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
+
 	virtual void NativeOnInitialized() override;
+	virtual void NativeConstruct() override;
 
 	UFUNCTION()
 	void ToggleGameUI();
@@ -60,6 +62,4 @@ protected:
 
 	int32 OpenedUIPriority = 0;
 	bool bIsUIPanelOpen = false;
-
-	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 };

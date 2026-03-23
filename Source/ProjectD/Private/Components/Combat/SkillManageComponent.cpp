@@ -1,4 +1,4 @@
-#include "Components/Combat/SkillManageComponent.h"
+﻿#include "Components/Combat/SkillManageComponent.h"
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
 #include "Pawn/PDPawnBase.h"
@@ -76,6 +76,36 @@ void USkillManageComponent::Server_BuySkill_Implementation(TSubclassOf<UGameplay
 		ApplyAssign(1, AbilityClass);
 		return;
 	}
+}
+
+int USkillManageComponent::BuySkill(TSubclassOf<UGameplayAbility> AbilityClass)
+{
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return INDEX_NONE;
+	}
+
+	if (!AbilityClass)
+	{
+		return INDEX_NONE;
+	}
+	
+	RemoveExistingSkill(AbilityClass);
+	
+	if (Slots[0].IsEmpty())
+	{
+		ApplyAssign(0, AbilityClass);
+		return 0;
+	}
+
+	if (Slots[1].IsEmpty())
+	{
+		ApplyAssign(1, AbilityClass);
+		return 1;
+	}
+
+	return INDEX_NONE;
 }
 
 void USkillManageComponent::Server_HandleSkillEquip_Implementation(const FSkillPayload& Payload, FGameplayTag ToSlotTag)

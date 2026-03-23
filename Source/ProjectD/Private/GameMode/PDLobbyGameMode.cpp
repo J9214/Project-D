@@ -247,7 +247,32 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
             }
 		}
     }
+    else
+    {
 
+        IOnlineSubsystem* OSS = IOnlineSubsystem::Get(FName("Steam"));
+        if (!OSS)
+        {
+            return;
+        }
+
+        IOnlineSessionPtr SessionInterface = OSS->GetSessionInterface();
+        if (!SessionInterface.IsValid())
+        {
+            return;
+        }
+
+        FOnlineSessionSettings* Settings = SessionInterface->GetSessionSettings(NAME_GameSession);
+        if (!Settings)
+        {
+            return;
+        }
+
+        Settings->Set(FName(TEXT("MAX_FIT")), 0, EOnlineDataAdvertisementType::ViaOnlineService);
+        SessionInterface->UpdateSession(NAME_GameSession, *Settings);
+    }
+
+    //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
     const FString TravelURL = TEXT("/Game/LakeTown/Maps/Demonstration");
     GetWorld()->ServerTravel(TravelURL);
 }
