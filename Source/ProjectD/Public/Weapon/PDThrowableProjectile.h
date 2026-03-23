@@ -38,6 +38,8 @@ private:
 	void SpawnFireArea();
 	void SpawnSmokeArea();
 	
+	void ApplyFlashGE();
+	
 	void SendExplosionCueTag();
 	
 protected:
