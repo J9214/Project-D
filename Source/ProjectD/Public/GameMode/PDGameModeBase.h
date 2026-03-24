@@ -8,6 +8,7 @@ class APDPlayerState;
 class ABallCore;
 class AGoalPost;
 class ADroneSpawner;
+class ABallSpawnPosition;
 
 UENUM(BlueprintType)
 enum class ERoundPhase : uint8
@@ -57,6 +58,7 @@ protected:
 
 	void CacheRoundActors();
 	void CachePlacedGoalPosts();
+	void CachePlacedBallSpawnPositions();
 	void SpawnAndCacheBallCore();
 	void CacheDroneSpawner();
 
@@ -64,7 +66,7 @@ protected:
 	void ResetPlacedGoalPostsForRound();
 	void ResetBallForRound();
 
-	FVector CalculateBallSpawnLocationFromGoals() const;
+	FVector GetRandomBallSpawnLocation() const;
 	FVector BuildRespawnLocationForController(AController* Controller) const;
 	FVector BuildRespawnLocationFromTeam(int32 TeamId) const;
     
@@ -112,6 +114,9 @@ protected:
 
 	UPROPERTY()
 	TArray<TObjectPtr<AGoalPost>> CachedGoalPosts;
+
+	UPROPERTY()
+	TArray<TObjectPtr<ABallSpawnPosition>> CachedBallSpawnPositions;
 
 	UPROPERTY()
 	TObjectPtr<ADroneSpawner> CachedDroneSpawner;
