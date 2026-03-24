@@ -1,5 +1,6 @@
 #include "AI/MassAI/DroneAllExplodeProcessor.h"
 #include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
+#include "AI/MassAI/DronePendingExplosionFragment.h"
 #include "AI/MassAI/Replicated/MassEntityTags.h"
 #include "AI/MassAI/MassBoidsHealthFragment.h"
 #include "MassExecutionContext.h"
@@ -18,6 +19,7 @@ void UDroneAllExplodeProcessor::ConfigureQueries(const TSharedRef<FMassEntityMan
 {
 	EntityQuery.AddRequirement<FMassVelocityFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassBoidsHealthFragment>(EMassFragmentAccess::ReadWrite);
+	EntityQuery.AddRequirement<FDronePendingExplosionFragment>(EMassFragmentAccess::ReadWrite);
 
 	EntityQuery.AddTagRequirement<FMassEntitySuicideTag>(EMassFragmentPresence::None);
 	EntityQuery.AddTagRequirement<FMassEntityDyingTag>(EMassFragmentPresence::None);
@@ -40,17 +42,57 @@ void UDroneAllExplodeProcessor::Execute(FMassEntityManager& EntityManager, FMass
 		return;
 	}
 
-	if (AllExplodeSubsystem->ConsumeExplodeAllRequest() == false)
+	const uint64 CurrentFrame = GFrameCounter;
+	const bool bShouldScheduleExplode = AllExplodeSubsystem->ConsumeExplodeAllRequest();
+	const int32 SafeExplodeOverFrames = FMath::Max(1, ExplodeOverFrames);
+
+	if (bShouldScheduleExplode == true)
 	{
-		return;
+		UE_LOG(LogProjectD, Warning, TEXT("[UDroneAllExplodeProcessor] Schedule Drone Explode. OverFrames=%d"), SafeExplodeOverFrames);
+
+		int32 GlobalDroneIndex = 0;
+
+		EntityQuery.ForEachEntityChunk(Context, [CurrentFrame, SafeExplodeOverFrames, &GlobalDroneIndex](FMassExecutionContext& ExecContext)
+			{
+				TArrayView<FMassVelocityFragment> Velocities = ExecContext.GetMutableFragmentView<FMassVelocityFragment>();
+				TArrayView<FMassBoidsHealthFragment> HealthInfos = ExecContext.GetMutableFragmentView<FMassBoidsHealthFragment>();
+				TArrayView<FDronePendingExplosionFragment> PendingInfos = ExecContext.GetMutableFragmentView<FDronePendingExplosionFragment>();
+
+				const int32 NumEntities = ExecContext.GetNumEntities();
+
+				for (int32 i = 0; i < NumEntities; ++i)
+				{
+					FVector& Velocity = Velocities[i].Value;
+					FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
+					FDronePendingExplosionFragment& PendingInfo = PendingInfos[i];
+
+					if (HealthInfo.Health <= 0.0f)
+					{
+						continue;
+					}
+
+					if (PendingInfo.bPendingExplode == true)
+					{
+						continue;
+					}
+
+					const int32 FrameOffset = GlobalDroneIndex % SafeExplodeOverFrames;
+
+					PendingInfo.bPendingExplode = true;
+					PendingInfo.ExplodeAtFrame = CurrentFrame + (uint64)FrameOffset;
+
+					Velocity = FVector::ZeroVector;
+
+					++GlobalDroneIndex;
+				}
+			});
 	}
 
-	UE_LOG(LogProjectD, Warning, TEXT("[UDroneAllExplodeProcessor] Drone Explose!"));
-
-	EntityQuery.ForEachEntityChunk(Context, [this](FMassExecutionContext& ExecContext)
+	EntityQuery.ForEachEntityChunk(Context, [CurrentFrame](FMassExecutionContext& ExecContext)
 		{
 			TArrayView<FMassVelocityFragment> Velocities = ExecContext.GetMutableFragmentView<FMassVelocityFragment>();
 			TArrayView<FMassBoidsHealthFragment> HealthInfos = ExecContext.GetMutableFragmentView<FMassBoidsHealthFragment>();
+			TArrayView<FDronePendingExplosionFragment> PendingInfos = ExecContext.GetMutableFragmentView<FDronePendingExplosionFragment>();
 
 			const int32 NumEntities = ExecContext.GetNumEntities();
 
@@ -58,8 +100,22 @@ void UDroneAllExplodeProcessor::Execute(FMassEntityManager& EntityManager, FMass
 			{
 				FVector& Velocity = Velocities[i].Value;
 				FMassBoidsHealthFragment& HealthInfo = HealthInfos[i];
+				FDronePendingExplosionFragment& PendingInfo = PendingInfos[i];
 
-				if (HealthInfo.Health <= 0)
+				if (PendingInfo.bPendingExplode == false)
+				{
+					continue;
+				}
+
+				if (CurrentFrame < PendingInfo.ExplodeAtFrame)
+				{
+					continue;
+				}
+
+				PendingInfo.bPendingExplode = false;
+				PendingInfo.ExplodeAtFrame = 0;
+
+				if (HealthInfo.Health <= 0.0f)
 				{
 					continue;
 				}
