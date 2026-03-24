@@ -37,6 +37,7 @@ void UDroneExplosionSubsystem::ApplyExplosionDamage(const FVector& Location, flo
 
 	FCollisionObjectQueryParams ObjectQuery;
 	ObjectQuery.AddObjectTypesToQuery(ECC_Pawn);
+	ObjectQuery.AddObjectTypesToQuery(ECC_Destructible);
 
 	const FCollisionShape Sphere = FCollisionShape::MakeSphere(Radius);
 

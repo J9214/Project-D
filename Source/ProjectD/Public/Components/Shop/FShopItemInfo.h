@@ -15,7 +15,6 @@ struct PROJECTD_API FShopItemInfo : public FTableRowBase
 	GENERATED_BODY()
 
 public:
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 ItemType = -1;
 

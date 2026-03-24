@@ -22,13 +22,10 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("9"));
 		if (PlayerHUDClass) {
-			UE_LOG(LogTemp, Warning, TEXT("99"));
 			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
 			if (PlayerHUDWidget)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("999"));
 				PlayerHUDWidget->AddToViewport();
 			}
 		}
