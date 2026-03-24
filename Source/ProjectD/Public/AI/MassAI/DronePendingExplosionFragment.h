@@ -10,5 +10,6 @@ struct PROJECTD_API FDronePendingExplosionFragment : public FMassFragment
 	GENERATED_BODY()
 
 public:
-	int32 RemainingFrames = 0;
+	bool bPendingExplode = false;
+	uint64 ExplodeAtFrame = 0;
 };

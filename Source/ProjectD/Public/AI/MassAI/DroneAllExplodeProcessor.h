@@ -19,4 +19,7 @@ protected:
 
 private:
 	FMassEntityQuery EntityQuery;
+
+	UPROPERTY(EditAnywhere, Category = "ProjectD|Drone")
+	int32 ExplodeOverFrames = 60;
 };
