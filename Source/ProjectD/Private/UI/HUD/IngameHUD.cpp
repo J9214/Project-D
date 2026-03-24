@@ -25,11 +25,27 @@ void UIngameHUD::NativeOnInitialized()
     {
         BindToAnimationFinished(CloseInventoryUI, CloseDelegate);
     }
+
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC)
+    {
+        return;
+    }
+
+    FInputModeGameOnly InputMode;
+    PC->SetInputMode(InputMode);
+    PC->bShowMouseCursor = false;
+}
+
+void UIngameHUD::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    bIsFocusable = true;
 }
 
 void UIngameHUD::ToggleGameUI()
 {
-    UE_LOG(LogTemp, Warning, TEXT("00"));
     if (IsAnimationPlaying(OpenShopUI) || IsAnimationPlaying(CloseShopUI) ||
         IsAnimationPlaying(OpenInventoryUI) || IsAnimationPlaying(CloseInventoryUI))
     {
@@ -38,14 +54,12 @@ void UIngameHUD::ToggleGameUI()
 
     if (!bIsUIPanelOpen)
     {
-        UE_LOG(LogTemp, Warning, TEXT("01"));
         PlayAnimation(OpenShopUI);
         PlayAnimation(OpenInventoryUI);
         bIsUIPanelOpen = true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("02"));
         PlayAnimation(CloseShopUI);
         PlayAnimation(CloseInventoryUI);
         bIsUIPanelOpen = false;
@@ -141,17 +155,4 @@ void UIngameHUD::OnUICloseFinished()
     FInputModeGameOnly InputMode;
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = false; 
-}
-
-FReply UIngameHUD::NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
-{
-
-    UE_LOG(LogTemp, Warning, TEXT("00"));
-    if (InKeyEvent.GetKey() == EKeys::Tab)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("00"));
-        ToggleGameUI();
-        return FReply::Handled();
-    }
-    return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
 }

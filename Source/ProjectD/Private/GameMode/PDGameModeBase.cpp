@@ -11,7 +11,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
+#include "Object/BallSpawnPosition.h"
 #include "ProjectD/ProjectD.h"
+#include "AI/MassAI/DroneSpawner.h"
+#include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -64,6 +67,7 @@ void APDGameModeBase::BeginPlay()
     }
 
     CacheRoundActors();
+    CacheDroneSpawner();
     StartMatchFlow();
 }
 
@@ -156,6 +160,12 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp skipped. Goal is already processing."));
+        return;
+    }
+
     if (IsValid(HolderPlayerState) == false)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleBallPickedUp failed. HolderPlayerState is invalid."));
@@ -168,8 +178,45 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
         return;
     }
 
+    if (bDroneSpawnTriggeredThisRound == true)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] HandleBallPickedUp skipped. Drone already spawned this round."));
+        return;
+    }
 
+    bDroneSpawnTriggeredThisRound = true;
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
+}
+
+void APDGameModeBase::HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball)
+{
+    if (RoundPhase != ERoundPhase::InRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. RoundPhase is not InRound."));
+        return;
+    }
+
+    if (bGoalProcessingThisRound == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered skipped. Goal already processing."));
+        return;
+    }
+
+    if (IsValid(GoalPost) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. GoalPost is invalid."));
+        return;
+    }
+
+    if (IsValid(Ball) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleGoalEntered failed. Ball is invalid."));
+        return;
+    }
+
+    bGoalProcessingThisRound = true;
+
+    TriggerDroneExplosionOnGoal();
 }
 
 void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
@@ -207,8 +254,6 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         TEXT("[GameMode] Goal scored. CurrentRoundIndex=%d"),
         CurrentRoundIndex
     );
-
-    TriggerDroneExplosionOnGoal();
 
     if (GS->bOvertime == true)
     {
@@ -482,6 +527,7 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
 void APDGameModeBase::CacheRoundActors()
 {
     CachePlacedGoalPosts();
+    CachePlacedBallSpawnPositions();
     SpawnAndCacheBallCore();
 }
 
@@ -513,6 +559,34 @@ void APDGameModeBase::CachePlacedGoalPosts()
     );
 }
 
+void APDGameModeBase::CachePlacedBallSpawnPositions()
+{
+    CachedBallSpawnPositions.Empty();
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CachePlacedBallSpawnPositions failed. World is nullptr."));
+        return;
+    }
+
+    for (TActorIterator<ABallSpawnPosition> It(World); It; ++It)
+    {
+        ABallSpawnPosition* BallSpawnPosition = *It;
+        if (IsValid(BallSpawnPosition) == true)
+        {
+            CachedBallSpawnPositions.Add(BallSpawnPosition);
+        }
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] CachePlacedBallSpawnPositions completed. BallSpawnPositionCount=%d"),
+        CachedBallSpawnPositions.Num()
+    );
+}
+
 void APDGameModeBase::SpawnAndCacheBallCore()
 {
     if (IsValid(CachedBallCore) == true)
@@ -534,7 +608,13 @@ void APDGameModeBase::SpawnAndCacheBallCore()
         return;
     }
 
-    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    const FVector BallSpawnLocation = GetRandomBallSpawnLocation();
+    if (BallSpawnLocation == FVector::ZeroVector)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] SpawnAndCacheBallCore failed. BallSpawnLocation is zero vector."));
+        return;
+    }
+
     const FRotator BallSpawnRotation = FRotator::ZeroRotator;
 
     FActorSpawnParameters SpawnParams;
@@ -567,6 +647,33 @@ void APDGameModeBase::SpawnAndCacheBallCore()
     );
 }
 
+void APDGameModeBase::CacheDroneSpawner()
+{
+    CachedDroneSpawner = nullptr;
+
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. World is invalid."));
+        return;
+    }
+
+    for (TActorIterator<ADroneSpawner> It(World); It; ++It)
+    {
+        ADroneSpawner* DroneSpawner = *It;
+        if (IsValid(DroneSpawner) == true)
+        {
+            CachedDroneSpawner = DroneSpawner;
+            break;
+        }
+    }
+
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CacheDroneSpawner failed. DroneSpawner not found."));
+    }
+}
+
 void APDGameModeBase::ResetRoundState()
 {
     APDGameStateBase* GS = GetGameState<APDGameStateBase>();
@@ -578,6 +685,9 @@ void APDGameModeBase::ResetRoundState()
 
     GS->CurrentBallHolder = nullptr;
     GS->GoalInstigator = nullptr;
+
+    bDroneSpawnTriggeredThisRound = false;
+    bGoalProcessingThisRound = false;
 
     UE_LOG(
         LogProjectD,
@@ -609,7 +719,7 @@ void APDGameModeBase::ResetBallForRound()
         return;
     }
 
-    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    const FVector BallSpawnLocation = GetRandomBallSpawnLocation();
     if (BallSpawnLocation == FVector::ZeroVector)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetBallForRound failed. BallSpawnLocation is zero vector."));
@@ -630,74 +740,41 @@ void APDGameModeBase::ResetBallForRound()
     );
 }
 
-FVector APDGameModeBase::CalculateBallSpawnLocationFromGoals() const
+FVector APDGameModeBase::GetRandomBallSpawnLocation() const
 {
-    if (CachedGoalPosts.Num() < 3)
+    if (CachedBallSpawnPositions.Num() <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] GetRandomBallSpawnLocation failed. CachedBallSpawnPositions is empty."));
+        return FVector::ZeroVector;
+    }
+
+    const int32 RandomIndex = FMath::RandRange(0, CachedBallSpawnPositions.Num() - 1);
+    ABallSpawnPosition* SelectedSpawnPosition = CachedBallSpawnPositions[RandomIndex];
+
+    if (IsValid(SelectedSpawnPosition) == false)
     {
         UE_LOG(
             LogProjectD,
             Warning,
-            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Need at least 3 GoalPosts. Count=%d"),
-            CachedGoalPosts.Num()
+            TEXT("[GameMode] GetRandomBallSpawnLocation failed. SelectedSpawnPosition is invalid. Index=%d"),
+            RandomIndex
         );
-
         return FVector::ZeroVector;
     }
 
-    // Select 3 Idx
-    int32 IndexA = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-
-    int32 IndexB = INDEX_NONE;
-
-    do
-    {
-        IndexB = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-    } while (IndexB == IndexA);
-
-    int32 IndexC = INDEX_NONE;
-
-    do
-    {
-        IndexC = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-    } while (IndexC == IndexA || IndexC == IndexB);
-
-    AGoalPost* GoalPostA = CachedGoalPosts[IndexA];
-    AGoalPost* GoalPostB = CachedGoalPosts[IndexB];
-    AGoalPost* GoalPostC = CachedGoalPosts[IndexC];
-
-    if (IsValid(GoalPostA) == false || IsValid(GoalPostB) == false || IsValid(GoalPostC) == false)
-    {
-        UE_LOG(
-            LogProjectD,
-            Warning,
-            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Selected GoalPost is invalid. IndexA=%d IndexB=%d IndexC=%d"),
-            IndexA,
-            IndexB,
-            IndexC
-        );
-
-        return FVector::ZeroVector;
-    }
-
-    const FVector GoalLocationA = GoalPostA->GetActorLocation();
-    const FVector GoalLocationB = GoalPostB->GetActorLocation();
-    const FVector GoalLocationC = GoalPostC->GetActorLocation();
-
-    const FVector CenterLocation = (GoalLocationA + GoalLocationB + GoalLocationC) / 3.0f;
+    const FVector SpawnLocation = SelectedSpawnPosition->GetActorLocation();
 
     UE_LOG(
         LogProjectD,
         Log,
-        TEXT("[GameMode] CalculateBallSpawnLocationFromGoals selected random indices. A=%d B=%d C=%d Center=(%.2f, %.2f, %.2f)"),
-        IndexA,
-        IndexB,
-        IndexC,
-        CenterLocation.X,
-        CenterLocation.Y,
-        CenterLocation.Z
+        TEXT("[GameMode] GetRandomBallSpawnLocation selected. Index=%d Location=(%.2f, %.2f, %.2f)"),
+        RandomIndex,
+        SpawnLocation.X,
+        SpawnLocation.Y,
+        SpawnLocation.Z
     );
 
-    return CenterLocation;
+    return SpawnLocation;
 }
 
 FVector APDGameModeBase::BuildRespawnLocationForController(AController* Controller) const
@@ -799,6 +876,12 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         return;
     }
 
+    if (IsValid(CachedDroneSpawner) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneSpawnOnBallPickup failed. CachedDroneSpawner is invalid."));
+        return;
+    }
+
     UE_LOG(
         LogProjectD,
         Log,
@@ -806,12 +889,26 @@ void APDGameModeBase::TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayer
         static_cast<int32>(HolderPlayerState->GetTeamID())
     );
 
-    // TODO - Drone Spawner
+    CachedDroneSpawner->SpawnDrones();
 }
 
 void APDGameModeBase::TriggerDroneExplosionOnGoal()
 {
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. World is invalid."));
+        return;
+    }
+
+    UCheckDroneAllExplodeSubsystem* ExplodeSubsystem = World->GetSubsystem<UCheckDroneAllExplodeSubsystem>();
+    if (IsValid(ExplodeSubsystem) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TriggerDroneExplosionOnGoal failed. ExplodeSubsystem is invalid."));
+        return;
+    }
+
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
 
-    // TODO - Drone Spawner
+    ExplodeSubsystem->RequestExplodeAllDrones();
 }

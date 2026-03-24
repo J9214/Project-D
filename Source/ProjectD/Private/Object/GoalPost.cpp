@@ -84,6 +84,12 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 	}
 
 	Ball->GetStaticMesh()->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+	{
+		GM->HandleGoalEntered(this, Ball);
+	}
+
 	StartHoldTimer();
 }
 

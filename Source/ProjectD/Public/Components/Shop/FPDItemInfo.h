@@ -6,6 +6,10 @@
 #include "Engine/DataTable.h"  
 #include "FPDItemInfo.generated.h"
 
+class UGameplayAbility;
+class AActor;
+class UTexture2D;
+
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
@@ -36,6 +40,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AActor> ItemClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<UGameplayAbility> ItemAbilityClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<UTexture2D> IconImage;

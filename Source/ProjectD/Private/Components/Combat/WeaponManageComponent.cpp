@@ -928,10 +928,10 @@ void UWeaponManageComponent::RefreshAttachments()
 
 void UWeaponManageComponent::ChangeWeapon(int32 TargetSlot, TSubclassOf<APDWeaponBase> NewWeaponClass)
 {
-    if (!(GetOwnerRole() == ROLE_Authority) || !Slots.IsValidIndex(TargetSlot))
-    {
-        return;
-    }
+    //if (!(GetOwnerRole() == ROLE_Authority) || !Slots.IsValidIndex(TargetSlot))
+    //{
+    //    return;
+    //}
 
     if (IsValid(Slots[TargetSlot].WeaponActor))
     {

@@ -50,6 +50,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	ETeamType TeamID;
 
