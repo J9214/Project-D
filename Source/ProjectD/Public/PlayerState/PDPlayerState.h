@@ -43,6 +43,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
+	const FString& GetDisplayName() const { return DisplayName; }
 
 	UFUNCTION()
 	void OnRep_CharacterCustomInfo();
