@@ -78,6 +78,7 @@ void APDLobbyPlayerController::Server_SubmitDisplayName_Implementation(const FSt
 {
     if (auto* PS = GetPlayerState<APDPlayerState>())
     {
+        UE_LOG(LogTemp, Warning, TEXT("[LobbyDisplayName] Server_SubmitDisplayName Name=[%s] NetId=[%s]"), *Name, *PS->GetUniqueId().ToString());
         PS->SetDisplayName(Name);
 
         if (APDLobbyGameMode* LobbyGameMode = GetWorld()->GetAuthGameMode<APDLobbyGameMode>())
@@ -96,7 +97,9 @@ void APDLobbyPlayerController::Client_RequestDisplayName_Implementation()
 
     if (auto* GI = GetGameInstance<UPDGameInstance>())
     {
-        Server_SubmitDisplayName(GI->GetPlayerLocalDisplayName());
+        const FString LocalDisplayName = GI->GetPlayerLocalDisplayName();
+        UE_LOG(LogTemp, Warning, TEXT("[LobbyDisplayName] Client_RequestDisplayName LocalName=[%s]"), *LocalDisplayName);
+        Server_SubmitDisplayName(LocalDisplayName);
     }
 }
 
