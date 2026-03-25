@@ -43,7 +43,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
-	const FString& GetDisplayName() const { return DisplayName; }
 
 	UFUNCTION(BlueprintPure, Category = "Team")
 	FORCEINLINE FString GetDisplayName() const { return DisplayName; }

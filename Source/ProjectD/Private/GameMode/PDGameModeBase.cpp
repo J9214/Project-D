@@ -1,4 +1,4 @@
-#include "GameMode/PDGameModeBase.h"
+﻿#include "GameMode/PDGameModeBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
@@ -315,6 +315,7 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin Try"));
     if (IsValid(NewPlayer) == false)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. NewPlayer is invalid."));
