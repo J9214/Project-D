@@ -7,10 +7,24 @@
 #include "PlayerState/PDPlayerState.h"
 #include "ProjectD/ProjectD.h"
 #include "GameMode/PDGameModeBase.h"
+#include "Components/SphereComponent.h"
 
 ABallCore::ABallCore()
 {
-	SetRootComponent(StaticMesh);
+	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
+	SetRootComponent(Sphere);
+	StaticMesh->SetupAttachment(Sphere);
+	StaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	StaticMesh->SetSimulatePhysics(false);
+	SceneRoot->SetupAttachment(Sphere);
+
+	SetActorEnableCollision(true);
+	Sphere->SetCollisionProfileName(TEXT("PhysicsActor"));
+	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Sphere->SetSimulatePhysics(true);
+	Sphere->SetEnableGravity(true);
+
+	Sphere->SetIsReplicated(true);
 
 	bReplicates = true;
 	SetReplicateMovement(true);
@@ -33,14 +47,14 @@ void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse,
 {
 	Super::DropPhysics(DropLocation, Impulse, InCamDirection);
 
-	if (IsValid(StaticMesh) == false)
+	if (IsValid(Sphere) == false)
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] DropPhysics failed. StaticMesh is invalid."));
 		return;
 	}
 
-	StaticMesh->WakeAllRigidBodies();
-	StaticMesh->AddImpulse(Impulse, NAME_None, true);
+	Sphere->WakeAllRigidBodies();
+	Sphere->AddImpulse(Impulse, NAME_None, true);
 }
 
 void ABallCore::ResetBallForRound(const FVector& SpawnLocation)
@@ -77,10 +91,10 @@ void ABallCore::HandleCarrierChanged()
 			}
 		}
 
-		StaticMesh->SetSimulatePhysics(false);
-		StaticMesh->SetEnableGravity(false);
+		Sphere->SetSimulatePhysics(false);
+		Sphere->SetEnableGravity(false);
 		SetActorEnableCollision(false);
-		StaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+		Sphere->SetCollisionProfileName(TEXT("NoCollision"));
 
 		if (APDPawnBase* PD = Cast<APDPawnBase>(CarrierPawn))
 		{
@@ -89,7 +103,7 @@ void ABallCore::HandleCarrierChanged()
 
 			if (CharacterMesh)
 			{
-				bool bAttached = StaticMesh->AttachToComponent(
+				bool bAttached = Sphere->AttachToComponent(
 					CharacterMesh,
 					FAttachmentTransformRules::KeepWorldTransform,
 					SocketName
@@ -97,8 +111,8 @@ void ABallCore::HandleCarrierChanged()
 
 				if (bAttached)
 				{
-					StaticMesh->SetRelativeLocation(FVector::ZeroVector);
-					StaticMesh->SetRelativeRotation(FRotator::ZeroRotator);
+					Sphere->SetRelativeLocation(FVector::ZeroVector);
+					Sphere->SetRelativeRotation(FRotator::ZeroRotator);
 				}
 			}
 		}
@@ -107,13 +121,13 @@ void ABallCore::HandleCarrierChanged()
 	{
 		if (!bIsPlacedInGoal)
 		{
-			StaticMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+			Sphere->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
 			SetActorEnableCollision(true);
-			StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-			StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-			StaticMesh->SetSimulatePhysics(true);
-			StaticMesh->SetEnableGravity(true);
+			Sphere->SetCollisionProfileName(TEXT("PhysicsActor"));
+			Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			Sphere->SetSimulatePhysics(true);
+			Sphere->SetEnableGravity(true);
 		}
 	}
 }
@@ -126,7 +140,7 @@ void ABallCore::ApplyRoundResetLocal(const FVector& SpawnLocation)
 		return;
 	}
 
-	if (IsValid(StaticMesh) == false)
+	if (IsValid(Sphere) == false)
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("[BallCore] ApplyRoundResetLocal failed. StaticMesh is invalid."));
 		return;
@@ -138,18 +152,18 @@ void ABallCore::ApplyRoundResetLocal(const FVector& SpawnLocation)
 	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
 
-	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-	StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	StaticMesh->SetEnableGravity(true);
-	StaticMesh->SetSimulatePhysics(true);
+	Sphere->SetCollisionProfileName(TEXT("PhysicsActor"));
+	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	Sphere->SetEnableGravity(true);
+	Sphere->SetSimulatePhysics(true);
 
-	StaticMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
-	StaticMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	Sphere->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	Sphere->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
 
 	SetActorLocation(SpawnLocation);
 	SetActorRotation(FRotator::ZeroRotator);
 
-	StaticMesh->WakeAllRigidBodies();
+	Sphere->WakeAllRigidBodies();
 
 	bIsCanInteract = true;
 	bIsPlacedInGoal = false;
