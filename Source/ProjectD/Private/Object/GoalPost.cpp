@@ -57,6 +57,7 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 	{
 		return;
 	}
+	
 	if (!CanPlaceBall(Pawn, Ball)) 
 	{
 		return;
@@ -64,16 +65,13 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 
 	PlacedBall = Ball;
 
-	Ball->SetPlacedInGoal(true);
-
-	Ball->ClearCarrier();
-
-
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Pawn))
 	{
 		PD->Server_ForceClearCarriedBall();
 	}
-
+	
+	Ball->PlaceIntoGoal(RootComponent);
+	
 	if (APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>())
 	{
 		APDPlayerState* PS = Pawn->GetPlayerState<APDPlayerState>();
@@ -82,8 +80,6 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 			GS->SetGoalInstigator(PS);
 		}
 	}
-
-	Ball->GetStaticMesh()->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
 	{
@@ -103,13 +99,15 @@ void AGoalPost::StealBall(APawn* Stealer)
 	GetWorld()->GetTimerManager().ClearTimer(HoldTimer);
 
 	ABallCore* BallToSteal = PlacedBall;
-
 	PlacedBall = nullptr;
 
-	if (BallToSteal)
+	if (!IsValid(BallToSteal))
 	{
-		BallToSteal->SetPlacedInGoal(false);
+		return;
 	}
+	
+	BallToSteal->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	BallToSteal->SetPlacedInGoal(false);
 
 	if (APDPawnBase* PD = Cast<APDPawnBase>(Stealer))
 	{

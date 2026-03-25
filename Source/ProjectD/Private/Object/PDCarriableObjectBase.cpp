@@ -12,13 +12,13 @@ APDCarriableObjectBase::APDCarriableObjectBase()
 	StaticMesh->SetMobility(EComponentMobility::Movable);
 	StaticMesh->SetSimulatePhysics(true);
 	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-
 	StaticMesh->BodyInstance.bUseCCD = true;
 }
 
 void APDCarriableObjectBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
 	DOREPLIFETIME(APDCarriableObjectBase, CarrierPawn);
 	DOREPLIFETIME(APDCarriableObjectBase, bIsPlacedInGoal);
 }
@@ -51,16 +51,25 @@ void APDCarriableObjectBase::DropPhysics(const FVector& DropLocation, const FVec
 		return;
 	}
 
+	UPrimitiveComponent* PhysicsComp = GetPhysicsComponent();
+	if (!IsValid(PhysicsComp))
+	{
+		return;
+	}
+	
 	CarrierPawn = nullptr;
+	
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	SetActorLocation(DropLocation, false, nullptr, ETeleportType::TeleportPhysics);
-
+	SetActorHiddenInGame(false);
 	SetActorEnableCollision(true);
-	StaticMesh->SetCollisionProfileName(TEXT("PhysicsActor"));
-	StaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	StaticMesh->SetSimulatePhysics(true);
-	StaticMesh->SetEnableGravity(true);
+	SetActorLocation(DropLocation, false, nullptr, ETeleportType::TeleportPhysics);
+	
+	PhysicsComp->SetCollisionProfileName(TEXT("PhysicsActor"));
+	PhysicsComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	PhysicsComp->SetSimulatePhysics(true);
+	PhysicsComp->SetEnableGravity(true);
+	PhysicsComp->WakeAllRigidBodies();
 }
 
 void APDCarriableObjectBase::OnRep_CarrierPawn()
@@ -84,7 +93,6 @@ bool APDCarriableObjectBase::IsCanInteract(AActor* Interactor)
 	return !PDPawn->GetCarriedObject();
 }
 
-
 void APDCarriableObjectBase::SetPlacedInGoal(bool bInGoal)
 {
 	if (HasAuthority())
@@ -94,13 +102,33 @@ void APDCarriableObjectBase::SetPlacedInGoal(bool bInGoal)
 	}
 }
 
+UPrimitiveComponent* APDCarriableObjectBase::GetPhysicsComponent() const
+{
+	return StaticMesh;
+}
+
 void APDCarriableObjectBase::OnRep_IsPlacedInGoal()
 {
+	UPrimitiveComponent* PhysicsComp = GetPhysicsComponent();
+	if (!IsValid(PhysicsComp))
+	{
+		return;
+	}
+	
 	if (bIsPlacedInGoal)
 	{
-		StaticMesh->SetSimulatePhysics(false);
-		StaticMesh->SetEnableGravity(false);
+		PhysicsComp->SetSimulatePhysics(false);
+		PhysicsComp->SetEnableGravity(false);
+		PhysicsComp->SetCollisionProfileName(TEXT("NoCollision"));
+		PhysicsComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		SetActorEnableCollision(false);
-		StaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	}
+	else
+	{
+		PhysicsComp->SetCollisionProfileName(TEXT("PhysicsActor"));
+		PhysicsComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		PhysicsComp->SetEnableGravity(true);
+		PhysicsComp->SetSimulatePhysics(true);
+		SetActorEnableCollision(true);
 	}
 }
