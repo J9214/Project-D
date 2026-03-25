@@ -23,6 +23,7 @@ APDGameModeBase::APDGameModeBase()
     TargetScoreToWin = 1000;
 
     NextRoundDelaySec = 3.0f;
+    PreRoundDurationSec = 10.0f;
 
     TeamRespawnRadiusFromBall = 900.0f;
     RespawnHeightOffset = 50.0f;
@@ -309,6 +310,14 @@ void APDGameModeBase::PlayerRespawn(AController* Controller)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn. PlayerState is invalid."));
     }
+}
+
+void APDGameModeBase::StartPreRound()
+{
+}
+
+void APDGameModeBase::FinishPreRound()
+{
 }
 
 void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -738,6 +747,30 @@ void APDGameModeBase::ResetBallForRound()
         CurrentRoundBallSpawnLocation.Y,
         CurrentRoundBallSpawnLocation.Z
     );
+}
+
+void APDGameModeBase::TeleportAllPlayersToRoundStart()
+{
+}
+
+void APDGameModeBase::TeleportPlayerToRoundStart(AController* Controller)
+{
+}
+
+void APDGameModeBase::SetAllPlayersMovementLocked(bool bLocked)
+{
+}
+
+void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLocked)
+{
+}
+
+void APDGameModeBase::SetAllPlayersShopEnabled(bool bEnabled)
+{
+}
+
+void APDGameModeBase::SetPlayerShopEnabled(AController* Controller, bool bEnabled)
+{
 }
 
 FVector APDGameModeBase::GetRandomBallSpawnLocation() const

@@ -14,6 +14,7 @@ UENUM(BlueprintType)
 enum class ERoundPhase : uint8
 {
 	Waiting,
+	PreRound,
 	InRound,
 	RoundEnded,
 	GameEnded
@@ -47,6 +48,8 @@ public:
 protected:
 	void PlayerRespawn(AController* Controller);
 
+	void StartPreRound();
+	void FinishPreRound();
 	void StartRound();
 	void StartMatchFlow();
 	void PrepareNextRound();
@@ -66,6 +69,13 @@ protected:
 	void ResetPlacedGoalPostsForRound();
 	void ResetBallForRound();
 
+	void TeleportAllPlayersToRoundStart();
+	void TeleportPlayerToRoundStart(AController* Controller);
+	void SetAllPlayersMovementLocked(bool bLocked);
+	void SetPlayerMovementLocked(AController* Controller, bool bLocked);
+	void SetAllPlayersShopEnabled(bool bEnabled);
+	void SetPlayerShopEnabled(AController* Controller, bool bEnabled);
+
 	FVector GetRandomBallSpawnLocation() const;
 	FVector BuildRespawnLocationForController(AController* Controller) const;
 	FVector BuildRespawnLocationFromTeam(int32 TeamId) const;
@@ -81,6 +91,7 @@ protected:
 protected:
 	FTimerHandle GameTimerHandle;
 	FTimerHandle NextRoundTimerHandle;
+	FTimerHandle PreRoundTimerHandle;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 TargetScoreToWin;
@@ -90,6 +101,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	float NextRoundDelaySec;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
+	float PreRoundDurationSec;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Spawn")
 	float TeamRespawnRadiusFromBall;
