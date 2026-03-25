@@ -16,6 +16,7 @@
 #include "AI/MassAI/MassDamageBridgeSubsystem.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "Skill/PDDamageableSkillActor.h"
+#include "Chaos/PDDestructibleObject.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -1056,7 +1057,7 @@ EBulletHitDecision UGA_Fire::EvaluateHitDecision(APDPawnBase* OwnerPawn, AActor*
 		return EBulletHitDecision::BlockAndDamage;
 	}
 
-	if (Cast<APawn>(HitActor))
+	if (Cast<APawn>(HitActor) || Cast<APDDestructibleObject>(HitActor))
 	{
 		if (bSameTeam)
 		{

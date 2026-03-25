@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
+#include "Object/BallSpawnPosition.h"
 #include "ProjectD/ProjectD.h"
 #include "AI/MassAI/DroneSpawner.h"
 #include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
@@ -65,7 +66,6 @@ void APDGameModeBase::BeginPlay()
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] MassProxyPoolSubsystem is invalid."));
     }
 
-	StartRound();
     CacheRoundActors();
     CacheDroneSpawner();
     StartMatchFlow();
@@ -527,6 +527,7 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
 void APDGameModeBase::CacheRoundActors()
 {
     CachePlacedGoalPosts();
+    CachePlacedBallSpawnPositions();
     SpawnAndCacheBallCore();
 }
 
@@ -558,6 +559,34 @@ void APDGameModeBase::CachePlacedGoalPosts()
     );
 }
 
+void APDGameModeBase::CachePlacedBallSpawnPositions()
+{
+    CachedBallSpawnPositions.Empty();
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CachePlacedBallSpawnPositions failed. World is nullptr."));
+        return;
+    }
+
+    for (TActorIterator<ABallSpawnPosition> It(World); It; ++It)
+    {
+        ABallSpawnPosition* BallSpawnPosition = *It;
+        if (IsValid(BallSpawnPosition) == true)
+        {
+            CachedBallSpawnPositions.Add(BallSpawnPosition);
+        }
+    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] CachePlacedBallSpawnPositions completed. BallSpawnPositionCount=%d"),
+        CachedBallSpawnPositions.Num()
+    );
+}
+
 void APDGameModeBase::SpawnAndCacheBallCore()
 {
     if (IsValid(CachedBallCore) == true)
@@ -579,7 +608,13 @@ void APDGameModeBase::SpawnAndCacheBallCore()
         return;
     }
 
-    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    const FVector BallSpawnLocation = GetRandomBallSpawnLocation();
+    if (BallSpawnLocation == FVector::ZeroVector)
+    {
+        UE_LOG(LogProjectD, Error, TEXT("[GameMode] SpawnAndCacheBallCore failed. BallSpawnLocation is zero vector."));
+        return;
+    }
+
     const FRotator BallSpawnRotation = FRotator::ZeroRotator;
 
     FActorSpawnParameters SpawnParams;
@@ -684,7 +719,7 @@ void APDGameModeBase::ResetBallForRound()
         return;
     }
 
-    const FVector BallSpawnLocation = CalculateBallSpawnLocationFromGoals();
+    const FVector BallSpawnLocation = GetRandomBallSpawnLocation();
     if (BallSpawnLocation == FVector::ZeroVector)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] ResetBallForRound failed. BallSpawnLocation is zero vector."));
@@ -705,74 +740,41 @@ void APDGameModeBase::ResetBallForRound()
     );
 }
 
-FVector APDGameModeBase::CalculateBallSpawnLocationFromGoals() const
+FVector APDGameModeBase::GetRandomBallSpawnLocation() const
 {
-    if (CachedGoalPosts.Num() < 3)
+    if (CachedBallSpawnPositions.Num() <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] GetRandomBallSpawnLocation failed. CachedBallSpawnPositions is empty."));
+        return FVector::ZeroVector;
+    }
+
+    const int32 RandomIndex = FMath::RandRange(0, CachedBallSpawnPositions.Num() - 1);
+    ABallSpawnPosition* SelectedSpawnPosition = CachedBallSpawnPositions[RandomIndex];
+
+    if (IsValid(SelectedSpawnPosition) == false)
     {
         UE_LOG(
             LogProjectD,
             Warning,
-            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Need at least 3 GoalPosts. Count=%d"),
-            CachedGoalPosts.Num()
+            TEXT("[GameMode] GetRandomBallSpawnLocation failed. SelectedSpawnPosition is invalid. Index=%d"),
+            RandomIndex
         );
-
         return FVector::ZeroVector;
     }
 
-    // Select 3 Idx
-    int32 IndexA = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-
-    int32 IndexB = INDEX_NONE;
-
-    do
-    {
-        IndexB = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-    } while (IndexB == IndexA);
-
-    int32 IndexC = INDEX_NONE;
-
-    do
-    {
-        IndexC = FMath::RandRange(0, CachedGoalPosts.Num() - 1);
-    } while (IndexC == IndexA || IndexC == IndexB);
-
-    AGoalPost* GoalPostA = CachedGoalPosts[IndexA];
-    AGoalPost* GoalPostB = CachedGoalPosts[IndexB];
-    AGoalPost* GoalPostC = CachedGoalPosts[IndexC];
-
-    if (IsValid(GoalPostA) == false || IsValid(GoalPostB) == false || IsValid(GoalPostC) == false)
-    {
-        UE_LOG(
-            LogProjectD,
-            Warning,
-            TEXT("[GameMode] CalculateBallSpawnLocationFromGoals failed. Selected GoalPost is invalid. IndexA=%d IndexB=%d IndexC=%d"),
-            IndexA,
-            IndexB,
-            IndexC
-        );
-
-        return FVector::ZeroVector;
-    }
-
-    const FVector GoalLocationA = GoalPostA->GetActorLocation();
-    const FVector GoalLocationB = GoalPostB->GetActorLocation();
-    const FVector GoalLocationC = GoalPostC->GetActorLocation();
-
-    const FVector CenterLocation = (GoalLocationA + GoalLocationB + GoalLocationC) / 3.0f;
+    const FVector SpawnLocation = SelectedSpawnPosition->GetActorLocation();
 
     UE_LOG(
         LogProjectD,
         Log,
-        TEXT("[GameMode] CalculateBallSpawnLocationFromGoals selected random indices. A=%d B=%d C=%d Center=(%.2f, %.2f, %.2f)"),
-        IndexA,
-        IndexB,
-        IndexC,
-        CenterLocation.X,
-        CenterLocation.Y,
-        CenterLocation.Z
+        TEXT("[GameMode] GetRandomBallSpawnLocation selected. Index=%d Location=(%.2f, %.2f, %.2f)"),
+        RandomIndex,
+        SpawnLocation.X,
+        SpawnLocation.Y,
+        SpawnLocation.Z
     );
 
-    return CenterLocation;
+    return SpawnLocation;
 }
 
 FVector APDGameModeBase::BuildRespawnLocationForController(AController* Controller) const
