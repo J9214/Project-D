@@ -311,6 +311,18 @@ void APDGameModeBase::PlayerRespawn(AController* Controller)
     }
 }
 
+void APDGameModeBase::StartInitialPreRound()
+{
+}
+
+void APDGameModeBase::FinishInitialPreRound()
+{
+}
+
+void APDGameModeBase::StartFirstRound()
+{
+}
+
 void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
@@ -423,6 +435,10 @@ void APDGameModeBase::PrepareNextRound()
         NextRoundDelaySec,
         false
     );
+}
+
+void APDGameModeBase::StartGameTimer()
+{
 }
 
 void APDGameModeBase::OnGameTick()
@@ -911,4 +927,28 @@ void APDGameModeBase::TriggerDroneExplosionOnGoal()
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
 
     ExplodeSubsystem->RequestExplodeAllDrones();
+}
+
+void APDGameModeBase::TeleportAllPlayersToRoundStart()
+{
+}
+
+void APDGameModeBase::TeleportPlayerToRoundStart(AController* Controller)
+{
+}
+
+void APDGameModeBase::SetAllPlayersMovementLocked(bool bLocked)
+{
+}
+
+void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLocked)
+{
+}
+
+void APDGameModeBase::SetAllPlayersShopEnabled(bool bEnabled)
+{
+}
+
+void APDGameModeBase::SetPlayerShopEnabled(AController* Controller, bool bEnabled)
+{
 }

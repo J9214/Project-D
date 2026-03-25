@@ -14,6 +14,7 @@ UENUM(BlueprintType)
 enum class ERoundPhase : uint8
 {
 	Waiting,
+	InitPreRound,
 	InRound,
 	RoundEnded,
 	GameEnded
@@ -47,10 +48,15 @@ public:
 protected:
 	void PlayerRespawn(AController* Controller);
 
+	void StartInitialPreRound();
+	void FinishInitialPreRound();
+	void StartFirstRound();
+
 	void StartRound();
 	void StartMatchFlow();
 	void PrepareNextRound();
 
+	void StartGameTimer();
 	void OnGameTick();
 	void HandleGameTimeExpired();
 
@@ -75,18 +81,31 @@ protected:
 	void TriggerDroneSpawnOnBallPickup(APDPlayerState* HolderPlayerState);
 	void TriggerDroneExplosionOnGoal();
 
+	void TeleportAllPlayersToRoundStart();
+	void TeleportPlayerToRoundStart(AController* Controller);
+
+	void SetAllPlayersMovementLocked(bool bLocked);
+	void SetPlayerMovementLocked(AController* Controller, bool bLocked);
+
+	void SetAllPlayersShopEnabled(bool bEnabled);
+	void SetPlayerShopEnabled(AController* Controller, bool bEnabled);
+
 	UFUNCTION()
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 
 protected:
 	FTimerHandle GameTimerHandle;
 	FTimerHandle NextRoundTimerHandle;
+	FTimerHandle InitialPreRoundTimerHandle;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 TargetScoreToWin;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 TotalGameDurationSec;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
+	float InitialPreRoundDurationSec;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	float NextRoundDelaySec;
@@ -123,4 +142,7 @@ protected:
 
 	bool bDroneSpawnTriggeredThisRound = false;
 	bool bGoalProcessingThisRound = false;
+
+	bool bInitialPreRoundFinished = false;
+	bool bGameTimerStarted = false;
 };
