@@ -72,6 +72,23 @@ void APDGameModeBase::BeginPlay()
     StartMatchFlow();
 }
 
+void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+    Super::InitGame(MapName, Options, ErrorMessage);
+
+    const FString ExpectedPlayersOption = UGameplayStatics::ParseOption(Options, TEXT("ExpectedPlayers"));
+    ExpectedTravelPlayerCount = FCString::Atoi(*ExpectedPlayersOption);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] InitGame. Map=%s ExpectedTravelPlayerCount=%d Options=%s"),
+        *MapName,
+        ExpectedTravelPlayerCount,
+        *Options
+    );
+}
+
 void APDGameModeBase::PlayerDied(AController* Controller)
 {
     if (IsValid(Controller) == false)
@@ -414,21 +431,40 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    if (APDPlayerState* PS = NewPlayer->GetPlayerState<APDPlayerState>())
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] PostLogin called. Controller=%s PlayerState=%s"),
+        *GetNameSafe(NewPlayer),
+        *GetNameSafe(NewPlayer->PlayerState)
+    );
+
+    BindPlayerDelegates(NewPlayer);
+    RegisterTravelReadyPlayer(NewPlayer);
+    TryStartInitialPreRound();
+}
+
+void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+    if (IsValid(NewPlayer) == false)
     {
-        if (UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase())
-        {
-            AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
-        }
-        else
-        {
-            UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. AttributeSet is invalid."));
-        }
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleStartingNewPlayer failed. NewPlayer is invalid."));
+        return;
     }
-    else
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. PlayerState is invalid."));
-    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] HandleStartingNewPlayer called. Controller=%s PlayerState=%s"),
+        *GetNameSafe(NewPlayer),
+        *GetNameSafe(NewPlayer->PlayerState)
+    );
+
+    BindPlayerDelegates(NewPlayer);
+    RegisterTravelReadyPlayer(NewPlayer);
+    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
@@ -478,6 +514,9 @@ void APDGameModeBase::StartMatchFlow()
 
     GS->RemainingTimeSec = TotalGameDurationSec;
 
+    TravelReadyPlayerStates.Empty();
+
+    bInitialPreRoundStarted = false;
     bInitialPreRoundFinished = false;
     bGameTimerStarted = false;
 
@@ -1133,4 +1172,102 @@ void APDGameModeBase::SetPlayerShopEnabled(AController* Controller, bool bEnable
     }
 
     // TODO : Shop Block & Can Open? (By bEnabled)
+}
+
+void APDGameModeBase::BindPlayerDelegates(APlayerController* NewPlayer)
+{
+    if (IsValid(NewPlayer) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. NewPlayer is invalid."));
+        return;
+    }
+
+    APDPlayerState* PS = NewPlayer->GetPlayerState<APDPlayerState>();
+    if (IsValid(PS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. PlayerState is invalid."));
+        return;
+    }
+
+    UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase();
+    if (IsValid(AS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. AttributeSet is invalid."));
+        return;
+    }
+
+    AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] BindPlayerDelegates completed. PlayerState=%s"),
+        *GetNameSafe(PS)
+    );
+}
+
+void APDGameModeBase::RegisterTravelReadyPlayer(APlayerController* NewPlayer)
+{
+    if (IsValid(NewPlayer) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] RegisterTravelReadyPlayer failed. NewPlayer is invalid."));
+        return;
+    }
+
+    APlayerState* PS = NewPlayer->PlayerState;
+    if (IsValid(PS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] RegisterTravelReadyPlayer failed. PlayerState is invalid."));
+        return;
+    }
+
+    TravelReadyPlayerStates.Add(PS);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] RegisterTravelReadyPlayer. ReadyCount=%d ExpectedTravelPlayerCount=%d PlayerState=%s"),
+        TravelReadyPlayerStates.Num(),
+        ExpectedTravelPlayerCount,
+        *GetNameSafe(PS)
+    );
+}
+
+void APDGameModeBase::TryStartInitialPreRound()
+{
+    if (bInitialPreRoundStarted == true)
+    {
+        return;
+    }
+
+    if (bInitialPreRoundFinished == true)
+    {
+        return;
+    }
+
+    if (RoundPhase != ERoundPhase::Waiting)
+    {
+        return;
+    }
+
+    if (ExpectedTravelPlayerCount <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TryStartInitialPreRound skipped. ExpectedTravelPlayerCount must be greater than 0."));
+        return;
+    }
+
+    if (TravelReadyPlayerStates.Num() < ExpectedTravelPlayerCount)
+    {
+        UE_LOG(
+            LogProjectD,
+            Log,
+            TEXT("[GameMode] TryStartInitialPreRound waiting. ReadyCount=%d ExpectedTravelPlayerCount=%d"),
+            TravelReadyPlayerStates.Num(),
+            ExpectedTravelPlayerCount
+        );
+        return;
+    }
+
+    bInitialPreRoundStarted = true;
+    StartInitialPreRound();
 }

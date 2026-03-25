@@ -29,7 +29,10 @@ public:
 	APDGameModeBase();
 	
 	virtual void BeginPlay() override;
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	
 	void PlayerDied(AController* Controller);
 
@@ -90,6 +93,10 @@ protected:
 	void SetAllPlayersShopEnabled(bool bEnabled);
 	void SetPlayerShopEnabled(AController* Controller, bool bEnabled);
 
+	void BindPlayerDelegates(APlayerController* NewPlayer);
+	void RegisterTravelReadyPlayer(APlayerController* NewPlayer);
+	void TryStartInitialPreRound();
+
 	UFUNCTION()
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 
@@ -140,9 +147,15 @@ protected:
 	UPROPERTY()
 	TObjectPtr<ADroneSpawner> CachedDroneSpawner;
 
+	UPROPERTY(Transient)
+	TSet<TWeakObjectPtr<APlayerState>> TravelReadyPlayerStates;
+
+	int32 ExpectedTravelPlayerCount = 0;
+
 	bool bDroneSpawnTriggeredThisRound = false;
 	bool bGoalProcessingThisRound = false;
 
+	bool bInitialPreRoundStarted = false;
 	bool bInitialPreRoundFinished = false;
 	bool bGameTimerStarted = false;
 };
