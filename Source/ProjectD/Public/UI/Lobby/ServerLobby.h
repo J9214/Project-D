@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "BlueprintDataDefinitions.h"
 #include "GameMode/PDLobbyGameMode.h"
 #include "TimerManager.h"
 #include "ServerLobby.generated.h"
 
+class APDPlayerState;
 class UTextBlock;
 class UWidget;
 
@@ -58,7 +60,8 @@ private:
 		const TCHAR* TeamLabel,
 		const FTeamInfo* TeamInfo,
 		bool bIsMyTeam);
-	void UpdateLocalTeamPanels(const FTeamInfo* TeamInfo);
+	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
+	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 
 	void RefreshMatchingTimeText();
 	void StartMatchingTimeRefresh();

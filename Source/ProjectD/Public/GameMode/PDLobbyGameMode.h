@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/OnlineReplStructs.h"
-#include "BlueprintDataDefinitions.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interface/PDTeamInterface.h"
 #include "PDLobbyGameMode.generated.h"
@@ -32,24 +31,6 @@ struct FTeamInfo
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 MaxPlayerCount = 0;
-
-	UPROPERTY(BlueprintReadOnly)
-	FBPUniqueNetId TeamMemberId_0;
-
-	UPROPERTY(BlueprintReadOnly)
-	FString TeamMemberDisplayName_0;
-
-	UPROPERTY(BlueprintReadOnly)
-	bool bHasTeamMember_0 = false;
-
-	UPROPERTY(BlueprintReadOnly)
-	FBPUniqueNetId TeamMemberId_1;
-
-	UPROPERTY(BlueprintReadOnly)
-	FString TeamMemberDisplayName_1;
-
-	UPROPERTY(BlueprintReadOnly)
-	bool bHasTeamMember_1 = false;
 };
 
 UCLASS()
