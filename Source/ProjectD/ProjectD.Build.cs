@@ -71,9 +71,8 @@ public class ProjectD : ModuleRules
             "CableComponent",
 
             //UI
-            "CommonUI",
+            "CommonUI"
 
-            "AnimationDataController"
         });
 
 

@@ -1,4 +1,4 @@
-#include "Object/BallCore.h"
+﻿#include "Object/BallCore.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
 #include "Components/StaticMeshComponent.h"
@@ -26,6 +26,7 @@ void ABallCore::OnInteract_Implementation(AActor* Interactor)
 	if (APDPawnBase* PDPawn = Cast<APDPawnBase>(Interactor))
 	{
 		PDPawn->Server_PickUpObject(this);
+		PDPawn->GetTeamID();
 	}
 }
 

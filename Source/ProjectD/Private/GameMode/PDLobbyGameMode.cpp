@@ -45,10 +45,10 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
 
     bool bCanFit = false;
 
-    UE_LOG(LogTemp, Warning, TEXT("PreLogin"));
+    UE_LOG(LogTemp, Warning, TEXT("PreLogin UniqueId Check: %s"), *UniqueId.ToString());
     for (int32 i = 0; i < TEAM_COUNT; i++)
     {
-        if (TeamInfos[i].LeaderSteamId == LeaderSteamID)
+        if (TeamInfos[i].PendingCount + TeamInfos[i].PlayerCount > MaxTeamSize ||  TeamInfos[i].LeaderSteamId == LeaderSteamID)
         {
             LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
             Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
@@ -95,6 +95,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     const FString NetIdKey = PlayerState->GetUniqueId().ToString(); 
     FString* FoundLeaderSteamID = LoginInfo.Find(NetIdKey);
 
+    UE_LOG(LogTemp, Warning, TEXT("PostLogin LoginInfo Check: %s"), *NetIdKey);
     if (!FoundLeaderSteamID)
     {
         UE_LOG(LogTemp, Warning, TEXT("LoginInfo missing: %s"), *NetIdKey);
