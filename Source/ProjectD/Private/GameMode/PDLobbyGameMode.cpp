@@ -299,12 +299,6 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
     {
         FTeamInfo Snapshot = TeamInfos[TeamIndex];
         Snapshot.MaxPlayerCount = MaxTeamSize;
-        Snapshot.bHasTeamMember_0 = false;
-        Snapshot.bHasTeamMember_1 = false;
-        Snapshot.TeamMemberDisplayName_0.Reset();
-        Snapshot.TeamMemberDisplayName_1.Reset();
-        Snapshot.TeamMemberId_0 = FBPUniqueNetId();
-        Snapshot.TeamMemberId_1 = FBPUniqueNetId();
         TeamInfoSnapshot.Add(MoveTemp(Snapshot));
     }
 
@@ -319,25 +313,15 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
                 continue;
             }
 
-            const int32 TeamIndex = static_cast<int32>(PDPlayerState->GetTeamID());
-            if (!TeamInfoSnapshot.IsValidIndex(TeamIndex))
-            {
-                continue;
-            }
-
-            FTeamInfo& Snapshot = TeamInfoSnapshot[TeamIndex];
-            if (!Snapshot.bHasTeamMember_0)
-            {
-                Snapshot.bHasTeamMember_0 = true;
-                Snapshot.TeamMemberDisplayName_0 = PDPlayerState->GetDisplayName();
-                Snapshot.TeamMemberId_0.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
-            }
-            else if (!Snapshot.bHasTeamMember_1)
-            {
-                Snapshot.bHasTeamMember_1 = true;
-                Snapshot.TeamMemberDisplayName_1 = PDPlayerState->GetDisplayName();
-                Snapshot.TeamMemberId_1.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
-            }
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[LobbyTeamPlayerState] Team=%d PlayerName=[%s] DisplayName=[%s] ResolvedDisplayName=[%s] NetId=[%s]"),
+                static_cast<int32>(PDPlayerState->GetTeamID()),
+                *PDPlayerState->GetPlayerName(),
+                *PDPlayerState->GetDisplayName(),
+                *PDPlayerState->GetResolvedDisplayName(),
+                *PDPlayerState->GetUniqueId().ToString());
         }
     }
 
@@ -347,15 +331,13 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
         UE_LOG(
             LogTemp,
             Warning,
-            TEXT("[LobbyTeamSnapshot] Team=%d Count=%d Slot0(Occupied=%d Name=[%s] IdValid=%d) Slot1(Occupied=%d Name=[%s] IdValid=%d)"),
+            TEXT("[LobbyTeamSnapshot] Team=%d Count=%d Pending=%d Max=%d Leader=[%s] MatchStart=%.2f"),
             TeamIndex,
             Snapshot.PlayerCount,
-            Snapshot.bHasTeamMember_0 ? 1 : 0,
-            *Snapshot.TeamMemberDisplayName_0,
-            Snapshot.TeamMemberId_0.IsValid() ? 1 : 0,
-            Snapshot.bHasTeamMember_1 ? 1 : 0,
-            *Snapshot.TeamMemberDisplayName_1,
-            Snapshot.TeamMemberId_1.IsValid() ? 1 : 0);
+            Snapshot.PendingCount,
+            Snapshot.MaxPlayerCount,
+            *Snapshot.LeaderSteamId,
+            LobbyMatchStartServerTimeSec);
     }
 
     for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
