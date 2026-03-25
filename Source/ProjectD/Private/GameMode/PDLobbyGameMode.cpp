@@ -341,6 +341,23 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
         }
     }
 
+    for (int32 TeamIndex = 0; TeamIndex < TeamInfoSnapshot.Num(); ++TeamIndex)
+    {
+        const FTeamInfo& Snapshot = TeamInfoSnapshot[TeamIndex];
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyTeamSnapshot] Team=%d Count=%d Slot0(Occupied=%d Name=[%s] IdValid=%d) Slot1(Occupied=%d Name=[%s] IdValid=%d)"),
+            TeamIndex,
+            Snapshot.PlayerCount,
+            Snapshot.bHasTeamMember_0 ? 1 : 0,
+            *Snapshot.TeamMemberDisplayName_0,
+            Snapshot.TeamMemberId_0.IsValid() ? 1 : 0,
+            Snapshot.bHasTeamMember_1 ? 1 : 0,
+            *Snapshot.TeamMemberDisplayName_1,
+            Snapshot.TeamMemberId_1.IsValid() ? 1 : 0);
+    }
+
     for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
     {
         APDServerLobbyPlayerController* ServerLobbyPC = Cast<APDServerLobbyPlayerController>(It->Get());
