@@ -8,7 +8,9 @@
 #include "OnlineSessionSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "PlayerState/PDPlayerState.h"
+#include "Controller/PDServerLobbyPlayerController.h"
 #include "Engine/NetDriver.h"
+#include "GameFramework/GameStateBase.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include <Controller/PDLobbyPlayerController.h>
@@ -18,9 +20,10 @@ APDLobbyGameMode::APDLobbyGameMode()
     for (int32 i = 0; i < TEAM_COUNT; i++)
     {
         TeamInfos[i].TeamID = static_cast<ETeamType>(i);
-		TeamInfos[i].LeaderSteamId = TEXT("");
+        TeamInfos[i].LeaderSteamId = TEXT("");
 		TeamInfos[i].PlayerCount = 0;
 		TeamInfos[i].PendingCount = 0;
+        TeamInfos[i].MaxPlayerCount = MaxTeamSize;
     }
 
     PendingIncomingPlayers = 0;
@@ -30,6 +33,7 @@ APDLobbyGameMode::APDLobbyGameMode()
 void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
+    LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
     if (IsRunningDedicatedServer() && !bIsSessionCreating)
     {
@@ -133,6 +137,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         PC->Client_RequestCharacterCustomInfo();
         PC->Client_RequestDisplayName();
     }
+    BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
 	TryGameStart(false);
 }
@@ -147,6 +152,7 @@ void APDLobbyGameMode::Logout(AController* Exiting)
 
     Super::Logout(Exiting);
 
+    BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
 }
 
@@ -190,6 +196,7 @@ void APDLobbyGameMode::OnCreateSessionComplete(FName SessionName, bool bWasSucce
 {
     if (bWasSuccessful)
     {
+        LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
         UE_LOG(LogTemp, Log, TEXT("Dedi Server: Session Created and Broadcasting to Steam!"));
     }
 }
@@ -276,4 +283,73 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
     //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
     const FString TravelURL = TEXT("/Game/LakeTown/Maps/Demonstration");
     GetWorld()->ServerTravel(TravelURL);
+}
+
+void APDLobbyGameMode::BroadcastLobbyTeamInfos()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    TArray<FTeamInfo> TeamInfoSnapshot;
+    TeamInfoSnapshot.Reserve(TEAM_COUNT);
+
+    for (int32 TeamIndex = 0; TeamIndex < TEAM_COUNT; ++TeamIndex)
+    {
+        FTeamInfo Snapshot = TeamInfos[TeamIndex];
+        Snapshot.MaxPlayerCount = MaxTeamSize;
+        Snapshot.bHasTeamMember_0 = false;
+        Snapshot.bHasTeamMember_1 = false;
+        Snapshot.TeamMemberDisplayName_0.Reset();
+        Snapshot.TeamMemberDisplayName_1.Reset();
+        Snapshot.TeamMemberId_0 = FBPUniqueNetId();
+        Snapshot.TeamMemberId_1 = FBPUniqueNetId();
+        TeamInfoSnapshot.Add(MoveTemp(Snapshot));
+    }
+
+    AGameStateBase* CurrentGameState = GameState;
+    if (CurrentGameState)
+    {
+        for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+        {
+            APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+            if (!PDPlayerState)
+            {
+                continue;
+            }
+
+            const int32 TeamIndex = static_cast<int32>(PDPlayerState->GetTeamID());
+            if (!TeamInfoSnapshot.IsValidIndex(TeamIndex))
+            {
+                continue;
+            }
+
+            FTeamInfo& Snapshot = TeamInfoSnapshot[TeamIndex];
+            if (!Snapshot.bHasTeamMember_0)
+            {
+                Snapshot.bHasTeamMember_0 = true;
+                Snapshot.TeamMemberDisplayName_0 = PDPlayerState->GetDisplayName();
+                Snapshot.TeamMemberId_0.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
+            }
+            else if (!Snapshot.bHasTeamMember_1)
+            {
+                Snapshot.bHasTeamMember_1 = true;
+                Snapshot.TeamMemberDisplayName_1 = PDPlayerState->GetDisplayName();
+                Snapshot.TeamMemberId_1.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
+            }
+        }
+    }
+
+    for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+    {
+        APDServerLobbyPlayerController* ServerLobbyPC = Cast<APDServerLobbyPlayerController>(It->Get());
+        if (!ServerLobbyPC)
+        {
+            continue;
+        }
+
+        ServerLobbyPC->Client_UpdateLobbyTeamInfos(TeamInfoSnapshot, LobbyMatchStartServerTimeSec);
+    }
 }

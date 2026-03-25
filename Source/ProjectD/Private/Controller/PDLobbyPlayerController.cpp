@@ -6,6 +6,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "PlayerState/PDPlayerState.h"
+#include "GameMode/PDLobbyGameMode.h"
 #include "GameInstance/PDGameInstance.h"
 
 void APDLobbyPlayerController::BeginPlay()
@@ -78,6 +79,11 @@ void APDLobbyPlayerController::Server_SubmitDisplayName_Implementation(const FSt
     if (auto* PS = GetPlayerState<APDPlayerState>())
     {
         PS->SetDisplayName(Name);
+
+        if (APDLobbyGameMode* LobbyGameMode = GetWorld()->GetAuthGameMode<APDLobbyGameMode>())
+        {
+            LobbyGameMode->BroadcastLobbyTeamInfos();
+        }
     }
 }
 
