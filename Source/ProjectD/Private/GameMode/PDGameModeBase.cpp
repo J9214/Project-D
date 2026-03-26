@@ -1229,6 +1229,18 @@ void APDGameModeBase::TryStartInitialPreRound()
         return;
     }
 
+    if (bMatchFlowInitialized == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. MatchFlow is not initialized."));
+        return;
+    }
+
+    if (bWorldReady == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. World is not ready."));
+        return;
+    }
+
     if (RoundPhase != ERoundPhase::Waiting)
     {
         return;
@@ -1249,6 +1261,12 @@ void APDGameModeBase::TryStartInitialPreRound()
             TravelReadyPlayerStates.Num(),
             ExpectedTravelPlayerCount
         );
+        return;
+    }
+
+    if (IsValid(CachedBallCore) == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. CachedBallCore is invalid."));
         return;
     }
 
