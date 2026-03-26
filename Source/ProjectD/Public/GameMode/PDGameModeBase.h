@@ -56,7 +56,6 @@ protected:
 	void StartFirstRound();
 
 	void StartRound();
-	void StartMatchFlow();
 	void PrepareNextRound();
 
 	void StartGameTimer();
@@ -158,4 +157,7 @@ protected:
 	bool bInitialPreRoundStarted = false;
 	bool bInitialPreRoundFinished = false;
 	bool bGameTimerStarted = false;
+
+	bool bMatchFlowInitialized = false;
+	bool bWorldReady = false;
 };

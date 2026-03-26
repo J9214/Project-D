@@ -69,7 +69,12 @@ void APDGameModeBase::BeginPlay()
 
     CacheRoundActors();
     CacheDroneSpawner();
-    StartMatchFlow();
+
+    bWorldReady = true;
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
+
+    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -78,6 +83,16 @@ void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, F
 
     const FString ExpectedPlayersOption = UGameplayStatics::ParseOption(Options, TEXT("ExpectedPlayers"));
     ExpectedTravelPlayerCount = FCString::Atoi(*ExpectedPlayersOption);
+
+    CurrentRoundIndex = 1;
+    RoundPhase = ERoundPhase::Waiting;
+
+    bInitialPreRoundStarted = false;
+    bInitialPreRoundFinished = false;
+    bGameTimerStarted = false;
+
+    bMatchFlowInitialized = true;
+    bWorldReady = false;
 
     UE_LOG(
         LogProjectD,
@@ -498,39 +513,6 @@ void APDGameModeBase::StartRound()
     ResetBallForRound();
 
     RoundPhase = ERoundPhase::InRound;
-}
-
-void APDGameModeBase::StartMatchFlow()
-{
-    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (IsValid(GS) == false)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartMatchFlow failed. GameState is invalid."));
-        return;
-    }
-
-    CurrentRoundIndex = 1;
-    RoundPhase = ERoundPhase::Waiting;
-
-    GS->RemainingTimeSec = TotalGameDurationSec;
-
-    TravelReadyPlayerStates.Empty();
-
-    bInitialPreRoundStarted = false;
-    bInitialPreRoundFinished = false;
-    bGameTimerStarted = false;
-
-    GetWorldTimerManager().ClearTimer(GameTimerHandle);
-    GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
-    GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Match flow initialized. Waiting for players. TotalGameDurationSec=%d TargetScoreToWin=%d"),
-        TotalGameDurationSec,
-        TargetScoreToWin
-    );
 }
 
 void APDGameModeBase::PrepareNextRound()
@@ -1247,6 +1229,18 @@ void APDGameModeBase::TryStartInitialPreRound()
         return;
     }
 
+    if (bMatchFlowInitialized == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. MatchFlow is not initialized."));
+        return;
+    }
+
+    if (bWorldReady == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. World is not ready."));
+        return;
+    }
+
     if (RoundPhase != ERoundPhase::Waiting)
     {
         return;
@@ -1267,6 +1261,12 @@ void APDGameModeBase::TryStartInitialPreRound()
             TravelReadyPlayerStates.Num(),
             ExpectedTravelPlayerCount
         );
+        return;
+    }
+
+    if (IsValid(CachedBallCore) == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. CachedBallCore is invalid."));
         return;
     }
 
