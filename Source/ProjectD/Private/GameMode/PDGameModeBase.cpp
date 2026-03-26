@@ -360,8 +360,6 @@ void APDGameModeBase::StartInitialPreRound()
     ResetPlacedGoalPostsForRound();
     ResetBallForRound();
 
-    TeleportAllPlayersToRoundStart();
-
     SetAllPlayersMovementLocked(true);
     SetAllPlayersShopEnabled(true);
 
@@ -396,6 +394,8 @@ void APDGameModeBase::FinishInitialPreRound()
     SetAllPlayersMovementLocked(false);
 
     bInitialPreRoundFinished = true;
+
+    TeleportAllPlayersToRoundStart();
 
     StartGameTimer();
     StartFirstRound();
