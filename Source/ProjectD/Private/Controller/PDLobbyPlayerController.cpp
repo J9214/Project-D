@@ -78,7 +78,16 @@ void APDLobbyPlayerController::Server_SubmitDisplayName_Implementation(const FSt
 {
     if (auto* PS = GetPlayerState<APDPlayerState>())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[LobbyDisplayName] Server_SubmitDisplayName Name=[%s] NetId=[%s]"), *Name, *PS->GetUniqueId().ToString());
+        const FString ResolvedDisplayName = Name.IsEmpty() ? PS->GetPlayerName() : Name;
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyDisplayName] Server_SubmitDisplayName Requested=[%s] Resolved=[%s] PlayerName=[%s] NetId=[%s]"),
+            *Name,
+            *ResolvedDisplayName,
+            *PS->GetPlayerName(),
+            *PS->GetUniqueId().ToString());
         PS->SetDisplayName(Name);
 
         if (APDLobbyGameMode* LobbyGameMode = GetWorld()->GetAuthGameMode<APDLobbyGameMode>())
@@ -98,7 +107,15 @@ void APDLobbyPlayerController::Client_RequestDisplayName_Implementation()
     if (auto* GI = GetGameInstance<UPDGameInstance>())
     {
         const FString LocalDisplayName = GI->GetPlayerLocalDisplayName();
-        UE_LOG(LogTemp, Warning, TEXT("[LobbyDisplayName] Client_RequestDisplayName LocalName=[%s]"), *LocalDisplayName);
+        const APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyDisplayName] Client_RequestDisplayName LocalName=[%s] PlayerStateName=[%s] NetId=[%s]"),
+            *LocalDisplayName,
+            PS ? *PS->GetPlayerName() : TEXT("None"),
+            PS ? *PS->GetUniqueId().ToString() : TEXT("None"));
         Server_SubmitDisplayName(LocalDisplayName);
     }
 }

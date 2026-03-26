@@ -4,6 +4,8 @@
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
 #include "PDCarriableObjectBase.generated.h"
 
+class UPrimitiveComponent;
+
 UCLASS(Abstract)
 class PROJECTD_API APDCarriableObjectBase : public APDDirectlyInteractGimmickBase
 {
@@ -21,9 +23,13 @@ public:
 	virtual bool IsCanInteract(AActor* Interactor) override;
 
 	void SetPlacedInGoal(bool bInGoal);
+	
 protected:
+	virtual UPrimitiveComponent* GetPhysicsComponent() const;
+	
 	UFUNCTION()
 	void OnRep_CarrierPawn();
+	
 	virtual void HandleCarrierChanged() PURE_VIRTUAL(APDCarriableObjectBase::HandleCarrierChanged, );
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPlacedInGoal)
@@ -31,6 +37,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_IsPlacedInGoal();
+	
 public:
 	UPROPERTY(ReplicatedUsing = OnRep_CarrierPawn, BlueprintReadOnly, VisibleInstanceOnly, Category = "Gimmick|Carrier")
 	TWeakObjectPtr<APawn> CarrierPawn = nullptr;

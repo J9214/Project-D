@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "BlueprintDataDefinitions.h"
 #include "GameInstance/PDCharacterCustomInfo.h"
 #include "Interface/PDTeamInterface.h"
 #include "PDPlayerState.generated.h"
@@ -42,18 +43,24 @@ public:
 	FPDCharacterCustomInfo CharacterCustomInfo;
 
 	UFUNCTION(BlueprintCallable)
-	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
+	void SetDisplayName(const FString& NewDisplayName);
+	const FString& GetDisplayName() const { return DisplayName; }
 
-	UFUNCTION(BlueprintPure, Category = "Team")
-	FORCEINLINE FString GetDisplayName() const { return DisplayName; }
+	UFUNCTION(BlueprintPure)
+	FString GetResolvedDisplayName() const;
+
+	UFUNCTION(BlueprintPure)
+	FBPUniqueNetId GetAvatarUniqueNetId() const;
 
 	UFUNCTION()
 	void OnRep_CharacterCustomInfo();
 
+	UFUNCTION()
+	void OnRep_DisplayName();
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
-
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
@@ -61,9 +68,6 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayName, BlueprintReadOnly, Category = "Team")
 	FString DisplayName;
-
-	UFUNCTION()
-	void OnRep_DisplayName();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<UPDAbilitySystemComponent> AbilitySystemComponent;
