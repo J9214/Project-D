@@ -1140,6 +1140,7 @@ void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLoc
     }
 
     // TODO : Movement Block & UI Open? (By bLocked)
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked Success."));
 }
 
 void APDGameModeBase::SetAllPlayersShopEnabled(bool bEnabled)
@@ -1172,6 +1173,7 @@ void APDGameModeBase::SetPlayerShopEnabled(AController* Controller, bool bEnable
     }
 
     // TODO : Shop Block & Can Open? (By bEnabled)
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerShopEnabled Success."));
 }
 
 void APDGameModeBase::BindPlayerDelegates(APlayerController* NewPlayer)
