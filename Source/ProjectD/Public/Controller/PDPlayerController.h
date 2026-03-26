@@ -41,7 +41,9 @@ public:
 
 	void UpdateCurrentAmmo(int32 CurrentAmmo);
 
-	void InitPlayerHPBar(const FString& DisplayName, UPDAttributeSetBase* Set);
+	UFUNCTION(Client, Reliable)
+	void Client_OnGameStarted();
+
 protected:
 
 	virtual void OnRep_PlayerState() override;
@@ -51,6 +53,12 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UIngameHUD> PlayerHUDWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> LoadingHUDClass;
+
+	UPROPERTY()
+	UUserWidget* LoadingHUD;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> ResultWidgetClass;

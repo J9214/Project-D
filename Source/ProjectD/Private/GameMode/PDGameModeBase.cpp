@@ -365,6 +365,14 @@ void APDGameModeBase::StartInitialPreRound()
 
     RoundPhase = ERoundPhase::InitPreRound;
 
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+        {
+            PC->Client_OnGameStarted();
+        }
+    }
+
     GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         InitialPreRoundTimerHandle,
@@ -380,6 +388,7 @@ void APDGameModeBase::StartInitialPreRound()
         TEXT("[GameMode] InitialPreRound started. Duration=%.2f"),
         InitialPreRoundDurationSec
     );
+
 }
 
 void APDGameModeBase::FinishInitialPreRound()

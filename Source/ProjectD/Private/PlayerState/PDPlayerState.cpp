@@ -151,6 +151,7 @@ void APDPlayerState::OnRep_DisplayName()
 		*DisplayName,
 		*GetPlayerName(),
 		*GetUniqueId().ToString());
+
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -172,16 +173,5 @@ void APDPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPlayerState->TeamID = this->TeamID;
 		NewPlayerState->DisplayName = this->DisplayName;
 		NewPlayerState->CharacterCustomInfo = this->CharacterCustomInfo;
-	}
-}
-
-void APDPlayerState::OnRep_DisplayName()
-{
-	if (APDPlayerController* PC = Cast<APDPlayerController>(GetPlayerController()))
-	{
-		if (PC->IsLocalController())
-		{
-			PC->InitPlayerHPBar(DisplayName, GetPDAttributeSetBase());
-		}
 	}
 }

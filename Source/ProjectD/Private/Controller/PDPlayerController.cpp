@@ -22,22 +22,25 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		if (PlayerHUDClass) {
+		//if (LoadingHUDClass && !LoadingHUD)
+		//{
+		//	LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
+		//	if (LoadingHUD)
+		//	{
+		//		LoadingHUD->AddToViewport(100);
+		//	}
+		//}
+
+		if (PlayerHUDClass && !PlayerHUDWidget)
+		{
 			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+
 			if (PlayerHUDWidget)
 			{
 				PlayerHUDWidget->AddToViewport();
 			}
 		}
 
-		//if (ResultWidgetClass)
-		//{
-		//	ResultWidget = CreateWidget<UUserWidget>(this, ResultWidgetClass);
-		//	if (ResultWidget)
-		//	{
-		//		ResultWidget->AddToViewport(10);
-		//	}
-		//}
 	}
 }
 
@@ -280,24 +283,64 @@ void APDPlayerController::OnRep_PlayerState()
 		return;
 	}
 
-	APDPlayerState* PS = GetPlayerState<APDPlayerState>();
-	if (PS)
-	{
-		InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
-	}
+	//APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	//if (PS)
+	//{
+	//	InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
+	//}
 
 }
 
-void APDPlayerController::InitPlayerHPBar(const FString& DisplayName, UPDAttributeSetBase* Set)
+void APDPlayerController::Client_OnGameStarted_Implementation()
 {
-	if (!PlayerHUDWidget)
+	UE_LOG(LogProjectD, Log, TEXT("Client_OnGameStarted"));
+	if (PlayerHUDClass && !PlayerHUDWidget)
 	{
+		PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogProjectD, Log, TEXT("Client_OnGameStarted World Null"));
 		return;
 	}
 
-	if (PlayerHUDWidget)
+	APDGameStateBase* GS = World->GetGameState<APDGameStateBase>();
+	if (GS)
 	{
-		PlayerHUDWidget->BindSlot(DisplayName,EHPBarSlot::Player, Set);
+		for (APlayerState* PS : GS->PlayerArray)
+		{
+			APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
+			if (!PDPS)
+			{
+				continue;
+			}
+
+			bool bIsMe = (PDPS == PlayerState);
+			bool bIsMyTeam = (PDPS->GetTeamID() == Cast<APDPlayerState>(PlayerState)->GetTeamID());
+
+			if (APawn* TargetPawn = PDPS->GetPawn())
+			{
+
+			}
+
+			if (bIsMyTeam)
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase());
+			}
+		}
 	}
+
+	if (LoadingHUD)
+	{
+		LoadingHUD->RemoveFromParent();
+		LoadingHUD = nullptr;
+	}
+ 
+	//if (PlayerHUDWidget)
+	//{
+	//	PlayerHUDWidget->AddToViewport();
+	//}
 }
 
