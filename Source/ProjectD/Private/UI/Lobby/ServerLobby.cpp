@@ -75,10 +75,43 @@ void UServerLobby::CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<co
 
 	const APDPlayerState* LocalPlayerState = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<APDPlayerState>() : nullptr;
 
+	if (LocalPlayerState)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyClientLocalPlayer] Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
+			static_cast<int32>(LocalPlayerState->GetTeamID()),
+			*LocalPlayerState->GetPlayerName(),
+			*LocalPlayerState->GetDisplayName(),
+			*LocalPlayerState->GetResolvedDisplayName(),
+			*LocalPlayerState->GetUniqueId().ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyClientLocalPlayer] LocalPlayerState is null"));
+	}
+
 	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
 	{
 		const APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
-		if (!PDPlayerState || PDPlayerState->GetTeamID() != LocalTeamID)
+		if (!PDPlayerState)
+		{
+			continue;
+		}
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyClientPlayerState] Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s] IsLocal=%d"),
+			static_cast<int32>(PDPlayerState->GetTeamID()),
+			*PDPlayerState->GetPlayerName(),
+			*PDPlayerState->GetDisplayName(),
+			*PDPlayerState->GetResolvedDisplayName(),
+			*PDPlayerState->GetUniqueId().ToString(),
+			PDPlayerState == LocalPlayerState ? 1 : 0);
+
+		if (PDPlayerState->GetTeamID() != LocalTeamID)
 		{
 			continue;
 		}
@@ -103,6 +136,13 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 {
 	TArray<const APDPlayerState*> LocalTeamMembers;
 	CollectLocalTeamPlayerStates(LocalTeamID, LocalTeamMembers);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyTeamPanel] Refresh Team=%d MemberCount=%d"),
+		static_cast<int32>(LocalTeamID),
+		LocalTeamMembers.Num());
 
 	const APDPlayerState* Slot0PlayerState = LocalTeamMembers.IsValidIndex(0) ? LocalTeamMembers[0] : nullptr;
 	const APDPlayerState* Slot1PlayerState = LocalTeamMembers.IsValidIndex(1) ? LocalTeamMembers[1] : nullptr;
@@ -136,10 +176,11 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[LobbyTeamPanel] Slot=0 Team=%d DisplayName=[%s] PlayerName=[%s] NetId=[%s] AvatarIdValid=%d"),
+			TEXT("[LobbyTeamPanel] Slot=0 Team=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d"),
 			static_cast<int32>(LocalTeamID),
 			*Slot0PlayerState->GetDisplayName(),
 			*Slot0PlayerState->GetPlayerName(),
+			*Slot0PlayerState->GetResolvedDisplayName(),
 			*Slot0PlayerState->GetUniqueId().ToString(),
 			AvatarUniqueNetId.IsValid() ? 1 : 0);
 		BP_UpdateTeamMemberAvatar(0, AvatarUniqueNetId);
@@ -155,10 +196,11 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 		UE_LOG(
 			LogTemp,
 			Warning,
-			TEXT("[LobbyTeamPanel] Slot=1 Team=%d DisplayName=[%s] PlayerName=[%s] NetId=[%s] AvatarIdValid=%d"),
+			TEXT("[LobbyTeamPanel] Slot=1 Team=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d"),
 			static_cast<int32>(LocalTeamID),
 			*Slot1PlayerState->GetDisplayName(),
 			*Slot1PlayerState->GetPlayerName(),
+			*Slot1PlayerState->GetResolvedDisplayName(),
 			*Slot1PlayerState->GetUniqueId().ToString(),
 			AvatarUniqueNetId.IsValid() ? 1 : 0);
 		BP_UpdateTeamMemberAvatar(1, AvatarUniqueNetId);

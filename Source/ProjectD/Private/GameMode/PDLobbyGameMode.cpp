@@ -124,7 +124,17 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 			TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
         }
 		PlayerState->SetTeamID(TeamInfos[SelectedTeam].TeamID);
+        PlayerState->SetDisplayName(PlayerState->GetPlayerName());
 		LoginInfo.Remove(NetIdKey);
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyDisplayName] PostLogin Sync Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
+            SelectedTeam,
+            *PlayerState->GetPlayerName(),
+            *PlayerState->GetDisplayName(),
+            *PlayerState->GetResolvedDisplayName(),
+            *PlayerState->GetUniqueId().ToString());
         UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
     }
     else
@@ -135,7 +145,6 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     if (auto* PC = Cast<APDLobbyPlayerController>(NewPlayer))
     {
         PC->Client_RequestCharacterCustomInfo();
-        PC->Client_RequestDisplayName();
     }
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
