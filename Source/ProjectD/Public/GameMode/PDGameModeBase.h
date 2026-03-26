@@ -157,4 +157,7 @@ protected:
 	bool bInitialPreRoundStarted = false;
 	bool bInitialPreRoundFinished = false;
 	bool bGameTimerStarted = false;
+
+	bool bMatchFlowInitialized = false;
+	bool bWorldReady = false;
 };

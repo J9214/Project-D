@@ -69,6 +69,12 @@ void APDGameModeBase::BeginPlay()
 
     CacheRoundActors();
     CacheDroneSpawner();
+
+    bWorldReady = true;
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
+
+    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -77,6 +83,16 @@ void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, F
 
     const FString ExpectedPlayersOption = UGameplayStatics::ParseOption(Options, TEXT("ExpectedPlayers"));
     ExpectedTravelPlayerCount = FCString::Atoi(*ExpectedPlayersOption);
+
+    CurrentRoundIndex = 1;
+    RoundPhase = ERoundPhase::Waiting;
+
+    bInitialPreRoundStarted = false;
+    bInitialPreRoundFinished = false;
+    bGameTimerStarted = false;
+
+    bMatchFlowInitialized = true;
+    bWorldReady = false;
 
     UE_LOG(
         LogProjectD,
