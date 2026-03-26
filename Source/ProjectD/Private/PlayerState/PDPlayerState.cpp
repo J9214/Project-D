@@ -42,7 +42,7 @@ void APDPlayerState::SetDisplayName(const FString& NewDisplayName)
 
 FString APDPlayerState::GetResolvedDisplayName() const
 {
-	return DisplayName.IsEmpty() ? GetPlayerName() : DisplayName;
+	return GetPlayerName().IsEmpty() ? DisplayName : GetPlayerName();
 }
 
 FBPUniqueNetId APDPlayerState::GetAvatarUniqueNetId() const
@@ -146,9 +146,10 @@ void APDPlayerState::OnRep_DisplayName()
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[LobbyPlayerState] OnRep_DisplayName DisplayName=[%s] PlayerName=[%s] NetId=[%s]"),
+		TEXT("[LobbyPlayerState] OnRep_DisplayName DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s]"),
 		*DisplayName,
 		*GetPlayerName(),
+		*GetResolvedDisplayName(),
 		*GetUniqueId().ToString());
 }
 
