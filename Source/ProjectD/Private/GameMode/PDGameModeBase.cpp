@@ -69,7 +69,6 @@ void APDGameModeBase::BeginPlay()
 
     CacheRoundActors();
     CacheDroneSpawner();
-    StartMatchFlow();
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -498,39 +497,6 @@ void APDGameModeBase::StartRound()
     ResetBallForRound();
 
     RoundPhase = ERoundPhase::InRound;
-}
-
-void APDGameModeBase::StartMatchFlow()
-{
-    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (IsValid(GS) == false)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartMatchFlow failed. GameState is invalid."));
-        return;
-    }
-
-    CurrentRoundIndex = 1;
-    RoundPhase = ERoundPhase::Waiting;
-
-    GS->RemainingTimeSec = TotalGameDurationSec;
-
-    TravelReadyPlayerStates.Empty();
-
-    bInitialPreRoundStarted = false;
-    bInitialPreRoundFinished = false;
-    bGameTimerStarted = false;
-
-    GetWorldTimerManager().ClearTimer(GameTimerHandle);
-    GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
-    GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Match flow initialized. Waiting for players. TotalGameDurationSec=%d TargetScoreToWin=%d"),
-        TotalGameDurationSec,
-        TargetScoreToWin
-    );
 }
 
 void APDGameModeBase::PrepareNextRound()

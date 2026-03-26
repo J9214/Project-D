@@ -56,7 +56,6 @@ protected:
 	void StartFirstRound();
 
 	void StartRound();
-	void StartMatchFlow();
 	void PrepareNextRound();
 
 	void StartGameTimer();
