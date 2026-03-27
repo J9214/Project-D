@@ -74,6 +74,25 @@ void APDLobbyPlayerController::ConnectToDedicatedServer()
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
 }
 
+void APDLobbyPlayerController::RequestTravelToLobby10()
+{
+    UE_LOG(LogTemp, Log, TEXT("[LobbyPC] RequestTravelToLobby10 called. Local=%d"), IsLocalController() ? 1 : 0);
+    Server_RequestTravelToLobby10();
+}
+
+void APDLobbyPlayerController::Server_RequestTravelToLobby10_Implementation()
+{
+    APDLobbyGameMode* LobbyGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<APDLobbyGameMode>() : nullptr;
+    if (!LobbyGameMode)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[LobbyPC] Server travel request failed: LobbyGameMode is null."));
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[LobbyPC] Server_RequestTravelToLobby10 received."));
+    LobbyGameMode->TravelToLobby10();
+}
+
 void APDLobbyPlayerController::Server_SubmitDisplayName_Implementation(const FString& Name)
 {
     if (auto* PS = GetPlayerState<APDPlayerState>())
@@ -128,7 +147,7 @@ void APDLobbyPlayerController::Server_SubmitCharacterCustomInfo_Implementation(c
         return;
     }
 
-    PS->CharacterCustomInfo = CharacterInfo;
+    PS->SetCharacterCustomInfo(CharacterInfo);
 }
 
 void APDLobbyPlayerController::Client_RequestCharacterCustomInfo_Implementation()
