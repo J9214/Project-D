@@ -23,6 +23,7 @@ APDGameModeBase::APDGameModeBase()
     TargetScoreToWin = 1000;
 
     NextRoundDelaySec = 3.0f;
+    InitialPreRoundDurationSec = 10.0f;
 
     TeamRespawnRadiusFromBall = 900.0f;
     RespawnHeightOffset = 50.0f;
@@ -68,7 +69,39 @@ void APDGameModeBase::BeginPlay()
 
     CacheRoundActors();
     CacheDroneSpawner();
-    StartMatchFlow();
+
+    bWorldReady = true;
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
+
+    TryStartInitialPreRound();
+}
+
+void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+    Super::InitGame(MapName, Options, ErrorMessage);
+
+    const FString ExpectedPlayersOption = UGameplayStatics::ParseOption(Options, TEXT("ExpectedPlayers"));
+    ExpectedTravelPlayerCount = FCString::Atoi(*ExpectedPlayersOption);
+
+    CurrentRoundIndex = 1;
+    RoundPhase = ERoundPhase::Waiting;
+
+    bInitialPreRoundStarted = false;
+    bInitialPreRoundFinished = false;
+    bGameTimerStarted = false;
+
+    bMatchFlowInitialized = true;
+    bWorldReady = false;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] InitGame. Map=%s ExpectedTravelPlayerCount=%d Options=%s"),
+        *MapName,
+        ExpectedTravelPlayerCount,
+        *Options
+    );
 }
 
 void APDGameModeBase::PlayerDied(AController* Controller)
@@ -311,6 +344,98 @@ void APDGameModeBase::PlayerRespawn(AController* Controller)
     }
 }
 
+void APDGameModeBase::StartInitialPreRound()
+{
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartInitialPreRound failed. GameState is invalid."));
+        return;
+    }
+
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartInitialPreRound skipped. RoundPhase is GameEnded."));
+        return;
+    }
+
+    if (bInitialPreRoundFinished == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartInitialPreRound skipped. Initial pre-round already finished."));
+        return;
+    }
+
+    if (RoundPhase != ERoundPhase::Waiting)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartInitialPreRound skipped. RoundPhase is not Waiting."));
+        return;
+    }
+
+    ResetRoundState();
+    ResetPlacedGoalPostsForRound();
+    ResetBallForRound();
+
+    SetAllPlayersMovementLocked(true);
+    SetAllPlayersShopEnabled(true);
+
+    RoundPhase = ERoundPhase::InitPreRound;
+
+    GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        InitialPreRoundTimerHandle,
+        this,
+        &APDGameModeBase::FinishInitialPreRound,
+        InitialPreRoundDurationSec,
+        false
+    );
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] InitialPreRound started. Duration=%.2f"),
+        InitialPreRoundDurationSec
+    );
+}
+
+void APDGameModeBase::FinishInitialPreRound()
+{
+    if (RoundPhase != ERoundPhase::InitPreRound)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] FinishInitialPreRound skipped. RoundPhase is not InitialPreRound."));
+        return;
+    }
+
+    SetAllPlayersShopEnabled(false);
+    SetAllPlayersMovementLocked(false);
+
+    bInitialPreRoundFinished = true;
+
+    TeleportAllPlayersToRoundStart();
+
+    StartGameTimer();
+    StartFirstRound();
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] InitialPreRound finished. First round will start."));
+}
+
+void APDGameModeBase::StartFirstRound()
+{
+    if (RoundPhase == ERoundPhase::GameEnded)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartFirstRound skipped. RoundPhase is GameEnded."));
+        return;
+    }
+
+    RoundPhase = ERoundPhase::InRound;
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] First round started. CurrentRoundIndex=%d"),
+        CurrentRoundIndex
+    );
+}
+
 void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
@@ -321,21 +446,40 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    if (APDPlayerState* PS = NewPlayer->GetPlayerState<APDPlayerState>())
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] PostLogin called. Controller=%s PlayerState=%s"),
+        *GetNameSafe(NewPlayer),
+        *GetNameSafe(NewPlayer->PlayerState)
+    );
+
+    BindPlayerDelegates(NewPlayer);
+    RegisterTravelReadyPlayer(NewPlayer);
+    TryStartInitialPreRound();
+}
+
+void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+    Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+    if (IsValid(NewPlayer) == false)
     {
-        if (UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase())
-        {
-            AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
-        }
-        else
-        {
-            UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. AttributeSet is invalid."));
-        }
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] HandleStartingNewPlayer failed. NewPlayer is invalid."));
+        return;
     }
-    else
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. PlayerState is invalid."));
-    }
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] HandleStartingNewPlayer called. Controller=%s PlayerState=%s"),
+        *GetNameSafe(NewPlayer),
+        *GetNameSafe(NewPlayer->PlayerState)
+    );
+
+    BindPlayerDelegates(NewPlayer);
+    RegisterTravelReadyPlayer(NewPlayer);
+    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
@@ -371,40 +515,6 @@ void APDGameModeBase::StartRound()
     RoundPhase = ERoundPhase::InRound;
 }
 
-void APDGameModeBase::StartMatchFlow()
-{
-    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
-    if (IsValid(GS) == false)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartMatchFlow failed. GameState is invalid."));
-        return;
-    }
-
-    CurrentRoundIndex = 1;
-    RoundPhase = ERoundPhase::Waiting;
-
-    GS->RemainingTimeSec = TotalGameDurationSec;
-
-    UE_LOG(
-        LogProjectD,
-        Log,
-        TEXT("[GameMode] Match start. TotalGameDurationSec=%d TargetScoreToWin=%d"),
-        TotalGameDurationSec,
-        TargetScoreToWin
-    );
-
-    GetWorldTimerManager().ClearTimer(GameTimerHandle);
-    GetWorldTimerManager().SetTimer(
-        GameTimerHandle,
-        this,
-        &APDGameModeBase::OnGameTick,
-        1.0f,
-        true
-    );
-
-    StartRound();
-}
-
 void APDGameModeBase::PrepareNextRound()
 {
     if (RoundPhase == ERoundPhase::GameEnded)
@@ -423,6 +533,28 @@ void APDGameModeBase::PrepareNextRound()
         NextRoundDelaySec,
         false
     );
+}
+
+void APDGameModeBase::StartGameTimer()
+{
+    if (bGameTimerStarted == true)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartGameTimer skipped. Timer already started."));
+        return;
+    }
+
+    GetWorldTimerManager().ClearTimer(GameTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        GameTimerHandle,
+        this,
+        &APDGameModeBase::OnGameTick,
+        1.0f,
+        true
+    );
+
+    bGameTimerStarted = true;
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Game timer started."));
 }
 
 void APDGameModeBase::OnGameTick()
@@ -911,4 +1043,233 @@ void APDGameModeBase::TriggerDroneExplosionOnGoal()
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] TriggerDroneExplosionOnGoal called."));
 
     ExplodeSubsystem->RequestExplodeAllDrones();
+}
+
+void APDGameModeBase::TeleportAllPlayersToRoundStart()
+{
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TeleportAllPlayersToRoundStart failed. World is invalid."));
+        return;
+    }
+
+    for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (IsValid(PC) == false)
+        {
+            continue;
+        }
+
+        TeleportPlayerToRoundStart(PC);
+    }
+}
+
+void APDGameModeBase::TeleportPlayerToRoundStart(AController* Controller)
+{
+    if (IsValid(Controller) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TeleportPlayerToRoundStart failed. Controller is invalid."));
+        return;
+    }
+
+    APawn* Pawn = Controller->GetPawn();
+    if (IsValid(Pawn) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TeleportPlayerToRoundStart failed. Pawn is invalid."));
+        return;
+    }
+
+    const FVector SpawnLocation = BuildRespawnLocationForController(Controller);
+    if (SpawnLocation == FVector::ZeroVector)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TeleportPlayerToRoundStart failed. SpawnLocation is zero vector."));
+        return;
+    }
+
+    const FRotator SpawnRotation = (CurrentRoundBallSpawnLocation - SpawnLocation).Rotation();
+    Pawn->TeleportTo(SpawnLocation, SpawnRotation);
+}
+
+void APDGameModeBase::SetAllPlayersMovementLocked(bool bLocked)
+{
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetAllPlayersMovementLocked failed. World is invalid."));
+        return;
+    }
+
+    for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (IsValid(PC) == false)
+        {
+            continue;
+        }
+
+        SetPlayerMovementLocked(PC, bLocked);
+    }
+}
+
+void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLocked)
+{
+    if (IsValid(Controller) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked failed. Controller is invalid."));
+        return;
+    }
+
+    // TODO : Movement Block & UI Open? (By bLocked)
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked Success."));
+}
+
+void APDGameModeBase::SetAllPlayersShopEnabled(bool bEnabled)
+{
+    UWorld* World = GetWorld();
+    if (IsValid(World) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetAllPlayersShopEnabled failed. World is invalid."));
+        return;
+    }
+
+    for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (IsValid(PC) == false)
+        {
+            continue;
+        }
+
+        SetPlayerShopEnabled(PC, bEnabled);
+    }
+}
+
+void APDGameModeBase::SetPlayerShopEnabled(AController* Controller, bool bEnabled)
+{
+    if (IsValid(Controller) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerShopEnabled failed. Controller is invalid."));
+        return;
+    }
+
+    // TODO : Shop Block & Can Open? (By bEnabled)
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerShopEnabled Success."));
+}
+
+void APDGameModeBase::BindPlayerDelegates(APlayerController* NewPlayer)
+{
+    if (IsValid(NewPlayer) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. NewPlayer is invalid."));
+        return;
+    }
+
+    APDPlayerState* PS = NewPlayer->GetPlayerState<APDPlayerState>();
+    if (IsValid(PS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. PlayerState is invalid."));
+        return;
+    }
+
+    UPDAttributeSetBase* AS = PS->GetPDAttributeSetBase();
+    if (IsValid(AS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] BindPlayerDelegates failed. AttributeSet is invalid."));
+        return;
+    }
+
+    AS->OnOutOfHealth.AddUniqueDynamic(this, &APDGameModeBase::OnPlayerOutOfHealth);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] BindPlayerDelegates completed. PlayerState=%s"),
+        *GetNameSafe(PS)
+    );
+}
+
+void APDGameModeBase::RegisterTravelReadyPlayer(APlayerController* NewPlayer)
+{
+    if (IsValid(NewPlayer) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] RegisterTravelReadyPlayer failed. NewPlayer is invalid."));
+        return;
+    }
+
+    APlayerState* PS = NewPlayer->PlayerState;
+    if (IsValid(PS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] RegisterTravelReadyPlayer failed. PlayerState is invalid."));
+        return;
+    }
+
+    TravelReadyPlayerStates.Add(PS);
+
+    UE_LOG(
+        LogProjectD,
+        Log,
+        TEXT("[GameMode] RegisterTravelReadyPlayer. ReadyCount=%d ExpectedTravelPlayerCount=%d PlayerState=%s"),
+        TravelReadyPlayerStates.Num(),
+        ExpectedTravelPlayerCount,
+        *GetNameSafe(PS)
+    );
+}
+
+void APDGameModeBase::TryStartInitialPreRound()
+{
+    if (bInitialPreRoundStarted == true)
+    {
+        return;
+    }
+
+    if (bInitialPreRoundFinished == true)
+    {
+        return;
+    }
+
+    if (bMatchFlowInitialized == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. MatchFlow is not initialized."));
+        return;
+    }
+
+    if (bWorldReady == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. World is not ready."));
+        return;
+    }
+
+    if (RoundPhase != ERoundPhase::Waiting)
+    {
+        return;
+    }
+
+    if (ExpectedTravelPlayerCount <= 0)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TryStartInitialPreRound skipped. ExpectedTravelPlayerCount must be greater than 0."));
+        return;
+    }
+
+    if (TravelReadyPlayerStates.Num() < ExpectedTravelPlayerCount)
+    {
+        UE_LOG(
+            LogProjectD,
+            Log,
+            TEXT("[GameMode] TryStartInitialPreRound waiting. ReadyCount=%d ExpectedTravelPlayerCount=%d"),
+            TravelReadyPlayerStates.Num(),
+            ExpectedTravelPlayerCount
+        );
+        return;
+    }
+
+    if (IsValid(CachedBallCore) == false)
+    {
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. CachedBallCore is invalid."));
+        return;
+    }
+
+    bInitialPreRoundStarted = true;
+    StartInitialPreRound();
 }

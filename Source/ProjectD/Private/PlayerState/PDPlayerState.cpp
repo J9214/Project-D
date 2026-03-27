@@ -34,6 +34,32 @@ void APDPlayerState::SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCha
 	CharacterCustomInfo = NewCharacterCustomInfo;
 	HandleCharacterCustomInfoChanged();
 	ForceNetUpdate();
+void APDPlayerState::SetDisplayName(const FString& NewDisplayName)
+{
+	const FString ResolvedDisplayName = NewDisplayName.IsEmpty() ? GetPlayerName() : NewDisplayName;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyPlayerState] SetDisplayName Requested=[%s] Stored=[%s] PlayerName=[%s] NetId=[%s]"),
+		*NewDisplayName,
+		*ResolvedDisplayName,
+		*GetPlayerName(),
+		*GetUniqueId().ToString());
+
+	DisplayName = ResolvedDisplayName;
+}
+
+FString APDPlayerState::GetResolvedDisplayName() const
+{
+	return GetPlayerName().IsEmpty() ? DisplayName : GetPlayerName();
+}
+
+FBPUniqueNetId APDPlayerState::GetAvatarUniqueNetId() const
+{
+	FBPUniqueNetId Result;
+	Result.SetUniqueNetId(GetUniqueId().GetUniqueNetId());
+	return Result;
 }
 
 void APDPlayerState::InitAbilityActorInfo(AActor* AvatarActor)
@@ -128,6 +154,18 @@ void APDPlayerState::OnRep_CharacterCustomInfo()
 void APDPlayerState::HandleCharacterCustomInfoChanged()
 {
 	BP_OnCharacterCustomInfoChanged(CharacterCustomInfo);
+}
+
+void APDPlayerState::OnRep_DisplayName()
+{
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyPlayerState] OnRep_DisplayName DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s]"),
+		*DisplayName,
+		*GetPlayerName(),
+		*GetResolvedDisplayName(),
+		*GetUniqueId().ToString());
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

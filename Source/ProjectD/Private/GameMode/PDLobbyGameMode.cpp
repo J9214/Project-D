@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GameMode/PDLobbyGameMode.h"
@@ -136,7 +136,17 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 			TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
         }
 		PlayerState->SetTeamID(TeamInfos[SelectedTeam].TeamID);
+        PlayerState->SetDisplayName(PlayerState->GetPlayerName());
 		LoginInfo.Remove(NetIdKey);
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyDisplayName] PostLogin Sync Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
+            SelectedTeam,
+            *PlayerState->GetPlayerName(),
+            *PlayerState->GetDisplayName(),
+            *PlayerState->GetResolvedDisplayName(),
+            *PlayerState->GetUniqueId().ToString());
         UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
     }
     else
@@ -147,7 +157,6 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     if (auto* PC = Cast<APDLobbyPlayerController>(NewPlayer))
     {
         PC->Client_RequestCharacterCustomInfo();
-        PC->Client_RequestDisplayName();
     }
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
@@ -293,7 +302,11 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
     }
 
     //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
-    const FString TravelURL = TEXT("/Game/LakeTown/Maps/Demonstration");
+    const int32 PlayerNums = GetNumPlayers();
+    const FString TravelURL = FString::Printf(
+        TEXT("/Game/LakeTown/Maps/Demonstration?ExpectedPlayers=%d"),
+        PlayerNums
+    );
     GetWorld()->ServerTravel(TravelURL);
 }
 
@@ -312,12 +325,6 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
     {
         FTeamInfo Snapshot = TeamInfos[TeamIndex];
         Snapshot.MaxPlayerCount = MaxTeamSize;
-        Snapshot.bHasTeamMember_0 = false;
-        Snapshot.bHasTeamMember_1 = false;
-        Snapshot.TeamMemberDisplayName_0.Reset();
-        Snapshot.TeamMemberDisplayName_1.Reset();
-        Snapshot.TeamMemberId_0 = FBPUniqueNetId();
-        Snapshot.TeamMemberId_1 = FBPUniqueNetId();
         TeamInfoSnapshot.Add(MoveTemp(Snapshot));
     }
 
@@ -332,26 +339,31 @@ void APDLobbyGameMode::BroadcastLobbyTeamInfos()
                 continue;
             }
 
-            const int32 TeamIndex = static_cast<int32>(PDPlayerState->GetTeamID());
-            if (!TeamInfoSnapshot.IsValidIndex(TeamIndex))
-            {
-                continue;
-            }
-
-            FTeamInfo& Snapshot = TeamInfoSnapshot[TeamIndex];
-            if (!Snapshot.bHasTeamMember_0)
-            {
-                Snapshot.bHasTeamMember_0 = true;
-                Snapshot.TeamMemberDisplayName_0 = PDPlayerState->GetDisplayName();
-                Snapshot.TeamMemberId_0.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
-            }
-            else if (!Snapshot.bHasTeamMember_1)
-            {
-                Snapshot.bHasTeamMember_1 = true;
-                Snapshot.TeamMemberDisplayName_1 = PDPlayerState->GetDisplayName();
-                Snapshot.TeamMemberId_1.SetUniqueNetId(PDPlayerState->GetUniqueId().GetUniqueNetId());
-            }
+            UE_LOG(
+                LogTemp,
+                Warning,
+                TEXT("[LobbyTeamPlayerState] Team=%d PlayerName=[%s] DisplayName=[%s] ResolvedDisplayName=[%s] NetId=[%s]"),
+                static_cast<int32>(PDPlayerState->GetTeamID()),
+                *PDPlayerState->GetPlayerName(),
+                *PDPlayerState->GetDisplayName(),
+                *PDPlayerState->GetResolvedDisplayName(),
+                *PDPlayerState->GetUniqueId().ToString());
         }
+    }
+
+    for (int32 TeamIndex = 0; TeamIndex < TeamInfoSnapshot.Num(); ++TeamIndex)
+    {
+        const FTeamInfo& Snapshot = TeamInfoSnapshot[TeamIndex];
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[LobbyTeamSnapshot] Team=%d Count=%d Pending=%d Max=%d Leader=[%s] MatchStart=%.2f"),
+            TeamIndex,
+            Snapshot.PlayerCount,
+            Snapshot.PendingCount,
+            Snapshot.MaxPlayerCount,
+            *Snapshot.LeaderSteamId,
+            LobbyMatchStartServerTimeSec);
     }
 
     for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)

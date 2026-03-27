@@ -2,6 +2,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Widget.h"
 #include "GameFramework/GameStateBase.h"
+#include "PlayerState/PDPlayerState.h"
 
 void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID)
 {
@@ -29,21 +30,8 @@ void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETe
 	UpdateTeamInfoText(TeamBInfo, TEXT("B Team"), TeamBInfoData, InLocalTeamID == ETeamType::TeamTwo);
 	UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, InLocalTeamID == ETeamType::TeamThree);
 
-	const FTeamInfo* LocalTeamInfo = nullptr;
-	if (InLocalTeamID == ETeamType::TeamOne)
-	{
-		LocalTeamInfo = TeamAInfoData;
-	}
-	else if (InLocalTeamID == ETeamType::TeamTwo)
-	{
-		LocalTeamInfo = TeamBInfoData;
-	}
-	else if (InLocalTeamID == ETeamType::TeamThree)
-	{
-		LocalTeamInfo = TeamCInfoData;
-	}
-
-	UpdateLocalTeamPanels(LocalTeamInfo);
+	UpdateLocalTeamPanels(InLocalTeamID);
+	UpdateOtherTeamAvatars(InLocalTeamID);
 }
 
 void UServerLobby::UpdateTeamInfoText(
@@ -69,10 +57,131 @@ void UServerLobby::UpdateTeamInfoText(
 		FString::Printf(TEXT("%s : %d / %d"), TeamLabel, CurrentPlayerCount, MaxPlayerCount)));
 }
 
-void UServerLobby::UpdateLocalTeamPanels(const FTeamInfo* TeamInfo)
+void UServerLobby::CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const
 {
-	const bool bHasSlot0 = TeamInfo && TeamInfo->bHasTeamMember_0;
-	const bool bHasSlot1 = TeamInfo && TeamInfo->bHasTeamMember_1;
+	OutTeamMembers.Reset();
+
+	if (LocalTeamID == ETeamType::None || !GetWorld())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Collect skipped LocalTeamID=%d"), static_cast<int32>(LocalTeamID));
+		return;
+	}
+
+	const AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
+	if (!CurrentGameState)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Collect skipped because GameState is null"));
+		return;
+	}
+
+	const APDPlayerState* LocalPlayerState = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<APDPlayerState>() : nullptr;
+
+	if (LocalPlayerState)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyClientLocalPlayer] Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
+			static_cast<int32>(LocalPlayerState->GetTeamID()),
+			*LocalPlayerState->GetPlayerName(),
+			*LocalPlayerState->GetDisplayName(),
+			*LocalPlayerState->GetResolvedDisplayName(),
+			*LocalPlayerState->GetUniqueId().ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyClientLocalPlayer] LocalPlayerState is null"));
+	}
+
+	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+	{
+		const APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+		if (!PDPlayerState)
+		{
+			continue;
+		}
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyClientPlayerState] Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s] IsLocal=%d"),
+			static_cast<int32>(PDPlayerState->GetTeamID()),
+			*PDPlayerState->GetPlayerName(),
+			*PDPlayerState->GetDisplayName(),
+			*PDPlayerState->GetResolvedDisplayName(),
+			*PDPlayerState->GetUniqueId().ToString(),
+			PDPlayerState == LocalPlayerState ? 1 : 0);
+
+		if (PDPlayerState->GetTeamID() != LocalTeamID)
+		{
+			continue;
+		}
+
+		OutTeamMembers.Add(PDPlayerState);
+	}
+
+	OutTeamMembers.Sort([LocalPlayerState](const APDPlayerState& A, const APDPlayerState& B)
+	{
+		const bool bAIsLocal = (&A == LocalPlayerState);
+		const bool bBIsLocal = (&B == LocalPlayerState);
+		if (bAIsLocal != bBIsLocal)
+		{
+			return bAIsLocal;
+		}
+
+		return A.GetPlayerId() < B.GetPlayerId();
+	});
+}
+
+void UServerLobby::CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const
+{
+	OutTeamMembers.Reset();
+
+	if (TeamID == ETeamType::None || !GetWorld())
+	{
+		return;
+	}
+
+	const AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
+	if (!CurrentGameState)
+	{
+		return;
+	}
+
+	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+	{
+		const APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+		if (!PDPlayerState || PDPlayerState->GetTeamID() != TeamID)
+		{
+			continue;
+		}
+
+		OutTeamMembers.Add(PDPlayerState);
+	}
+
+	OutTeamMembers.Sort([](const APDPlayerState& A, const APDPlayerState& B)
+	{
+		return A.GetPlayerId() < B.GetPlayerId();
+	});
+}
+
+void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
+{
+	TArray<const APDPlayerState*> LocalTeamMembers;
+	CollectLocalTeamPlayerStates(LocalTeamID, LocalTeamMembers);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyTeamPanel] Refresh Team=%d MemberCount=%d"),
+		static_cast<int32>(LocalTeamID),
+		LocalTeamMembers.Num());
+
+	const APDPlayerState* Slot0PlayerState = LocalTeamMembers.IsValidIndex(0) ? LocalTeamMembers[0] : nullptr;
+	const APDPlayerState* Slot1PlayerState = LocalTeamMembers.IsValidIndex(1) ? LocalTeamMembers[1] : nullptr;
+
+	const bool bHasSlot0 = Slot0PlayerState != nullptr;
+	const bool bHasSlot1 = Slot1PlayerState != nullptr;
 
 	if (TeamPanel_0)
 	{
@@ -86,22 +195,109 @@ void UServerLobby::UpdateLocalTeamPanels(const FTeamInfo* TeamInfo)
 
 	if (TeamNickName_0)
 	{
-		TeamNickName_0->SetText(FText::FromString(bHasSlot0 ? TeamInfo->TeamMemberDisplayName_0 : FString()));
+		TeamNickName_0->SetText(FText::FromString(bHasSlot0 ? Slot0PlayerState->GetResolvedDisplayName() : FString()));
 	}
 
 	if (TeamNickName_1)
 	{
-		TeamNickName_1->SetText(FText::FromString(bHasSlot1 ? TeamInfo->TeamMemberDisplayName_1 : FString()));
+		TeamNickName_1->SetText(FText::FromString(bHasSlot1 ? Slot1PlayerState->GetResolvedDisplayName() : FString()));
 	}
 
 	if (bHasSlot0)
 	{
-		BP_UpdateTeamMemberAvatar(0, TeamInfo->TeamMemberId_0);
+		NotifyAvatarTarget(ELobbyAvatarTarget::LocalTeam, 0, Slot0PlayerState, LocalTeamID);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Slot=0 Team=%d Empty"), static_cast<int32>(LocalTeamID));
+		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 0, false, FBPUniqueNetId());
 	}
 
 	if (bHasSlot1)
 	{
-		BP_UpdateTeamMemberAvatar(1, TeamInfo->TeamMemberId_1);
+		NotifyAvatarTarget(ELobbyAvatarTarget::LocalTeam, 1, Slot1PlayerState, LocalTeamID);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Slot=1 Team=%d Empty"), static_cast<int32>(LocalTeamID));
+		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 1, false, FBPUniqueNetId());
+	}
+}
+
+void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, const APDPlayerState* SlotPlayerState, ETeamType SourceTeamID)
+{
+	if (!SlotPlayerState)
+	{
+		BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId());
+		return;
+	}
+
+	const FBPUniqueNetId AvatarUniqueNetId = SlotPlayerState->GetAvatarUniqueNetId();
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyAvatarTarget] Target=%d SourceTeam=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d"),
+		static_cast<int32>(AvatarTarget),
+		static_cast<int32>(SourceTeamID),
+		SlotIndex,
+		*SlotPlayerState->GetDisplayName(),
+		*SlotPlayerState->GetPlayerName(),
+		*SlotPlayerState->GetResolvedDisplayName(),
+		*SlotPlayerState->GetUniqueId().ToString(),
+		AvatarUniqueNetId.IsValid() ? 1 : 0);
+
+	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId);
+}
+
+void UServerLobby::UpdateOtherTeamAvatars(ETeamType LocalTeamID)
+{
+	TArray<const APDPlayerState*> TeamMembers;
+	TArray<ETeamType> OtherTeams;
+	OtherTeams.Reserve(2);
+
+	for (int32 TeamIndex = 0; TeamIndex < static_cast<int32>(ETeamType::MAX); ++TeamIndex)
+	{
+		const ETeamType CandidateTeam = static_cast<ETeamType>(TeamIndex);
+		if (CandidateTeam == LocalTeamID)
+		{
+			continue;
+		}
+
+		OtherTeams.Add(CandidateTeam);
+	}
+
+	for (int32 OtherTeamIndex = 0; OtherTeamIndex < 2; ++OtherTeamIndex)
+	{
+		const ELobbyAvatarTarget AvatarTarget = (OtherTeamIndex == 0) ? ELobbyAvatarTarget::OtherTeamB : ELobbyAvatarTarget::OtherTeamC;
+		const ETeamType SourceTeamID = OtherTeams.IsValidIndex(OtherTeamIndex) ? OtherTeams[OtherTeamIndex] : ETeamType::None;
+
+		if (SourceTeamID == ETeamType::None)
+		{
+			BP_UpdateLobbyMemberAvatar(AvatarTarget, 0, false, FBPUniqueNetId());
+			BP_UpdateLobbyMemberAvatar(AvatarTarget, 1, false, FBPUniqueNetId());
+			continue;
+		}
+
+		CollectTeamPlayerStates(SourceTeamID, TeamMembers);
+
+		for (int32 SlotIndex = 0; SlotIndex < 2; ++SlotIndex)
+		{
+			const APDPlayerState* SlotPlayerState = TeamMembers.IsValidIndex(SlotIndex) ? TeamMembers[SlotIndex] : nullptr;
+			if (!SlotPlayerState)
+			{
+				UE_LOG(
+					LogTemp,
+					Warning,
+					TEXT("[LobbyOtherTeamAvatar] Target=%d SourceTeam=%d Slot=%d Empty"),
+					static_cast<int32>(AvatarTarget),
+					static_cast<int32>(SourceTeamID),
+					SlotIndex);
+				BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId());
+				continue;
+			}
+
+			NotifyAvatarTarget(AvatarTarget, SlotIndex, SlotPlayerState, SourceTeamID);
+		}
 	}
 }
 
