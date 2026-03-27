@@ -24,6 +24,18 @@ UAbilitySystemComponent* APDPlayerState::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void APDPlayerState::SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	CharacterCustomInfo = NewCharacterCustomInfo;
+	HandleCharacterCustomInfoChanged();
+	ForceNetUpdate();
+}
+
 void APDPlayerState::InitAbilityActorInfo(AActor* AvatarActor)
 {
 	if (!AbilitySystemComponent || !AvatarActor)
@@ -110,14 +122,19 @@ void APDPlayerState::SetReviveState()
 
 void APDPlayerState::OnRep_CharacterCustomInfo()
 {
+	HandleCharacterCustomInfoChanged();
+}
 
+void APDPlayerState::HandleCharacterCustomInfoChanged()
+{
+	BP_OnCharacterCustomInfoChanged(CharacterCustomInfo);
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(APDPlayerState, CharacterCustomInfo);
+	DOREPLIFETIME_CONDITION_NOTIFY(APDPlayerState, CharacterCustomInfo, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME(APDPlayerState, TeamID);
 	DOREPLIFETIME(APDPlayerState, DisplayName);
 }
@@ -132,5 +149,7 @@ void APDPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPlayerState->TeamID = this->TeamID;
 		NewPlayerState->DisplayName = this->DisplayName;
 		NewPlayerState->CharacterCustomInfo = this->CharacterCustomInfo;
+		NewPlayerState->CustomizableObjectInstance = this->CustomizableObjectInstance;
+		NewPlayerState->HandleCharacterCustomInfoChanged();
 	}
 }

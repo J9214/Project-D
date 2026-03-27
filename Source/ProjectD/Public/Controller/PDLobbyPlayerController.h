@@ -24,6 +24,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void ConnectToDedicatedServer();
 
+    UFUNCTION(BlueprintCallable)
+    void RequestTravelToLobby10();
+
     UFUNCTION(Client, Reliable)
     void Client_RequestCharacterCustomInfo();
 
@@ -35,6 +38,9 @@ public:
 
     UFUNCTION(Server, Reliable)
     void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestTravelToLobby10();
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
     TSubclassOf<UUserWidget> UIWidgetClass;

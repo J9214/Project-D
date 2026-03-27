@@ -5,6 +5,7 @@
 #include "AbilitySystemInterface.h"
 #include "GameInstance/PDCharacterCustomInfo.h"
 #include "Interface/PDTeamInterface.h"
+#include "MuCO/CustomizableObjectInstance.h"
 #include "PDPlayerState.generated.h"
 
 class UPDAbilitySystemComponent;
@@ -41,6 +42,12 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_CharacterCustomInfo, BlueprintReadOnly, Category = "Custom")
 	FPDCharacterCustomInfo CharacterCustomInfo;
 
+	UFUNCTION(BlueprintCallable, Category = "Custom")
+	void SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCharacterCustomInfo);
+
+	UFUNCTION(BlueprintPure, Category = "Custom")
+	const FPDCharacterCustomInfo& GetCharacterCustomInfo() const { return CharacterCustomInfo; }
+
 	UFUNCTION(BlueprintCallable)
 	void SetDisplayName(const FString& NewDisplayName) { DisplayName = NewDisplayName; }
 	const FString& GetDisplayName() const { return DisplayName; }
@@ -48,16 +55,29 @@ public:
 	UFUNCTION()
 	void OnRep_CharacterCustomInfo();
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Custom")
+	void BP_OnCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo);
+
+	UFUNCTION(BlueprintCallable, Category = "Custom")
+	void SetCustomizableObjectInstance(UCustomizableObjectInstance* InInstance) { CustomizableObjectInstance = InInstance; }
+
+	UFUNCTION(BlueprintPure, Category = "Custom")
+	UCustomizableObjectInstance* GetCustomizableObjectInstance() const { return CustomizableObjectInstance; }
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void CopyProperties(APlayerState* PlayerState) override;
+	void HandleCharacterCustomInfoChanged();
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	ETeamType TeamID;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Team")
 	FString DisplayName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Custom")
+	TObjectPtr<UCustomizableObjectInstance> CustomizableObjectInstance;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AbilitySystem")
 	TObjectPtr<UPDAbilitySystemComponent> AbilitySystemComponent;

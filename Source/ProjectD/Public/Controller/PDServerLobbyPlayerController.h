@@ -19,8 +19,14 @@ public:
     virtual void BeginPlay() override;
     virtual void OnRep_PlayerState() override;
 
+    UFUNCTION(BlueprintCallable)
+    void RequestTravelToLobby10();
+
     UFUNCTION(Client, Reliable)
     void Client_UpdateLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, float InMatchStartServerTimeSec);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestTravelToLobby10();
 
 public:
 

@@ -60,6 +60,7 @@ class PROJECTD_API APDLobbyGameMode : public AGameModeBase
 public:
 	APDLobbyGameMode();
 	void BroadcastLobbyTeamInfos();
+	void TravelToLobby10();
 
 protected:
 	virtual void BeginPlay() override;
