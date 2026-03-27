@@ -30,17 +30,24 @@
 #include "Structs/FSpeedUpModifier.h"
 #include "Gimmick/ZipLine/PDZipLine.h"
 #include "Components/PDPlayerUIComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Components/CapsuleComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
+	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule")); 
+	SetRootComponent(CapsuleComponent);
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
 	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
+	UIComponent = CreateDefaultSubobject<UPDPlayerUIComponent>(TEXT("UIComponent"));
+	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
+	WidgetComponent->SetupAttachment(RootComponent);
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }

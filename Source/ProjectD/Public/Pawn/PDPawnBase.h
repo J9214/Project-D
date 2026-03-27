@@ -48,6 +48,7 @@ public:
 	FORCEINLINE UMoverComponent* GetMoverComponent() const { return MoverComponent; }
 	FORCEINLINE UPDPlayerUIComponent* GetUIComponent() const { return UIComponent; }
 	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return WidgetComponent; }
+	FORCEINLINE UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 
@@ -105,6 +106,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UWidgetComponent> WidgetComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
+	TObjectPtr<UCapsuleComponent> CapsuleComponent;
 #pragma region FirstPerson
 
 protected:
