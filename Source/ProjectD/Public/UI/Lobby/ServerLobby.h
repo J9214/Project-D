@@ -30,6 +30,9 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void BP_UpdateTeamMemberAvatar(int32 SlotIndex, const FBPUniqueNetId& UniqueNetId);
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BP_UpdateOtherTeamMemberAvatar(ETeamType TeamID, int32 SlotIndex, const FBPUniqueNetId& UniqueNetId);
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TeamAInfo;
 
@@ -62,6 +65,8 @@ private:
 		bool bIsMyTeam);
 	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
 	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
+	void CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
+	void UpdateOtherTeamAvatars();
 
 	void RefreshMatchingTimeText();
 	void StartMatchingTimeRefresh();

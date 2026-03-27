@@ -31,6 +31,7 @@ void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETe
 	UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, InLocalTeamID == ETeamType::TeamThree);
 
 	UpdateLocalTeamPanels(InLocalTeamID);
+	UpdateOtherTeamAvatars();
 }
 
 void UServerLobby::UpdateTeamInfoText(
@@ -132,6 +133,38 @@ void UServerLobby::CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<co
 	});
 }
 
+void UServerLobby::CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const
+{
+	OutTeamMembers.Reset();
+
+	if (TeamID == ETeamType::None || !GetWorld())
+	{
+		return;
+	}
+
+	const AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
+	if (!CurrentGameState)
+	{
+		return;
+	}
+
+	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+	{
+		const APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+		if (!PDPlayerState || PDPlayerState->GetTeamID() != TeamID)
+		{
+			continue;
+		}
+
+		OutTeamMembers.Add(PDPlayerState);
+	}
+
+	OutTeamMembers.Sort([](const APDPlayerState& A, const APDPlayerState& B)
+	{
+		return A.GetPlayerId() < B.GetPlayerId();
+	});
+}
+
 void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 {
 	TArray<const APDPlayerState*> LocalTeamMembers;
@@ -208,6 +241,47 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Slot=1 Team=%d Empty"), static_cast<int32>(LocalTeamID));
+	}
+}
+
+void UServerLobby::UpdateOtherTeamAvatars()
+{
+	TArray<const APDPlayerState*> TeamMembers;
+	const ETeamType TargetTeams[] = { ETeamType::TeamTwo, ETeamType::TeamThree };
+
+	for (const ETeamType TargetTeam : TargetTeams)
+	{
+		CollectTeamPlayerStates(TargetTeam, TeamMembers);
+
+		for (int32 SlotIndex = 0; SlotIndex < 2; ++SlotIndex)
+		{
+			const APDPlayerState* SlotPlayerState = TeamMembers.IsValidIndex(SlotIndex) ? TeamMembers[SlotIndex] : nullptr;
+			if (!SlotPlayerState)
+			{
+				UE_LOG(
+					LogTemp,
+					Warning,
+					TEXT("[LobbyOtherTeamAvatar] Team=%d Slot=%d Empty"),
+					static_cast<int32>(TargetTeam),
+					SlotIndex);
+				continue;
+			}
+
+			const FBPUniqueNetId AvatarUniqueNetId = SlotPlayerState->GetAvatarUniqueNetId();
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("[LobbyOtherTeamAvatar] Team=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d"),
+				static_cast<int32>(TargetTeam),
+				SlotIndex,
+				*SlotPlayerState->GetDisplayName(),
+				*SlotPlayerState->GetPlayerName(),
+				*SlotPlayerState->GetResolvedDisplayName(),
+				*SlotPlayerState->GetUniqueId().ToString(),
+				AvatarUniqueNetId.IsValid() ? 1 : 0);
+
+			BP_UpdateOtherTeamMemberAvatar(TargetTeam, SlotIndex, AvatarUniqueNetId);
+		}
 	}
 }
 
