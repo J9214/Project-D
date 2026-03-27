@@ -48,7 +48,6 @@ public:
 	FORCEINLINE UMoverComponent* GetMoverComponent() const { return MoverComponent; }
 	FORCEINLINE UPDPlayerUIComponent* GetUIComponent() const { return UIComponent; }
 	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return WidgetComponent; }
-	FORCEINLINE UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 
@@ -63,6 +62,7 @@ protected:
 	virtual void OnRep_PlayerState() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void PostInitializeComponents() override;
 
 	void InitAbilityActorInfo();
 	void InitAttributeSet();
@@ -77,6 +77,7 @@ private:
 	bool ShouldBlockFirstPersonToggleInput() const;
 
 protected:
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UWeaponManageComponent> WeaponManageComponent;
 	
@@ -106,9 +107,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UWidgetComponent> WidgetComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collision")
-	TObjectPtr<UCapsuleComponent> CapsuleComponent;
+	
 #pragma region FirstPerson
 
 protected:

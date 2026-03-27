@@ -38,16 +38,12 @@ APDPawnBase::APDPawnBase()
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 
-	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule")); 
-	SetRootComponent(CapsuleComponent);
 	WeaponManageComponent = CreateDefaultSubobject<UWeaponManageComponent>(TEXT("WeaponManageComponent"));
 	WeaponStateComponent = CreateDefaultSubobject<UWeaponStateComponent>(TEXT("WeaponStateComponent"));
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
 	UIComponent = CreateDefaultSubobject<UPDPlayerUIComponent>(TEXT("UIComponent"));
-	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("WidgetComponent"));
-	WidgetComponent->SetupAttachment(RootComponent);
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -160,6 +156,18 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 		{
 			PDInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed, &ThisClass::Input_AbilityInputReleased);
 		}
+	}
+}
+
+void APDPawnBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	UWidgetComponent* GetWidgetComponent = Cast<UWidgetComponent>(GetDefaultSubobjectByName(TEXT("IngameWidgetComponent")));
+
+	if (GetWidgetComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Set WidgetComponent"));
+		WidgetComponent = GetWidgetComponent;
 	}
 }
 
