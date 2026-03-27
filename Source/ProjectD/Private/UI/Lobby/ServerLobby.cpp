@@ -6,6 +6,17 @@
 
 void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID)
 {
+	CachedTeamInfos = InTeamInfos;
+	CachedLocalTeamID = InLocalTeamID;
+	LobbyTeamRefreshRetryCount = 0;
+	RefreshLobbyTeamInfos();
+}
+
+void UServerLobby::RefreshLobbyTeamInfos()
+{
+	const TArray<FTeamInfo>& InTeamInfos = CachedTeamInfos;
+	const ETeamType InLocalTeamID = CachedLocalTeamID;
+
 	const FTeamInfo* TeamAInfoData = nullptr;
 	const FTeamInfo* TeamBInfoData = nullptr;
 	const FTeamInfo* TeamCInfoData = nullptr;
@@ -32,6 +43,14 @@ void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETe
 
 	UpdateLocalTeamPanels(InLocalTeamID);
 	UpdateOtherTeamAvatars(InLocalTeamID);
+
+	if (AreAllExpectedPlayerStatesReady())
+	{
+		StopLobbyTeamRefreshRetry();
+		return;
+	}
+
+	StartLobbyTeamRefreshRetry();
 }
 
 void UServerLobby::UpdateTeamInfoText(
@@ -301,6 +320,143 @@ void UServerLobby::UpdateOtherTeamAvatars(ETeamType LocalTeamID)
 	}
 }
 
+int32 UServerLobby::GetExpectedReadyPlayerCount(ETeamType TeamID) const
+{
+	for (const FTeamInfo& TeamInfo : CachedTeamInfos)
+	{
+		if (TeamInfo.TeamID == TeamID)
+		{
+			return TeamInfo.PlayerCount;
+		}
+	}
+
+	return 0;
+}
+
+int32 UServerLobby::CountReadyPlayerStates(ETeamType TeamID) const
+{
+	if (TeamID == ETeamType::None || !GetWorld())
+	{
+		return 0;
+	}
+
+	const AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
+	if (!CurrentGameState)
+	{
+		return 0;
+	}
+
+	int32 ReadyPlayerCount = 0;
+
+	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+	{
+		const APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+		if (!PDPlayerState || PDPlayerState->GetTeamID() != TeamID)
+		{
+			continue;
+		}
+
+		const bool bHasReadyDisplayName = !PDPlayerState->GetResolvedDisplayName().IsEmpty();
+		const bool bHasReadyUniqueId = PDPlayerState->GetAvatarUniqueNetId().IsValid();
+		if (bHasReadyDisplayName && bHasReadyUniqueId)
+		{
+			++ReadyPlayerCount;
+		}
+	}
+
+	return ReadyPlayerCount;
+}
+
+bool UServerLobby::AreAllExpectedPlayerStatesReady() const
+{
+	if (CachedTeamInfos.IsEmpty())
+	{
+		return true;
+	}
+
+	bool bAllReady = true;
+
+	for (const FTeamInfo& TeamInfo : CachedTeamInfos)
+	{
+		const int32 ReadyPlayerCount = CountReadyPlayerStates(TeamInfo.TeamID);
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyTeamRefreshRetry] Team=%d Ready=%d Expected=%d RetryCount=%d"),
+			static_cast<int32>(TeamInfo.TeamID),
+			ReadyPlayerCount,
+			TeamInfo.PlayerCount,
+			LobbyTeamRefreshRetryCount);
+
+		if (ReadyPlayerCount < TeamInfo.PlayerCount)
+		{
+			bAllReady = false;
+		}
+	}
+
+	return bAllReady;
+}
+
+void UServerLobby::RetryRefreshLobbyTeamInfos()
+{
+	++LobbyTeamRefreshRetryCount;
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyTeamRefreshRetry] RetryRefreshLobbyTeamInfos Attempt=%d"),
+		LobbyTeamRefreshRetryCount);
+
+	RefreshLobbyTeamInfos();
+}
+
+void UServerLobby::StartLobbyTeamRefreshRetry()
+{
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	if (LobbyTeamRefreshRetryCount >= 20)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("[LobbyTeamRefreshRetry] Max retries reached. CachedTeamInfoCount=%d"),
+			CachedTeamInfos.Num());
+		StopLobbyTeamRefreshRetry();
+		return;
+	}
+
+	if (GetWorld()->GetTimerManager().IsTimerActive(LobbyTeamRefreshRetryHandle))
+	{
+		return;
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyTeamRefreshRetry] Scheduling retry Attempt=%d"),
+		LobbyTeamRefreshRetryCount + 1);
+
+	GetWorld()->GetTimerManager().SetTimer(
+		LobbyTeamRefreshRetryHandle,
+		this,
+		&UServerLobby::RetryRefreshLobbyTeamInfos,
+		0.2f,
+		false);
+}
+
+void UServerLobby::StopLobbyTeamRefreshRetry()
+{
+	LobbyTeamRefreshRetryCount = 0;
+
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LobbyTeamRefreshRetryHandle);
+	}
+}
+
 void UServerLobby::ApplyMatchStartServerTime(float InMatchStartServerTimeSec)
 {
 	MatchStartServerTimeSec = InMatchStartServerTimeSec;
@@ -312,6 +468,7 @@ void UServerLobby::ApplyMatchStartServerTime(float InMatchStartServerTimeSec)
 
 void UServerLobby::NativeDestruct()
 {
+	StopLobbyTeamRefreshRetry();
 	StopMatchingTimeRefresh();
 	Super::NativeDestruct();
 }
