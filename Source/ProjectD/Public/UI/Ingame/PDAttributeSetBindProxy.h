@@ -38,7 +38,7 @@ private:
     TObjectPtr<UIngameHUD> HUD;
 
     UPROPERTY()
-    TObjectPtr<UPDAttributeSetBase> BoundSet;
+    TObjectPtr<UPDAttributeSetBase> BindSet;
 
     UPROPERTY()
     EHPBarSlot Slot;

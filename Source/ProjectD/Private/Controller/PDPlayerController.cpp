@@ -9,6 +9,8 @@
 #include "Components/Inventory/PDInventoryComponent.h"
 #include "PlayerState/PDPlayerState.h"
 #include "Components/Shop/PDShopComponent.h"
+#include "Pawn/PDPawnBase.h"
+#include "Components/PDPlayerUIComponent.h"
 
 APDPlayerController::APDPlayerController()
 {
@@ -293,7 +295,7 @@ void APDPlayerController::OnRep_PlayerState()
 
 void APDPlayerController::Client_OnGameStarted_Implementation()
 {
-	UE_LOG(LogProjectD, Log, TEXT("Client_OnGameStarted"));
+	UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted"));
 	if (PlayerHUDClass && !PlayerHUDWidget)
 	{
 		PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
@@ -302,7 +304,7 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogProjectD, Log, TEXT("Client_OnGameStarted World Null"));
+		UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted World Null"));
 		return;
 	}
 
@@ -320,9 +322,18 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			bool bIsMe = (PDPS == PlayerState);
 			bool bIsMyTeam = (PDPS->GetTeamID() == Cast<APDPlayerState>(PlayerState)->GetTeamID());
 
-			if (APawn* TargetPawn = PDPS->GetPawn())
+			if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
 			{
+				if (bIsMe)
+				{
+					continue;
+				}
 
+				if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
+				{
+					UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
+					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), bIsMyTeam);
+				}
 			}
 
 			if (bIsMyTeam)

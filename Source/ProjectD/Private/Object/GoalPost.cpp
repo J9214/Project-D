@@ -1,4 +1,4 @@
-#include "Object/GoalPost.h"
+﻿#include "Object/GoalPost.h"
 #include "Object/BallCore.h"
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
@@ -7,11 +7,39 @@
 #include "PlayerState/PDPlayerState.h"
 #include "ProjectD/ProjectD.h"
 #include "GameMode/PDGameModeBase.h"
+#include "Components/WidgetComponent.h"
+#include "UI/Ingame/ObjectInfo.h"
+#include "Kismet/GameplayStatics.h"
 
 AGoalPost::AGoalPost()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	GoalHoldTime = 10.0f;
+
+	GoalWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("GoalWidget"));
+	if (GetRootComponent())
+	{
+		GoalWidget->SetupAttachment(StaticMesh);
+	}
+
+	GoalWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	GoalWidget->SetDrawAtDesiredSize(true);
+}
+
+void AGoalPost::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (GoalWidget)
+	{
+		CachedInfoWidget = Cast<UObjectInfo>(GoalWidget->GetUserWidgetObject());
+
+		if (!CachedInfoWidget)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GoalWidget's UserWidget is not UObjectInfo!"));
+		}
+	}
 }
 
 void AGoalPost::OnInteract_Implementation(AActor* Interactor)
@@ -30,6 +58,27 @@ void AGoalPost::OnInteract_Implementation(AActor* Interactor)
 	else if (PlacedBall)
 	{
 		StealBall(PDPawn);
+	}
+}
+
+void AGoalPost::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!CachedInfoWidget)
+	{
+		return;
+	}
+
+	if (!CachedPlayer)
+	{
+		CachedPlayer = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	}
+
+	if (CachedPlayer)
+	{
+		float Dist = GetDistanceTo(CachedPlayer);
+		CachedInfoWidget->UpdateDistanceUI((int32)(Dist / 100.0f));
 	}
 }
 

@@ -10,33 +10,33 @@ void UPDAttributeSetBindProxy::Init(UIngameHUD* InHUD, EHPBarSlot InSlot, UPDAtt
     HUD = InHUD;
     Slot = InSlot;
 
-    if (BoundSet == InSet)
+    if (BindSet == InSet)
     {
         return;
     }
 
     Unbind();
 
-    BoundSet = InSet;
-    if (!IsValid(BoundSet) || !IsValid(HUD))
+    BindSet = InSet;
+    if (!IsValid(BindSet) || !IsValid(HUD))
     {
         return;
     }
 
-    BoundSet->OnHealthChanged.AddDynamic(this, &ThisClass::OnHealth);
+    BindSet->OnHealthChanged.AddDynamic(this, &ThisClass::OnHealth);
 
-    OnHealth(BoundSet->GetHealth(), BoundSet->GetHealth());
+    OnHealth(BindSet->GetHealth(), BindSet->GetHealth());
 }
 
 void UPDAttributeSetBindProxy::Unbind()
 {
-    if (!IsValid(BoundSet))
+    if (!IsValid(BindSet))
     {
         return;
     }
 
-    BoundSet->OnHealthChanged.RemoveDynamic(this, &ThisClass::OnHealth);
-    BoundSet = nullptr;
+    BindSet->OnHealthChanged.RemoveDynamic(this, &ThisClass::OnHealth);
+    BindSet = nullptr;
 }
 
 

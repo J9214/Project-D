@@ -1,4 +1,4 @@
-#include "Pawn/PDPawnBase.h"
+﻿#include "Pawn/PDPawnBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
@@ -29,6 +29,7 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Structs/FSpeedUpModifier.h"
 #include "Gimmick/ZipLine/PDZipLine.h"
+#include "Components/PDPlayerUIComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -235,6 +236,10 @@ void APDPawnBase::BindAttributeChangeDelegates()
 
 void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	if(UIComponent)
+	{
+		UIComponent->OnHealthChanged(Data.OldValue, Data.NewValue);
+	}
 }
 
 bool APDPawnBase::IsPlacementModeActive() const
