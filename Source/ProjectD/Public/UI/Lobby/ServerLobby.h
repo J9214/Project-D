@@ -68,15 +68,27 @@ private:
 		const TCHAR* TeamLabel,
 		const FTeamInfo* TeamInfo,
 		bool bIsMyTeam);
+	void RefreshLobbyTeamInfos();
 	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
 	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 	void CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 	void UpdateOtherTeamAvatars(ETeamType LocalTeamID);
 	void NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, const APDPlayerState* SlotPlayerState, ETeamType SourceTeamID);
+	int32 GetExpectedReadyPlayerCount(ETeamType TeamID) const;
+	int32 CountReadyPlayerStates(ETeamType TeamID) const;
+	bool AreAllExpectedPlayerStatesReady() const;
+	void RetryRefreshLobbyTeamInfos();
+	void StartLobbyTeamRefreshRetry();
+	void StopLobbyTeamRefreshRetry();
 
 	void RefreshMatchingTimeText();
 	void StartMatchingTimeRefresh();
 	void StopMatchingTimeRefresh();
+
+	TArray<FTeamInfo> CachedTeamInfos;
+	ETeamType CachedLocalTeamID = ETeamType::None;
+	FTimerHandle LobbyTeamRefreshRetryHandle;
+	int32 LobbyTeamRefreshRetryCount = 0;
 
 	FTimerHandle MatchingTimeRefreshHandle;
 	float MatchStartServerTimeSec = 0.0f;

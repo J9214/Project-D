@@ -35,6 +35,8 @@ void APDPlayerState::SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCha
 	CharacterCustomInfo = NewCharacterCustomInfo;
 	HandleCharacterCustomInfoChanged();
 	ForceNetUpdate();
+}
+
 void APDPlayerState::SetDisplayName(const FString& NewDisplayName)
 {
 	const FString ResolvedDisplayName = NewDisplayName.IsEmpty() ? GetPlayerName() : NewDisplayName;
