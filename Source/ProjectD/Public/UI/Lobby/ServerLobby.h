@@ -13,6 +13,14 @@ class APDPlayerState;
 class UTextBlock;
 class UWidget;
 
+UENUM(BlueprintType)
+enum class ELobbyAvatarTarget : uint8
+{
+	LocalTeam UMETA(DisplayName = "LocalTeam"),
+	OtherTeamB UMETA(DisplayName = "OtherTeamB"),
+	OtherTeamC UMETA(DisplayName = "OtherTeamC")
+};
+
 /**
  * 
  */
@@ -28,10 +36,7 @@ protected:
 	virtual void NativeDestruct() override;
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void BP_UpdateTeamMemberAvatar(int32 SlotIndex, const FBPUniqueNetId& UniqueNetId);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void BP_UpdateOtherTeamMemberAvatar(ETeamType TeamID, int32 SlotIndex, const FBPUniqueNetId& UniqueNetId);
+	void BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, bool bHasPlayer, const FBPUniqueNetId& UniqueNetId);
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TeamAInfo;
@@ -66,7 +71,8 @@ private:
 	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
 	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 	void CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
-	void UpdateOtherTeamAvatars();
+	void UpdateOtherTeamAvatars(ETeamType LocalTeamID);
+	void NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, const APDPlayerState* SlotPlayerState, ETeamType SourceTeamID);
 
 	void RefreshMatchingTimeText();
 	void StartMatchingTimeRefresh();
