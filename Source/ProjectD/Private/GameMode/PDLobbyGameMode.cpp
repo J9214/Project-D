@@ -30,6 +30,19 @@ APDLobbyGameMode::APDLobbyGameMode()
     bUseSeamlessTravel = true;
 }
 
+void APDLobbyGameMode::TravelToLobby10()
+{
+    if (!GetWorld() || GetWorld()->IsInSeamlessTravel())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[LobbyGameMode] TravelToLobby10 ignored. World invalid or already in seamless travel."));
+        return;
+    }
+
+    const FString TravelURL = TEXT("/Game/ProjectD/Maps/level_Temp");
+    UE_LOG(LogTemp, Log, TEXT("[LobbyGameMode] ServerTravel to %s"), *TravelURL);
+    GetWorld()->ServerTravel(TravelURL);
+}
+
 void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
