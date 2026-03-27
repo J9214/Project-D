@@ -19,18 +19,21 @@ void UPDIngameInfo::NativeOnInitialized()
 	APlayerController* PC = GetOwningPlayer();
 	if (!PC)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::NativeOnInitialized PC Null"));
 		return;
 	}
 
 	APDPawnBase* Pawn = Cast<APDPawnBase>(PC->GetPawn());
 	if (!Pawn)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::NativeOnInitialized Pawn Null"));
 		return;
 	}
 
 	UWeaponManageComponent* WeaponComp = Pawn->GetWeaponManageComponent();
 	if (!WeaponComp)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::NativeOnInitialized WeaponComp Null"));
 		return;
 	}
 
@@ -39,21 +42,21 @@ void UPDIngameInfo::NativeOnInitialized()
 
 }
 
-void UPDIngameInfo::SetActiveWeapon(const FSlateBrush& InBrush, int32 InCurrentBullet, int32 InMaxBullet, int32 InSlotIndex)
+void UPDIngameInfo::SetActiveWeapon(const FSlateBrush& InBrush, int32 InCurrentAmmo, int32 InMaxAmmo, int32 InSlotIndex)
 {
 	if (ActiveWeapon)
 	{
 		ActiveWeapon->SetBrush(InBrush);
 	}
 
-	if (CurrentBullet)
+	if (CurrentAmmo)
 	{
-		CurrentBullet->SetText(FText::AsNumber(InCurrentBullet));
+		CurrentAmmo->SetText(FText::AsNumber(InCurrentAmmo));
 	}
 
-	if (MaxBullet)
+	if (MaxAmmo)
 	{
-		MaxBullet->SetText(FText::AsNumber(InMaxBullet));
+		MaxAmmo->SetText(FText::AsNumber(InMaxAmmo));
 	}
 
 	if (ActiveSlotIndex)
@@ -82,26 +85,20 @@ void UPDIngameInfo::SetSkillIcon(int32 SkillIndex, const FSlateBrush& InBrush)
 	}
 }
 
+void UPDIngameInfo::UpdateCurrentAmmo(int32 AmmoCount)
+{
+	if (CurrentAmmo)
+	{
+		CurrentAmmo->SetText(FText::AsNumber(AmmoCount));
+	}
+}
+
 void UPDIngameInfo::HandleEquippedWeaponChanged(APDWeaponBase* NewWeapon)
 {
 
 	if (!NewWeapon || !NewWeapon->WeaponData)
 	{
-		if (ActiveWeapon)
-		{
-			ActiveWeapon->SetBrush(FSlateBrush());
-		}
-
-		if (CurrentBullet)
-		{
-			CurrentBullet->SetText(FText::GetEmpty());
-		}
-
-		if (MaxBullet)
-		{
-			MaxBullet->SetText(FText::GetEmpty());
-		}
-
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::HandleEquippedWeaponChanged NewWeapon Null"));
 		return;
 	}
 
@@ -116,18 +113,19 @@ void UPDIngameInfo::HandleEquippedWeaponChanged(APDWeaponBase* NewWeapon)
 		}
 		else
 		{
-			ActiveWeapon->SetBrush(FSlateBrush());
+			UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::HandleEquippedWeaponChanged IconTex Null"));
+			ActiveWeapon->SetBrushFromTexture(EmptyWeaponIconTexture, true);
 		}
 	}
 
-	if (CurrentBullet)
+	if (CurrentAmmo)
 	{
-		CurrentBullet->SetText(FText::AsNumber(NewWeapon->GetCurrentAmmo()));
+		CurrentAmmo->SetText(FText::AsNumber(NewWeapon->GetCurrentAmmo()));
 	}
 
-	if (MaxBullet)
+	if (MaxAmmo)
 	{
-		MaxBullet->SetText(FText::AsNumber(NewWeapon->GetMaxAmmo()));
+		MaxAmmo->SetText(FText::AsNumber(NewWeapon->GetMaxAmmo()));
 	}
 
 }
@@ -138,7 +136,7 @@ void UPDIngameInfo::HandleEquippedThrowableChanged(APDThrowableItemBase* NewThro
 	{
 		if (ActiveGrenada)
 		{
-			ActiveGrenada->SetBrush(FSlateBrush());
+			UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::HandleEquippedThrowableChanged NewThrowable Null"));
 		}
 		return;
 	}
@@ -154,7 +152,8 @@ void UPDIngameInfo::HandleEquippedThrowableChanged(APDThrowableItemBase* NewThro
 		}
 		else
 		{
-			ActiveGrenada->SetBrush(FSlateBrush());
+			UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::HandleEquippedThrowableChanged IconTex Null"));
+			ActiveGrenada->SetBrushFromTexture(EmptyThrowIconTexture, true);
 		}
 	}
 }
@@ -163,24 +162,28 @@ UTexture2D* UPDIngameInfo::GetItemIconTextureByID(const FName& ItemID) const
 {
 	if (ItemID.IsNone())
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::GetItemIconTextureByID ItemID Null"));
 		return nullptr;
 	}
 
 	UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
 	if (!GI)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::GetItemIconTextureByID GI Null"));
 		return nullptr;
 	}
 
 	UPDItemInfoSubsystem* ItemSubsystem = GI->GetSubsystem<UPDItemInfoSubsystem>();
 	if (!ItemSubsystem)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::GetItemIconTextureByID ItemSubsystem Null"));
 		return nullptr;
 	}
 
 	const FPDItemInfo* Info = ItemSubsystem->GetItemInfoByName(ItemID);
 	if (!Info)
 	{
+		UE_LOG(LogTemp, Error, TEXT("UPDIngameInfo::GetItemIconTextureByID Info Null"));
 		return nullptr;
 	}
 

@@ -5,10 +5,14 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Components/Shop/FPDItemInfo.h"
+#include "UI/Ingame/PDAttributeSetBindProxy.h"
 #include "IngameHUD.generated.h"
 
 class UPD_InventoryUI;
 class UPD_ShopUI;
+class UPDIngameInfo;
+class UPDTeamHPInfo;
+class UPDAttributeSetBase;
 /**
  * 
  */
@@ -22,6 +26,11 @@ public:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 
+	void BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set);
+
+	UFUNCTION()
+	void HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue);
+
 	UFUNCTION()
 	void ToggleGameUI();
 
@@ -32,7 +41,8 @@ public:
 	void InitItem(EItemType ItemType, int SlotIndex, const FName& NewItemID, int Count = 0);
 
 	UFUNCTION()
-	void InitUI();
+	void UpdateCurrentAmmo(int32 CurrentAmmo);
+
 
 protected:
 
@@ -41,6 +51,15 @@ protected:
 
 	UPROPERTY(Transient, meta = (BindWidget))
 	TObjectPtr<UPD_ShopUI> ShopUI;
+
+	UPROPERTY(Transient, meta = (BindWidget))
+	TObjectPtr<UPDIngameInfo> PlayerIngameInfo;
+
+	UPROPERTY(Transient, meta = (BindWidget))
+	TObjectPtr<UPDTeamHPInfo> PlayerHPBar;
+
+	UPROPERTY(Transient, meta = (BindWidget))
+	TObjectPtr<UPDTeamHPInfo> TeamHPBar;
 
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> OpenShopUI;
@@ -53,6 +72,15 @@ protected:
 
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> CloseInventoryUI;
+
+	UPROPERTY()
+	TMap<EHPBarSlot, TObjectPtr<UPDAttributeSetBase>> BoundAttrSets;
+
+	UPROPERTY()
+	TMap<EHPBarSlot, TObjectPtr<UPDAttributeSetBindProxy>> BindProxies;
+
+	UPROPERTY()
+	TMap<EHPBarSlot, TObjectPtr<UPDTeamHPInfo>> HPBars;
 
 	UFUNCTION()
 	void OnUIOpenFinished();

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
@@ -7,6 +7,8 @@
 class ABallCore;
 class APawn;
 class UStaticMeshComponent;
+class UWidgetComponent;
+class UObjectInfo;
 
 UCLASS()
 class PROJECTD_API AGoalPost : public APDDirectlyInteractGimmickBase
@@ -16,8 +18,12 @@ class PROJECTD_API AGoalPost : public APDDirectlyInteractGimmickBase
 public:
 	AGoalPost();
 
+	virtual void BeginPlay() override;
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
+	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	UWidgetComponent* GetGoadWidget() const { return GoalWidget; }
 public:
 	void ResetGoalPost();
 
@@ -34,8 +40,19 @@ protected:
 	UPROPERTY()
 	TObjectPtr<ABallCore> PlacedBall = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UWidgetComponent> GoalWidget;
+
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UObjectInfo> CachedInfoWidget;
+
 	FTimerHandle HoldTimer;
 
 	UPROPERTY(BlueprintReadWrite)
 	float GoalHoldTime;
+
+private:
+
+	UPROPERTY()
+	TObjectPtr<APawn> CachedPlayer;
 };

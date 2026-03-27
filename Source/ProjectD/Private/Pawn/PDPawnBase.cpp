@@ -1,4 +1,4 @@
-#include "Pawn/PDPawnBase.h"
+﻿#include "Pawn/PDPawnBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/PDAbilitySystemComponent.h"
@@ -29,6 +29,9 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Structs/FSpeedUpModifier.h"
 #include "Gimmick/ZipLine/PDZipLine.h"
+#include "Components/PDPlayerUIComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Components/CapsuleComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -40,6 +43,7 @@ APDPawnBase::APDPawnBase()
 	SkillManageComponent = CreateDefaultSubobject<USkillManageComponent>(TEXT("SkillManageComponent"));
 	MovementBridgeComponent = CreateDefaultSubobject<UMovementBridgeComponent>(TEXT("MovementBridgeComponent"));
 	InteractionComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("InteractionComponent"));
+	UIComponent = CreateDefaultSubobject<UPDPlayerUIComponent>(TEXT("UIComponent"));
 
 	OverrideInputComponentClass = UPDEnhancedInputComponent::StaticClass();
 }
@@ -155,6 +159,18 @@ void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	}
 }
 
+void APDPawnBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	UWidgetComponent* GetWidgetComponent = Cast<UWidgetComponent>(GetDefaultSubobjectByName(TEXT("IngameWidgetComponent")));
+
+	if (GetWidgetComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Set WidgetComponent"));
+		WidgetComponent = GetWidgetComponent;
+	}
+}
+
 void APDPawnBase::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
 {
 	if (!bIsFirstPerson)
@@ -235,6 +251,10 @@ void APDPawnBase::BindAttributeChangeDelegates()
 
 void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	if(UIComponent)
+	{
+		UIComponent->OnHealthChanged(Data.OldValue, Data.NewValue);
+	}
 }
 
 bool APDPawnBase::IsPlacementModeActive() const

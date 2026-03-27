@@ -9,6 +9,8 @@
 #include "Components/Inventory/PDInventoryComponent.h"
 #include "PlayerState/PDPlayerState.h"
 #include "Components/Shop/PDShopComponent.h"
+#include "Pawn/PDPawnBase.h"
+#include "Components/PDPlayerUIComponent.h"
 
 APDPlayerController::APDPlayerController()
 {
@@ -22,22 +24,25 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		if (PlayerHUDClass) {
+		//if (LoadingHUDClass && !LoadingHUD)
+		//{
+		//	LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
+		//	if (LoadingHUD)
+		//	{
+		//		LoadingHUD->AddToViewport(100);
+		//	}
+		//}
+
+		if (PlayerHUDClass && !PlayerHUDWidget)
+		{
 			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+
 			if (PlayerHUDWidget)
 			{
 				PlayerHUDWidget->AddToViewport();
 			}
 		}
 
-		//if (ResultWidgetClass)
-		//{
-		//	ResultWidget = CreateWidget<UUserWidget>(this, ResultWidgetClass);
-		//	if (ResultWidget)
-		//	{
-		//		ResultWidget->AddToViewport(10);
-		//	}
-		//}
 	}
 }
 
@@ -259,5 +264,94 @@ void APDPlayerController::InitializeHUD()
 			PlayerHUDWidget->AddToViewport();
 		}
 	}
+}
+
+void APDPlayerController::UpdateCurrentAmmo(int32 CurrentAmmo)
+{
+	if (!PlayerHUDWidget)
+	{
+		return;
+	}
+
+	PlayerHUDWidget->UpdateCurrentAmmo(CurrentAmmo);
+}
+
+void APDPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	//APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	//if (PS)
+	//{
+	//	InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
+	//}
+
+}
+
+void APDPlayerController::Client_OnGameStarted_Implementation()
+{
+	UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted"));
+	if (PlayerHUDClass && !PlayerHUDWidget)
+	{
+		PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted World Null"));
+		return;
+	}
+
+	APDGameStateBase* GS = World->GetGameState<APDGameStateBase>();
+	if (GS)
+	{
+		for (APlayerState* PS : GS->PlayerArray)
+		{
+			APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
+			if (!PDPS)
+			{
+				continue;
+			}
+
+			bool bIsMe = (PDPS == PlayerState);
+			bool bIsMyTeam = (PDPS->GetTeamID() == Cast<APDPlayerState>(PlayerState)->GetTeamID());
+
+			if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
+			{
+				if (bIsMe)
+				{
+					continue;
+				}
+
+				if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
+				{
+					UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
+					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), bIsMyTeam);
+				}
+			}
+
+			if (bIsMyTeam)
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase());
+			}
+		}
+	}
+
+	if (LoadingHUD)
+	{
+		LoadingHUD->RemoveFromParent();
+		LoadingHUD = nullptr;
+	}
+ 
+	//if (PlayerHUDWidget)
+	//{
+	//	PlayerHUDWidget->AddToViewport();
+	//}
 }
 

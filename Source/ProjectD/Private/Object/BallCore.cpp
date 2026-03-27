@@ -1,4 +1,4 @@
-#include "Object/BallCore.h"
+﻿#include "Object/BallCore.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
 #include "Components/StaticMeshComponent.h"
@@ -8,9 +8,13 @@
 #include "ProjectD/ProjectD.h"
 #include "GameMode/PDGameModeBase.h"
 #include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
+#include "UI/Ingame/ObjectInfo.h"
+#include <Kismet/GameplayStatics.h>
 
 ABallCore::ABallCore()
 {
+	PrimaryActorTick.bCanEverTick = true;
 	Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
 	Sphere->SetCollisionProfileName(TEXT("PhysicsActor"));
 	Sphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -32,6 +36,30 @@ ABallCore::ABallCore()
 
 	bReplicates = true;
 	SetReplicateMovement(true);
+
+	BallWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("BallWidget"));
+	if (GetRootComponent())
+	{
+		BallWidget->SetupAttachment(StaticMesh);
+	}
+
+	BallWidget->SetWidgetSpace(EWidgetSpace::Screen); 
+	BallWidget->SetDrawAtDesiredSize(true);
+}
+
+void ABallCore::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (BallWidget)
+	{
+		CachedInfoWidget = Cast<UObjectInfo>(BallWidget->GetUserWidgetObject());
+
+		if (!CachedInfoWidget)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BallWidget's UserWidget is not UObjectInfo!"));
+		}
+	}
 }
 
 void ABallCore::OnInteract_Implementation(AActor* Interactor)
@@ -44,6 +72,7 @@ void ABallCore::OnInteract_Implementation(AActor* Interactor)
 	if (APDPawnBase* PDPawn = Cast<APDPawnBase>(Interactor))
 	{
 		PDPawn->Server_PickUpObject(this);
+		PDPawn->GetTeamID();
 	}
 }
 
@@ -59,6 +88,27 @@ void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse,
 
 	Sphere->WakeAllRigidBodies();
 	Sphere->AddImpulse(Impulse, NAME_None, true);
+}
+
+void ABallCore::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!CachedInfoWidget)
+	{
+		return;
+	}
+
+	if (!CachedPlayer)
+	{
+		CachedPlayer = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	}
+
+	if (CachedPlayer)
+	{
+		float Dist = GetDistanceTo(CachedPlayer);
+		CachedInfoWidget->UpdateDistanceUI((int32)(Dist / 100.0f));
+	}
 }
 
 void ABallCore::ResetBallForRound(const FVector& SpawnLocation)

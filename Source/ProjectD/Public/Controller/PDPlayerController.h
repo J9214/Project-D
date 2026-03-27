@@ -11,6 +11,7 @@ class UUserWidget;
 class UWeaponManageComponent;
 class UPDShopComponent;
 class UIngameHUD;
+class UPDAttributeSetBase;
 
 UCLASS()
 class PROJECTD_API APDPlayerController : public APlayerController
@@ -38,12 +39,26 @@ public:
 
 	void InitializeHUD();
 
+	void UpdateCurrentAmmo(int32 CurrentAmmo);
+
+	UFUNCTION(Client, Reliable)
+	void Client_OnGameStarted();
+
 protected:
+
+	virtual void OnRep_PlayerState() override;
+
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> PlayerHUDClass;
 
 	UPROPERTY()
 	TObjectPtr<UIngameHUD> PlayerHUDWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> LoadingHUDClass;
+
+	UPROPERTY()
+	UUserWidget* LoadingHUD;
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> ResultWidgetClass;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
@@ -23,6 +23,8 @@ class UCapsuleComponent;
 class UMoverComponent;
 class APDCarriableObjectBase;
 class UInteractionComponent;
+class UPDPlayerUIComponent;
+class UWidgetComponent;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -44,6 +46,8 @@ public:
 	FORCEINLINE USkillManageComponent* GetSkillManageComponent() const { return SkillManageComponent; }
 	FORCEINLINE UMovementBridgeComponent* GetMovementBridgeComponent() const { return MovementBridgeComponent; }
 	FORCEINLINE UMoverComponent* GetMoverComponent() const { return MoverComponent; }
+	FORCEINLINE UPDPlayerUIComponent* GetUIComponent() const { return UIComponent; }
+	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return WidgetComponent; }
 
 	USkeletalMeshComponent* GetSkeletalMeshComponent() const;
 
@@ -58,6 +62,7 @@ protected:
 	virtual void OnRep_PlayerState() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void PostInitializeComponents() override;
 
 	void InitAbilityActorInfo();
 	void InitAttributeSet();
@@ -72,6 +77,7 @@ private:
 	bool ShouldBlockFirstPersonToggleInput() const;
 
 protected:
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UWeaponManageComponent> WeaponManageComponent;
 	
@@ -95,6 +101,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mover")
 	TObjectPtr<UInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UPDPlayerUIComponent> UIComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UWidgetComponent> WidgetComponent;
 	
 #pragma region FirstPerson
 

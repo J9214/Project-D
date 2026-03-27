@@ -3,6 +3,7 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/Inventory/PDInventoryComponent.h"
+#include <Controller/PDPlayerController.h>
 
 APDPlayerState::APDPlayerState()
 {
@@ -168,6 +169,7 @@ void APDPlayerState::OnRep_DisplayName()
 		*GetPlayerName(),
 		*GetResolvedDisplayName(),
 		*GetUniqueId().ToString());
+
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

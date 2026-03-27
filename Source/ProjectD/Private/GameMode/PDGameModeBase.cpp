@@ -1,4 +1,4 @@
-#include "GameMode/PDGameModeBase.h"
+﻿#include "GameMode/PDGameModeBase.h"
 #include "PlayerState/PDPlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
@@ -380,6 +380,14 @@ void APDGameModeBase::StartInitialPreRound()
 
     RoundPhase = ERoundPhase::InitPreRound;
 
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+        {
+            PC->Client_OnGameStarted();
+        }
+    }
+
     GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         InitialPreRoundTimerHandle,
@@ -395,6 +403,7 @@ void APDGameModeBase::StartInitialPreRound()
         TEXT("[GameMode] InitialPreRound started. Duration=%.2f"),
         InitialPreRoundDurationSec
     );
+
 }
 
 void APDGameModeBase::FinishInitialPreRound()
@@ -440,6 +449,7 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin Try"));
     if (IsValid(NewPlayer) == false)
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin failed. NewPlayer is invalid."));

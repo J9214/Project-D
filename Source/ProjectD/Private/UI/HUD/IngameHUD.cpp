@@ -5,6 +5,8 @@
 #include "Animation/WidgetAnimation.h"
 #include "UI/Inventory/PD_InventoryUI.h"
 #include "UI/Shop/PD_ShopUI.h"
+#include "UI/Ingame/PDIngameInfo.h"
+#include "UI/Ingame/PDTeamHPInfo.h"
 
 void UIngameHUD::NativeOnInitialized()
 {
@@ -42,6 +44,52 @@ void UIngameHUD::NativeConstruct()
     Super::NativeConstruct();
 
     bIsFocusable = true;
+}
+
+void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set)
+{
+    if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
+    {
+        if (Bar->CheckInit())
+        {
+            return;
+        }
+
+        Bar->Init(DisplayName);
+        switch (InSlot)
+        {
+        case EHPBarSlot::Player:
+        {
+            Bar->SetPlayerColor();
+            break;
+        }
+        case EHPBarSlot::Team1:
+        {
+            Bar->SetTeamColor(0);
+            break;
+        }
+        default: break;
+        }
+    }
+
+    BoundAttrSets.FindOrAdd(InSlot) = Set;
+
+    UPDAttributeSetBindProxy* Proxy = BindProxies.FindRef(InSlot);
+    if (!IsValid(Proxy))
+    {
+        Proxy = NewObject<UPDAttributeSetBindProxy>(this);
+        BindProxies.Add(InSlot, Proxy);
+    }
+
+    Proxy->Init(this, InSlot, Set);
+}
+
+void UIngameHUD::HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue)
+{
+    if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
+    {
+        float Value = Bar->HandleHealthChanged(OldValue, NewValue);
+    }
 }
 
 void UIngameHUD::ToggleGameUI()
@@ -92,12 +140,10 @@ void UIngameHUD::InitItem(EItemType ItemType, int SlotIndex, const FName& NewIte
     }
 }
 
-void UIngameHUD::InitUI()
+void UIngameHUD::UpdateCurrentAmmo(int32 CurrentAmmo)
 {
-
-
+    PlayerIngameInfo->UpdateCurrentAmmo(CurrentAmmo);
 }
-
 
 void UIngameHUD::InitGold(int NewGold)
 {
