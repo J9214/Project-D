@@ -11,6 +11,16 @@ void UFriendsLobby::InitFriendsPopupButton(bool Active)
 	FriendsPopupButton->SetVisibility(Active ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 }
 
+void UFriendsLobby::ClosePopupAnimation()
+{
+    if (CloseFriendsList)
+    {
+        PlayAnimation(CloseFriendsList);
+    }
+
+    IsActiveFriendsPopup = false;
+}
+
 void UFriendsLobby::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
@@ -37,5 +47,5 @@ void UFriendsLobby::HandleFriendsPopupClicked()
             PlayAnimation(OpenFriendsList);
         }
     }
-	IsActiveFriendsPopup = !IsActiveFriendsPopup;
+
 }

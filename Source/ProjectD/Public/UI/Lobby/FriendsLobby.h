@@ -23,6 +23,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void InitFriendsPopupButton(bool Active);
 
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ClosePopupAnimation();
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> FriendsPopupButton;
 

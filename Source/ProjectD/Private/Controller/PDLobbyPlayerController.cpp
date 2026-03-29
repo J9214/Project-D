@@ -8,6 +8,7 @@
 #include "PlayerState/PDPlayerState.h"
 #include "GameMode/PDLobbyGameMode.h"
 #include "GameInstance/PDGameInstance.h"
+#include "UI/Lobby/FriendsLobby.h"
 
 void APDLobbyPlayerController::BeginPlay()
 {
@@ -282,4 +283,16 @@ void APDLobbyPlayerController::OnDestroySessionComplete(FName SessionName, bool 
     }
 
     ClientTravel(PendingDediUrl, TRAVEL_Absolute);
+}
+
+void APDLobbyPlayerController::Client_UpdateLobbyUI_Implementation()
+{
+    if (UIWidgetInstance)
+    {
+        UFriendsLobby* FriendsLobby = Cast<UFriendsLobby>(UIWidgetInstance);
+        if (FriendsLobby)
+        {
+            FriendsLobby->BP_InitTeamInfoDisplay();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "GameMode/PDLobbyGameMode.h"
@@ -60,41 +60,60 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
     int32 IncomingSize = UGameplayStatics::GetIntOption(Options, TEXT("TeamSize"), 1);
     FString LeaderSteamID = UGameplayStatics::ParseOption(Options, TEXT("LeaderSteamId"));
 
-    bool bCanFit = false;
-
-    UE_LOG(LogTemp, Warning, TEXT("PreLogin UniqueId Check: %s"), *UniqueId.ToString());
-    for (int32 i = 0; i < TEAM_COUNT; i++)
     {
-        if (TeamInfos[i].PendingCount + TeamInfos[i].PlayerCount > MaxTeamSize ||  TeamInfos[i].LeaderSteamId == LeaderSteamID)
+        FScopeLock Lock(&TeamLock);
+
+        bool bCanFit = false;
+
+        if (LoginInfo.Contains(UniqueId.ToString()))
         {
-            LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
             Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
             return;
         }
-    }
-    
-    for (int32 i = 0; i < TEAM_COUNT; i++)
-    {
-        if (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize)
+
+        int32 SelectedTeamIdx = -1;
+
+        for (int32 i = 0; i < TEAM_COUNT; i++)
         {
-            if (!TeamInfos[i].LeaderSteamId.IsEmpty())
+            if (TeamInfos[i].LeaderSteamId == LeaderSteamID && !LeaderSteamID.IsEmpty())
             {
-                continue;
+                if (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize)
+                {
+                    SelectedTeamIdx = i;
+                    break;
+                }
             }
-            TeamInfos[i].LeaderSteamId = LeaderSteamID;
-			TeamInfos[i].PendingCount = IncomingSize;
-            LoginInfo.Add(UniqueId.ToString(), TeamInfos[i].LeaderSteamId);
-            bCanFit = true;
-            break;
+        }
+
+        if (SelectedTeamIdx == -1)
+        {
+            for (int32 i = 0; i < TEAM_COUNT; i++)
+            {
+                if (TeamInfos[i].LeaderSteamId.IsEmpty() && (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount == 0))
+                {
+                    if (IncomingSize <= MaxTeamSize)
+                    {
+                        SelectedTeamIdx = i;
+                        TeamInfos[i].LeaderSteamId = LeaderSteamID;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (SelectedTeamIdx != -1)
+        {
+            TeamInfos[SelectedTeamIdx].PendingCount += IncomingSize;
+            LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
+
+            UE_LOG(LogTemp, Log, TEXT("[PreLogin] Team %d Reserved (Leader: %s)"), SelectedTeamIdx, *LeaderSteamID);
+        }
+        else
+        {
+            ErrorMessage = TEXT("No_Available_Team_Slot");
+            UE_LOG(LogTemp, Warning, TEXT("[PreLogin] Denied: Could not find or fit into a team for Leader %s"), *LeaderSteamID);
         }
     }
-
-    if (!bCanFit)
-    {
-        ErrorMessage = TEXT("No_Available_Team_Slot");
-        return;
-    }
-
     Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 }
 
@@ -102,7 +121,6 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
-    UE_LOG(LogTemp, Warning, TEXT("PostLogin"));
     APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
     if (!PlayerState)
     {
@@ -110,55 +128,63 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     }
 
     const FString NetIdKey = PlayerState->GetUniqueId().ToString(); 
-    FString* FoundLeaderSteamID = LoginInfo.Find(NetIdKey);
+    ETeamType AssignedTeamID = ETeamType::None;
 
-    UE_LOG(LogTemp, Warning, TEXT("PostLogin LoginInfo Check: %s"), *NetIdKey);
-    if (!FoundLeaderSteamID)
     {
-        UE_LOG(LogTemp, Warning, TEXT("LoginInfo missing: %s"), *NetIdKey);
-        return;
-    }
+        FScopeLock Lock(&TeamLock);
+        FString* FoundLeaderSteamID = LoginInfo.Find(NetIdKey);
 
-    int32 SelectedTeam = -1;
-    for (int32 i = 0; i < TEAM_COUNT; i++)
-    {
-        if (TeamInfos[i].LeaderSteamId == *FoundLeaderSteamID)
+        if (!FoundLeaderSteamID)
         {
-            SelectedTeam = i;
-            break;
-		}
-    }
-
-    if (SelectedTeam != -1)
-    {
-        TeamInfos[SelectedTeam].PlayerCount++;
-        if (--TeamInfos[SelectedTeam].PendingCount == 0)
-        {
-			TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
+            UE_LOG(LogTemp, Warning, TEXT("LoginInfo missing: %s"), *NetIdKey);
+            return;
         }
-		PlayerState->SetTeamID(TeamInfos[SelectedTeam].TeamID);
-        PlayerState->SetDisplayName(PlayerState->GetPlayerName());
-		LoginInfo.Remove(NetIdKey);
-        UE_LOG(
-            LogTemp,
-            Warning,
-            TEXT("[LobbyDisplayName] PostLogin Sync Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
-            SelectedTeam,
-            *PlayerState->GetPlayerName(),
-            *PlayerState->GetDisplayName(),
-            *PlayerState->GetResolvedDisplayName(),
-            *PlayerState->GetUniqueId().ToString());
-        UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 팀에 배정되지 못함"), *PlayerState->GetPlayerName());
+
+        int32 SelectedTeam = -1;
+        for (int32 i = 0; i < TEAM_COUNT; i++)
+        {
+            if (TeamInfos[i].LeaderSteamId == *FoundLeaderSteamID)
+            {
+                SelectedTeam = i;
+                break;
+            }
+        }
+
+        if (SelectedTeam != -1)
+        {
+            TeamInfos[SelectedTeam].PlayerCount++;
+            AssignedTeamID = TeamInfos[SelectedTeam].TeamID;
+
+            if (--TeamInfos[SelectedTeam].PendingCount <= 0)
+            {
+                TeamInfos[SelectedTeam].PendingCount = 0;
+                TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
+            }
+
+            LoginInfo.Remove(NetIdKey);
+            UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 팀에 배정되지 못함"), *PlayerState->GetPlayerName());
+            NewPlayer->ClientTravel(TEXT("/Game/ProjectD/Maps/Main_Menu"), ETravelType::TRAVEL_Absolute);
+            LoginInfo.Remove(NetIdKey);
+            return;
+        }
     }
 
-    if (auto* PC = Cast<APDLobbyPlayerController>(NewPlayer))
-    {
-        PC->Client_RequestCharacterCustomInfo();
-    }
+    PlayerState->SetTeamID(AssignedTeamID);
+
+    UE_LOG(
+        LogTemp,
+        Warning,
+        TEXT("[LobbyDisplayName] PostLogin Sync Team=%d PlayerName=[%s] DisplayName=[%s] Resolved=[%s] NetId=[%s]"),
+        AssignedTeamID,
+        *PlayerState->GetPlayerName(),
+        *PlayerState->GetDisplayName(),
+        *PlayerState->GetResolvedDisplayName(),
+        *PlayerState->GetUniqueId().ToString());
+
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
 	TryGameStart(false);
@@ -166,14 +192,22 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 void APDLobbyGameMode::Logout(AController* Exiting)
 {
-    APDPlayerState* PlayerState = Exiting ? Exiting->GetPlayerState<APDPlayerState>() : nullptr;
-    if (PlayerState && static_cast<int>(PlayerState->GetTeamID()) < TEAM_COUNT)
     {
-		TeamInfos[static_cast<int>(PlayerState->GetTeamID())].PlayerCount--;
+        FScopeLock Lock(&TeamLock);
+
+        APDPlayerState* PlayerState = Exiting ? Exiting->GetPlayerState<APDPlayerState>() : nullptr;
+        if (PlayerState)
+        {
+            int32 TeamIndex = static_cast<int>(PlayerState->GetTeamID());
+            if (TeamIndex >= 0 && TeamIndex < TEAM_COUNT)
+            {
+                TeamInfos[TeamIndex].PlayerCount = FMath::Max(0, TeamInfos[TeamIndex].PlayerCount - 1);
+            }
+        }
+
     }
 
     Super::Logout(Exiting);
-
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
 }
