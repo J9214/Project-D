@@ -32,6 +32,9 @@
 #include "Components/PDPlayerUIComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Animation/AnimInstance.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -524,26 +527,243 @@ void APDPawnBase::OnDeathTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 
 void APDPawnBase::HandleDeathState(bool bIsDead)
 {
+	if (bIsDead)
+	{
+		CacheMeshDeathState();
+		CancelMovementGA();
+
+		if (MovementBridgeComponent)
+		{
+			MovementBridgeComponent->ClearMoveRequests();
+		}
+
+		if (MoverComponent)
+		{
+			MoverComponent->ClearQueuedInstantMovementEffects();
+
+			if (USceneComponent* UpdatedComponent = MoverComponent->GetUpdatedComponent())
+			{
+				UpdatedComponent->ComponentVelocity = FVector::ZeroVector;
+			}
+
+			MoverComponent->SetComponentTickEnabled(false);
+			MoverComponent->Deactivate();
+		}
+
+		if (USceneComponent* RootSceneComponent = Cast<USceneComponent>(RootComponent))
+		{
+			RootSceneComponent->ComponentVelocity = FVector::ZeroVector;
+		}
+	}
+	else if (MoverComponent)
+	{
+		MoverComponent->Activate(true);
+		MoverComponent->SetComponentTickEnabled(true);
+	}
+
 	if (RootComponent)
 	{
 		if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(RootComponent))
 		{
-			Primitive->SetCollisionEnabled(bIsDead ? ECollisionEnabled::QueryOnly : ECollisionEnabled::QueryAndPhysics);
+			if (bIsDead)
+			{
+				Primitive->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			}
+			else if (bRootCollisionStateCached)
+			{
+				if (CachedRootCollisionProfileName != NAME_None)
+				{
+					Primitive->SetCollisionProfileName(CachedRootCollisionProfileName);
+				}
+
+				Primitive->SetCollisionEnabled(CachedRootCollisionEnabled);
+				bRootCollisionStateCached = false;
+			}
 		}
 	}
+
+	SetDeathMontageEnabled(bIsDead);
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (bIsDead)
+		{
 			DisableInput(PC);
+		}
 		else
+		{
 			EnableInput(PC);
+		}
 	}
 
-	if (bIsDead == true)
+	if (bIsDead && HasAuthority() && IsValid(CarriedObject.Get()))
 	{
-		// Ball & Object Detach
 		Server_DropObject(FVector::ZeroVector);
+	}
+}
+
+void APDPawnBase::HandleDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (bInterrupted || Montage != DeathMontage)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+	if (!ASC->HasMatchingGameplayTag(DeadTag))
+	{
+		return;
+	}
+
+	SpawnDeathSound();
+	SpawnDeathVFX();
+	SetDeathVisualHidden(true);
+}
+
+void APDPawnBase::SpawnDeathVFX() const
+{
+	if (GetNetMode() == NM_DedicatedServer || !DeathVFX)
+	{
+		return;
+	}
+
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+		GetWorld(),
+		DeathVFX,
+		GetActorLocation() + DeathVFXLocationOffset,
+		GetActorRotation(),
+		DeathVFXScale,
+		true,
+		true
+	);
+}
+
+void APDPawnBase::SpawnDeathSound() const
+{
+	if (GetNetMode() == NM_DedicatedServer || !DeathSound)
+	{
+		return;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(
+		GetWorld(),
+		DeathSound,
+		GetActorLocation() + DeathSoundLocationOffset,
+		GetActorRotation(),
+		DeathSoundVolumeMultiplier,
+		DeathSoundPitchMultiplier,
+		0.0f,
+		DeathSoundAttenuation
+	);
+}
+
+void APDPawnBase::SetDeathVisualHidden(bool bShouldHide) const
+{
+	if (USkeletalMeshComponent* Mesh = GetSkeletalMeshComponent())
+	{
+		Mesh->SetHiddenInGame(bShouldHide, true);
+	}
+
+	if (WidgetComponent)
+	{
+		WidgetComponent->SetHiddenInGame(bShouldHide);
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (IsValid(AttachedActor))
+		{
+			AttachedActor->SetActorHiddenInGame(bShouldHide);
+		}
+	}
+}
+
+void APDPawnBase::CacheMeshDeathState()
+{
+	if (bMeshDeathStateCached)
+	{
+		return;
+	}
+
+	if (USkeletalMeshComponent* Mesh = GetSkeletalMeshComponent())
+	{
+		bCachedMeshOwnerNoSee = Mesh->bOwnerNoSee;
+		bMeshDeathStateCached = true;
+	}
+
+	if (!bRootCollisionStateCached)
+	{
+		if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(RootComponent))
+		{
+			CachedRootCollisionProfileName = Primitive->GetCollisionProfileName();
+			CachedRootCollisionEnabled = Primitive->GetCollisionEnabled();
+			bRootCollisionStateCached = true;
+		}
+	}
+}
+
+void APDPawnBase::SetDeathMontageEnabled(bool bEnable)
+{
+	USkeletalMeshComponent* Mesh = GetSkeletalMeshComponent();
+	if (!Mesh)
+	{
+		return;
+	}
+
+	if (!bEnable)
+	{
+		if (UAnimInstance* AnimInstance = Mesh->GetAnimInstance())
+		{
+			if (DeathMontage)
+			{
+				FOnMontageEnded ClearEndDelegate;
+				AnimInstance->Montage_SetEndDelegate(ClearEndDelegate, DeathMontage);
+				AnimInstance->Montage_Stop(DeathMontageStopBlendOutTime, DeathMontage);
+			}
+		}
+
+		SetDeathVisualHidden(false);
+		Mesh->SetOwnerNoSee(bCachedMeshOwnerNoSee);
+		bMeshDeathStateCached = false;
+		return;
+	}
+
+	SetDeathVisualHidden(false);
+	Mesh->SetOwnerNoSee(false);
+
+	if (UAnimInstance* AnimInstance = Mesh->GetAnimInstance())
+	{
+		AnimInstance->Montage_Stop(0.05f);
+
+		if (DeathMontage)
+		{
+			if (AnimInstance->Montage_Play(DeathMontage, DeathMontagePlayRate) > 0.0f)
+			{
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &ThisClass::HandleDeathMontageEnded);
+				AnimInstance->Montage_SetEndDelegate(EndDelegate, DeathMontage);
+			}
+			else
+			{
+				HandleDeathMontageEnded(DeathMontage, false);
+			}
+		}
+		else
+		{
+			HandleDeathMontageEnded(nullptr, false);
+		}
+	}
+	else
+	{
+		HandleDeathMontageEnded(nullptr, false);
 	}
 }
 

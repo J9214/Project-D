@@ -11,11 +11,68 @@
 #include "Components/Shop/PDShopComponent.h"
 #include "Pawn/PDPawnBase.h"
 #include "Components/PDPlayerUIComponent.h"
+#include "GameMode/PDGameModeBase.h"
 
 APDPlayerController::APDPlayerController()
 {
 	ShopComponent = CreateDefaultSubobject<UPDShopComponent>(TEXT("ShopComponent"));
 
+}
+
+void APDPlayerController::KillSelfCheat()
+{
+	if (HasAuthority())
+	{
+		if (APDGameModeBase* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<APDGameModeBase>() : nullptr)
+		{
+			GameMode->PlayerDied(this);
+		}
+		else if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+		{
+			PDPlayerState->SetDeadState();
+		}
+
+		return;
+	}
+
+	Server_KillSelfCheat();
+}
+
+void APDPlayerController::ReviveSelfCheat()
+{
+	if (HasAuthority())
+	{
+		if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+		{
+			PDPlayerState->SetReviveState();
+		}
+
+		return;
+	}
+
+	Server_ReviveSelfCheat();
+}
+
+void APDPlayerController::Server_KillSelfCheat_Implementation()
+{
+	if (APDGameModeBase* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<APDGameModeBase>() : nullptr)
+	{
+		GameMode->PlayerDied(this);
+		return;
+	}
+
+	if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+	{
+		PDPlayerState->SetDeadState();
+	}
+}
+
+void APDPlayerController::Server_ReviveSelfCheat_Implementation()
+{
+	if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+	{
+		PDPlayerState->SetReviveState();
+	}
 }
 
 void APDPlayerController::BeginPlay()

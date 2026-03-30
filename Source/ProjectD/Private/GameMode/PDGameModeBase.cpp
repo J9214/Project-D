@@ -324,24 +324,25 @@ void APDGameModeBase::PlayerRespawn(AController* Controller)
         return;
     }
 
-    const FVector RespawnLocation = BuildRespawnLocationForController(Controller);
-    if (RespawnLocation == FVector::ZeroVector)
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn failed. RespawnLocation is zero vector."));
-        return;
-    }
+	const FVector RespawnLocation = BuildRespawnLocationForController(Controller);
+	if (RespawnLocation == FVector::ZeroVector)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn failed. RespawnLocation is zero vector."));
+		return;
+	}
 
-    const FRotator RespawnRotation = (CurrentRoundBallSpawnLocation - RespawnLocation).Rotation();
-    Pawn->TeleportTo(RespawnLocation, RespawnRotation);
-
-    if (APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>())
-    {
-        PS->SetReviveState();
-    }
+	if (APDPlayerState* PS = Controller->GetPlayerState<APDPlayerState>())
+	{
+		PS->SetReviveState();
+	}
     else
-    {
-        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn. PlayerState is invalid."));
-    }
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PlayerRespawn. PlayerState is invalid."));
+		return;
+	}
+
+	const FRotator RespawnRotation = (CurrentRoundBallSpawnLocation - RespawnLocation).Rotation();
+	Pawn->TeleportTo(RespawnLocation, RespawnRotation);
 }
 
 void APDGameModeBase::StartInitialPreRound()
