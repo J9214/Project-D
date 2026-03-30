@@ -104,7 +104,7 @@ void UIngameHUD::ToggleGameUI()
         return;
     }
 
-    bool bIsDead = true; 
+    bool bIsDead = false; 
 
     APlayerController* PC = GetOwningPlayer();
     if (PC)
@@ -124,22 +124,69 @@ void UIngameHUD::ToggleGameUI()
         {
             PlayAnimation(OpenShopUI);
             PlayAnimation(OpenInventoryUI);
+            bIsShopOpen = true;
         }
         else
         {
             PlayAnimation(OpenInventoryUI);
+            bIsShopOpen = false;
         }
         bIsUIPanelOpen = true;
     }
     else
     {
-        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
+        if (bIsShopOpen)
         {
             PlayAnimation(CloseShopUI);
+            bIsShopOpen = false;
         }
 
         PlayAnimation(CloseInventoryUI);
         bIsUIPanelOpen = false;
+    }
+}
+
+void UIngameHUD::ForceOpenDeadShopUI()
+{
+    if (CloseShopUI)
+    {
+        StopAnimation(CloseShopUI);
+    }
+
+    if (CloseInventoryUI)
+    {
+        StopAnimation(CloseInventoryUI);
+    }
+
+    if (!bIsUIPanelOpen)
+    {
+        OpenedUIPriority = 0;
+        bIsShopOpen = false;
+
+        if (OpenInventoryUI)
+        {
+            PlayAnimation(OpenInventoryUI);
+        }
+        else if (OpenedUIPriority <= 0)
+        {
+            OnUIOpenFinished();
+        }
+
+        bIsUIPanelOpen = true;
+    }
+    else if (OpenedUIPriority <= 0)
+    {
+        OnUIOpenFinished();
+    }
+
+    if (!bIsShopOpen)
+    {
+        if (OpenShopUI)
+        {
+            PlayAnimation(OpenShopUI);
+        }
+
+        bIsShopOpen = true;
     }
 }
 
@@ -176,37 +223,7 @@ void UIngameHUD::UpdateCurrentAmmo(int32 CurrentAmmo)
 
 void UIngameHUD::OnShopUI()
 {
-    if (IsAnimationPlaying(OpenShopUI) || IsAnimationPlaying(CloseShopUI) ||
-        IsAnimationPlaying(OpenInventoryUI) || IsAnimationPlaying(CloseInventoryUI))
-    {
-        return;
-    }
-
-    bool bIsDead = true;
-
-    if (!bIsUIPanelOpen)
-    {
-        if (bIsDead)
-        {
-            PlayAnimation(OpenShopUI);
-            PlayAnimation(OpenInventoryUI);
-        }
-        else
-        {
-            PlayAnimation(OpenInventoryUI);
-        }
-        bIsUIPanelOpen = true;
-    }
-    else
-    {
-        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
-        {
-            PlayAnimation(CloseShopUI);
-        }
-
-        PlayAnimation(CloseInventoryUI);
-        bIsUIPanelOpen = false;
-    }
+    ForceOpenDeadShopUI();
 }
 
 void UIngameHUD::InitGold(int NewGold)
