@@ -32,6 +32,7 @@ class USoundAttenuation;
 class USoundBase;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
+struct FPDCharacterCustomInfo;
 
 UCLASS()
 class PROJECTD_API APDPawnBase : public APawn, public IAbilitySystemInterface, public IPDTeamInterface
@@ -58,6 +59,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Placement")
 	bool TryConsumePlacementFirstPersonToggleInput();
+
+	UFUNCTION(BlueprintCallable, Category = "Custom")
+	void ApplyCustomizationFromPlayerState();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Custom")
+	void BP_ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo);
 	
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawFireDebug(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
@@ -72,6 +79,9 @@ protected:
 	void InitAbilityActorInfo();
 	void InitAttributeSet();
 	void BindAttributeChangeDelegates();
+	void BindCustomizationSyncFromPlayerState();
+	void UnbindCustomizationSyncFromPlayerState();
+	void HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo);
 	
 private:
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
@@ -112,6 +122,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UWidgetComponent> WidgetComponent;
+
+	TWeakObjectPtr<class APDPlayerState> BoundCustomizationPlayerState;
+	FDelegateHandle CharacterCustomInfoChangedHandle;
 	
 #pragma region FirstPerson
 

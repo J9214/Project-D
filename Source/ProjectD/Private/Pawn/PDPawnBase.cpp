@@ -134,11 +134,18 @@ void APDPawnBase::PossessedBy(AController* NewController)
 		
 		InitAttributeSet();
 	}
+
+	BindCustomizationSyncFromPlayerState();
+	ApplyCustomizationFromPlayerState();
 }
 
 void APDPawnBase::OnRep_PlayerState()
 {
+	Super::OnRep_PlayerState();
+
 	InitAbilityActorInfo();
+	BindCustomizationSyncFromPlayerState();
+	ApplyCustomizationFromPlayerState();
 }
 
 void APDPawnBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -250,6 +257,58 @@ void APDPawnBase::BindAttributeChangeDelegates()
 	}
 	
 	ASC->GetGameplayAttributeValueChangeDelegate(UPDAttributeSetBase::GetHealthAttribute()).AddUObject(this, &ThisClass::OnHealthChanged);
+}
+
+void APDPawnBase::BindCustomizationSyncFromPlayerState()
+{
+	APDPlayerState* CurrentPlayerState = GetPlayerState<APDPlayerState>();
+
+	if (BoundCustomizationPlayerState.Get() == CurrentPlayerState && CharacterCustomInfoChangedHandle.IsValid())
+	{
+		return;
+	}
+
+	UnbindCustomizationSyncFromPlayerState();
+
+	if (!CurrentPlayerState)
+	{
+		return;
+	}
+
+	CharacterCustomInfoChangedHandle = CurrentPlayerState->OnCharacterCustomInfoChangedNative().AddUObject(
+		this,
+		&ThisClass::HandleReplicatedCharacterCustomInfoChanged
+	);
+
+	BoundCustomizationPlayerState = CurrentPlayerState;
+}
+
+void APDPawnBase::UnbindCustomizationSyncFromPlayerState()
+{
+	APDPlayerState* BoundPlayerState = BoundCustomizationPlayerState.Get();
+	if (BoundPlayerState && CharacterCustomInfoChangedHandle.IsValid())
+	{
+		BoundPlayerState->OnCharacterCustomInfoChangedNative().Remove(CharacterCustomInfoChangedHandle);
+	}
+
+	CharacterCustomInfoChangedHandle.Reset();
+	BoundCustomizationPlayerState = nullptr;
+}
+
+void APDPawnBase::HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
+{
+	BP_ApplyCharacterCustomization(NewCharacterCustomInfo);
+}
+
+void APDPawnBase::ApplyCustomizationFromPlayerState()
+{
+	const APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	BP_ApplyCharacterCustomization(PS->GetCharacterCustomInfo());
 }
 
 void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)
