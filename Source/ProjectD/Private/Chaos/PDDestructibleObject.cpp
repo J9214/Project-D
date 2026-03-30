@@ -108,7 +108,11 @@ void APDDestructibleObject::HandleDestroyed()
 
 		if (IsValid(GCA))
 		{
-			GCA->GetGeometryCollectionComponent()->SetSimulatePhysics(true);
+			UGeometryCollectionComponent* GCC = GCA->GetGeometryCollectionComponent();
+			if (IsValid(GCC))
+			{
+				GCC->SetSimulatePhysics(true);
+			}
 		}
 	}
 }
