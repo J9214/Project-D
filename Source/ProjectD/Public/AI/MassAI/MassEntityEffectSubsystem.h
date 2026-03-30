@@ -33,6 +33,28 @@ public:
 	bool bPlayNiagara = true;
 };
 
+USTRUCT()
+struct PROJECTD_API FCachedCue
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(Transient)
+	TObjectPtr<UNiagaraSystem> Niagara = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> Sound = nullptr;
+
+	UPROPERTY(Transient)
+	FVector Scale = FVector(1.0f);
+
+	UPROPERTY(Transient)
+	bool bPlaySound = true;
+
+	UPROPERTY(Transient)
+	bool bPlayNiagara = true;
+};
+
 UCLASS(Config = Game, DefaultConfig)
 class PROJECTD_API UMassEntityEffectSubsystem : public UWorldSubsystem
 {
@@ -50,19 +72,9 @@ private:
 	const FMassEntityEffectCue* FindCueDef(const EMassEntityCueId CueId) const;
 
 private:
-	struct FCachedCue
-	{
-		TObjectPtr<UNiagaraSystem> Niagara = nullptr;
-		TObjectPtr<USoundBase> Sound = nullptr;
-		FVector Scale = FVector(1.0f);
-		bool bPlaySound = true;
-		bool bPlayNiagara = true;
-	};
-
-private:
 	UPROPERTY(EditAnywhere, Config, Category = "Effect")
 	TArray<FMassEntityEffectCue> Cues;
 
-private:
+	UPROPERTY(VisibleAnywhere, Category = "Effect")
 	TMap<EMassEntityCueId, FCachedCue> CachedCues;
 };
