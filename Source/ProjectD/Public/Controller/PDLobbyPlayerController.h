@@ -41,6 +41,9 @@ public:
 
     UFUNCTION(Server, Reliable)
     void Server_RequestTravelToLobby10();
+
+    UFUNCTION(Client, Reliable)
+    void Client_UpdateLobbyUI();
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
     TSubclassOf<UUserWidget> UIWidgetClass;

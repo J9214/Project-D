@@ -19,4 +19,12 @@ void APDListenLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         PC->Client_RequestCharacterCustomInfo();
         PC->Client_RequestDisplayName();
     }
+
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (APDLobbyPlayerController* AllPC = Cast<APDLobbyPlayerController>(It->Get()))
+        {
+            AllPC->Client_UpdateLobbyUI();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -11,7 +11,7 @@
 
 class APDPlayerState;
 class UTextBlock;
-class UWidget;
+class UBorder;
 
 UENUM(BlueprintType)
 enum class ELobbyAvatarTarget : uint8
@@ -31,7 +31,7 @@ class PROJECTD_API UServerLobby : public UCommonUserWidget
 public:
 	void ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID);
 	void ApplyMatchStartServerTime(float InMatchStartServerTimeSec);
-	
+
 protected:
 	virtual void NativeDestruct() override;
 
@@ -51,10 +51,10 @@ protected:
 	TObjectPtr<UTextBlock> MatchingTime;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UWidget> TeamPanel_0;
+	TObjectPtr<UBorder> TeamPanel_0;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UWidget> TeamPanel_1;
+	TObjectPtr<UBorder> TeamPanel_1;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TeamNickName_0;

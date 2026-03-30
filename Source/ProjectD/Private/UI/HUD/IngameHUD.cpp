@@ -7,6 +7,10 @@
 #include "UI/Shop/PD_ShopUI.h"
 #include "UI/Ingame/PDIngameInfo.h"
 #include "UI/Ingame/PDTeamHPInfo.h"
+#include "PlayerState/PDPlayerState.h"
+#include "GameplayTagContainer.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 void UIngameHUD::NativeOnInitialized()
 {
@@ -100,15 +104,39 @@ void UIngameHUD::ToggleGameUI()
         return;
     }
 
+    bool bIsDead = false; 
+
+    APlayerController* PC = GetOwningPlayer();
+    if (PC)
+    {
+        if (APDPlayerState* PS = PC->GetPlayerState<APDPlayerState>())
+        {
+            if (UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent())
+            {
+                bIsDead = ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Dead")));
+            }
+        }
+    }
     if (!bIsUIPanelOpen)
     {
-        PlayAnimation(OpenShopUI);
-        PlayAnimation(OpenInventoryUI);
+        if (bIsDead)
+        {
+            PlayAnimation(OpenShopUI);
+            PlayAnimation(OpenInventoryUI);
+        }
+        else
+        {
+            PlayAnimation(OpenInventoryUI);
+        }
         bIsUIPanelOpen = true;
     }
     else
     {
-        PlayAnimation(CloseShopUI);
+        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
+        {
+            PlayAnimation(CloseShopUI);
+        }
+
         PlayAnimation(CloseInventoryUI);
         bIsUIPanelOpen = false;
     }

@@ -7,6 +7,7 @@
 #include "GameFramework/OnlineReplStructs.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Interface/PDTeamInterface.h"
+#include "HAL/CriticalSection.h"
 #include "PDLobbyGameMode.generated.h"
 /**
  * 
@@ -76,4 +77,5 @@ private:
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
 
+	FCriticalSection TeamLock;
 };

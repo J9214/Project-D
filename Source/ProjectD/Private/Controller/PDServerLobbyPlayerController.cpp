@@ -6,6 +6,7 @@
 #include "PlayerState/PDPlayerState.h"
 #include "UI/Lobby/ServerLobby.h"
 #include "GameMode/PDLobbyGameMode.h"
+#include "UI/Lobby/ServerLobby.h"
 
 void APDServerLobbyPlayerController::BeginPlay()
 {
