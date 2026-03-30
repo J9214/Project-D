@@ -44,12 +44,6 @@ void UServerLobby::RefreshLobbyTeamInfos()
 	UpdateLocalTeamPanels(InLocalTeamID);
 	UpdateOtherTeamAvatars(InLocalTeamID);
 
-	if (AreAllExpectedPlayerStatesReady())
-	{
-		StopLobbyTeamRefreshRetry();
-		return;
-	}
-
 	StartLobbyTeamRefreshRetry();
 }
 
@@ -417,17 +411,6 @@ void UServerLobby::StartLobbyTeamRefreshRetry()
 		return;
 	}
 
-	if (LobbyTeamRefreshRetryCount >= 20)
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[LobbyTeamRefreshRetry] Max retries reached. CachedTeamInfoCount=%d"),
-			CachedTeamInfos.Num());
-		StopLobbyTeamRefreshRetry();
-		return;
-	}
-
 	if (GetWorld()->GetTimerManager().IsTimerActive(LobbyTeamRefreshRetryHandle))
 	{
 		return;
@@ -436,15 +419,14 @@ void UServerLobby::StartLobbyTeamRefreshRetry()
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[LobbyTeamRefreshRetry] Scheduling retry Attempt=%d"),
-		LobbyTeamRefreshRetryCount + 1);
+		TEXT("[LobbyTeamRefreshRetry] Starting 1s polling refresh"));
 
 	GetWorld()->GetTimerManager().SetTimer(
 		LobbyTeamRefreshRetryHandle,
 		this,
 		&UServerLobby::RetryRefreshLobbyTeamInfos,
-		0.2f,
-		false);
+		1.0f,
+		true);
 }
 
 void UServerLobby::StopLobbyTeamRefreshRetry()
