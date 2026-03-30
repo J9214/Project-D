@@ -37,6 +37,13 @@ void APDLobbyPlayerController::BeginPlay()
 
 void APDLobbyPlayerController::ConnectToDedicatedServer()
 {
+
+#if UE_EDITOR
+    FString IpAddress = TEXT("127.0.0.1:17777");
+    ClientTravel(IpAddress, TRAVEL_Absolute);
+
+#else
+
     if (GetNetMode() == NM_Client)
     {
         UE_LOG(LogTemp, Warning, TEXT("Guest cannot start dedi search/join."));
@@ -73,6 +80,9 @@ void APDLobbyPlayerController::ConnectToDedicatedServer()
 
     UE_LOG(LogTemp, Warning, TEXT("=== 스팀 인터넷 세션 검색 시작 ==="));
     SessionInterface->FindSessions(0, SessionSearch.ToSharedRef());
+
+#endif
+
 }
 
 void APDLobbyPlayerController::RequestTravelToLobby10()
