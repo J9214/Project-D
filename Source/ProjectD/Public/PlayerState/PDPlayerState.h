@@ -14,6 +14,8 @@ class UPDAttributeSetBase;
 class UGameplayEffect;
 class UPDInventoryComponent;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FPDOnCharacterCustomInfoChangedNative, const FPDCharacterCustomInfo&);
+
 UCLASS()
 class PROJECTD_API APDPlayerState : public APlayerState, public IAbilitySystemInterface, public IPDTeamInterface
 {
@@ -73,6 +75,8 @@ public:
 	UFUNCTION()
 	void OnRep_DisplayName();
 
+	FPDOnCharacterCustomInfoChangedNative& OnCharacterCustomInfoChangedNative() { return CharacterCustomInfoChangedNative; }
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
@@ -102,4 +106,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inven")
 	TObjectPtr<UPDInventoryComponent> InventoryComponent;
+
+	FPDOnCharacterCustomInfoChangedNative CharacterCustomInfoChangedNative;
 };

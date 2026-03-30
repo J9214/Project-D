@@ -156,6 +156,7 @@ void APDPlayerState::OnRep_CharacterCustomInfo()
 
 void APDPlayerState::HandleCharacterCustomInfoChanged()
 {
+	CharacterCustomInfoChangedNative.Broadcast(CharacterCustomInfo);
 	BP_OnCharacterCustomInfoChanged(CharacterCustomInfo);
 }
 
@@ -191,7 +192,6 @@ void APDPlayerState::CopyProperties(APlayerState* PlayerState)
 		NewPlayerState->TeamID = this->TeamID;
 		NewPlayerState->DisplayName = this->DisplayName;
 		NewPlayerState->CharacterCustomInfo = this->CharacterCustomInfo;
-		NewPlayerState->CustomizableObjectInstance = this->CustomizableObjectInstance;
 		NewPlayerState->HandleCharacterCustomInfoChanged();
 	}
 }
