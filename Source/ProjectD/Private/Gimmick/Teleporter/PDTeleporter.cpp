@@ -1,6 +1,6 @@
 #include "Gimmick/Teleporter/PDTeleporter.h"
 
-#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 
 #include "MoverComponent.h"
 
@@ -8,14 +8,14 @@
 
 APDTeleporter::APDTeleporter()
 {
-	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
-	CapsuleComp->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
-	CapsuleComp->SetupAttachment(RootComponent);
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("Capsule"));
+	BoxComp->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	BoxComp->SetupAttachment(RootComponent);
 
 	Destination = CreateDefaultSubobject<USceneComponent>(TEXT("Destination"));
 	Destination->SetupAttachment(RootComponent);
 
-	Shape = CapsuleComp;
+	Shape = BoxComp;
 }
 
 void APDTeleporter::OnInteract_Implementation(AActor* Interactor)

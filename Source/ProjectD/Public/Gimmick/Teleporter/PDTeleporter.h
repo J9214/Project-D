@@ -4,7 +4,7 @@
 #include "Gimmick/PDOverlapGimmickBase.h"
 #include "PDTeleporter.generated.h"
 
-class UCapsuleComponent;
+class UBoxComponent;
 
 UCLASS()
 class PROJECTD_API APDTeleporter : public APDOverlapGimmickBase
@@ -21,7 +21,7 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Gimmick|Component")
-	TObjectPtr<UCapsuleComponent> CapsuleComp;
+	TObjectPtr<UBoxComponent> BoxComp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gimmick|Teleport")
 	TObjectPtr<USceneComponent> Destination;
