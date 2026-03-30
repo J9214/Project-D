@@ -35,6 +35,8 @@
 #include "Animation/AnimInstance.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Controller/PDPlayerController.h"
+#include "UI/HUD/IngameHUD.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -647,6 +649,17 @@ void APDPawnBase::HandleDeathState(bool bIsDead)
 	{
 		if (bIsDead)
 		{
+			if (PC->IsLocalController())
+			{
+				if (APDPlayerController* PDPC = Cast<APDPlayerController>(PC))
+				{
+					if (UIngameHUD* IngameHUD = PDPC->GetIngameHUDWidget())
+					{
+						IngameHUD->ForceOpenDeadShopUI();
+					}
+				}
+			}
+
 			DisableInput(PC);
 		}
 		else

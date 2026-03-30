@@ -35,6 +35,9 @@ public:
 	void ToggleGameUI();
 
 	UFUNCTION()
+	void ForceOpenDeadShopUI();
+
+	UFUNCTION()
 	void InitGold(int NewGold);
 
 	UFUNCTION()
@@ -92,4 +95,5 @@ protected:
 
 	int32 OpenedUIPriority = 0;
 	bool bIsUIPanelOpen = false;
+	bool bIsShopOpen = false;
 };
