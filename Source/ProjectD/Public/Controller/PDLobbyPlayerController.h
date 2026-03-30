@@ -36,7 +36,7 @@ public:
     UFUNCTION(Server, Reliable)
     void Server_SubmitDisplayName(const FString& Name);
 
-    UFUNCTION(Server, Reliable)
+    UFUNCTION(BlueprintCallable, Server, Reliable, Category = "Custom")
     void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
 
     UFUNCTION(Server, Reliable)
