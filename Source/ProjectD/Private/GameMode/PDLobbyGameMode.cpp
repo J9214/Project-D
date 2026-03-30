@@ -89,25 +89,28 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
             }
         }
 
+        bool isLeader = false;
+
         if (SelectedTeamIdx == -1)
         {
             for (int32 i = 0; i < TEAM_COUNT; i++)
             {
-                if (TeamInfos[i].LeaderSteamId.IsEmpty() && (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount == 0))
+                if (TeamInfos[i].LeaderSteamId.IsEmpty() && (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize))
                 {
-                    if (IncomingSize <= MaxTeamSize)
-                    {
-                        SelectedTeamIdx = i;
-                        TeamInfos[i].LeaderSteamId = LeaderSteamID;
-                        break;
-                    }
+                    SelectedTeamIdx = i;
+                    TeamInfos[i].LeaderSteamId = LeaderSteamID;
+                    isLeader = true;
+                    break;
                 }
             }
         }
 
         if (SelectedTeamIdx != -1)
         {
-            TeamInfos[SelectedTeamIdx].PendingCount += IncomingSize;
+            if (isLeader)
+            {
+                TeamInfos[SelectedTeamIdx].PendingCount += IncomingSize;
+            }
             LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
 
             UE_LOG(LogTemp, Log, TEXT("[PreLogin] Team %d Reserved (Leader: %s)"), SelectedTeamIdx, *LeaderSteamID);
