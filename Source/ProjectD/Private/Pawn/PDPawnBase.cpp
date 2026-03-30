@@ -539,6 +539,12 @@ void APDPawnBase::HandleDeathState(bool bIsDead)
 		else
 			EnableInput(PC);
 	}
+
+	if (bIsDead == true)
+	{
+		// Ball & Object Detach
+		Server_DropObject(FVector::ZeroVector);
+	}
 }
 
 FVector APDPawnBase::GetDirectionByMoveInput(const FVector& FallbackForward) const

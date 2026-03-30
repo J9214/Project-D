@@ -553,6 +553,15 @@ void APDGameModeBase::StartGameTimer()
         return;
     }
 
+    APDGameStateBase* GS = GetGameState<APDGameStateBase>();
+    if (IsValid(GS) == false)
+    {
+        UE_LOG(LogProjectD, Warning, TEXT("[GameMode] StartGameTimer failed. GameState is invalid."));
+        return;
+    }
+
+    GS->RemainingTimeSec = TotalGameDurationSec;
+
     GetWorldTimerManager().ClearTimer(GameTimerHandle);
     GetWorldTimerManager().SetTimer(
         GameTimerHandle,

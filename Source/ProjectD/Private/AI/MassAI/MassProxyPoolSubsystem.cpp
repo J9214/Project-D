@@ -138,7 +138,6 @@ void UMassProxyPoolSubsystem::Release(const FMassEntityHandle& Entity)
 	const int32* FoundId = EntityToProxyId.Find(Key);
 	if (FoundId == nullptr)
 	{
-		UE_LOG(LogProjectD, Warning, TEXT("UMassProxyPoolSubsystem::Release - Can't Found Entity!!"));
 		return;
 	}
 	int32	ProxyId = *FoundId;
