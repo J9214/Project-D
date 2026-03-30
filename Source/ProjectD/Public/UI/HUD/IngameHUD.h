@@ -43,6 +43,8 @@ public:
 	UFUNCTION()
 	void UpdateCurrentAmmo(int32 CurrentAmmo);
 
+	UFUNCTION(Exec)
+	void OnShopUI();
 
 protected:
 

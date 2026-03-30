@@ -104,7 +104,7 @@ void UIngameHUD::ToggleGameUI()
         return;
     }
 
-    bool bIsDead = false; 
+    bool bIsDead = true; 
 
     APlayerController* PC = GetOwningPlayer();
     if (PC)
@@ -117,6 +117,7 @@ void UIngameHUD::ToggleGameUI()
             }
         }
     }
+
     if (!bIsUIPanelOpen)
     {
         if (bIsDead)
@@ -171,6 +172,41 @@ void UIngameHUD::InitItem(EItemType ItemType, int SlotIndex, const FName& NewIte
 void UIngameHUD::UpdateCurrentAmmo(int32 CurrentAmmo)
 {
     PlayerIngameInfo->UpdateCurrentAmmo(CurrentAmmo);
+}
+
+void UIngameHUD::OnShopUI()
+{
+    if (IsAnimationPlaying(OpenShopUI) || IsAnimationPlaying(CloseShopUI) ||
+        IsAnimationPlaying(OpenInventoryUI) || IsAnimationPlaying(CloseInventoryUI))
+    {
+        return;
+    }
+
+    bool bIsDead = true;
+
+    if (!bIsUIPanelOpen)
+    {
+        if (bIsDead)
+        {
+            PlayAnimation(OpenShopUI);
+            PlayAnimation(OpenInventoryUI);
+        }
+        else
+        {
+            PlayAnimation(OpenInventoryUI);
+        }
+        bIsUIPanelOpen = true;
+    }
+    else
+    {
+        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
+        {
+            PlayAnimation(CloseShopUI);
+        }
+
+        PlayAnimation(CloseInventoryUI);
+        bIsUIPanelOpen = false;
+    }
 }
 
 void UIngameHUD::InitGold(int NewGold)

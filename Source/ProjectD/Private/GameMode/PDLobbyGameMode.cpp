@@ -57,6 +57,10 @@ void APDLobbyGameMode::BeginPlay()
 
 void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
+
+#if UE_EDITOR
+    Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+#else
     int32 IncomingSize = UGameplayStatics::GetIntOption(Options, TEXT("TeamSize"), 1);
     FString LeaderSteamID = UGameplayStatics::ParseOption(Options, TEXT("LeaderSteamId"));
 
@@ -115,12 +119,30 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
         }
     }
     Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+
+#endif
 }
 
 void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+#if UE_EDITOR
+
+    APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
+    if (!PlayerState)
+    {
+        return;
+    }
+    int32 TestTeamIdx = 0;
+    PlayerState->SetTeamID(static_cast<ETeamType>(TestTeamIdx));
+    TeamInfos[TestTeamIdx].PlayerCount++;
+
+    UE_LOG(LogTemp, Warning, TEXT("[Editor] Player %s assigned to Team %d"), *PlayerState->GetPlayerName(), TestTeamIdx);
+
+    BroadcastLobbyTeamInfos();
+    TryGameStart(true);
+#else
     APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
     if (!PlayerState)
     {
@@ -188,6 +210,8 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
 	TryGameStart(false);
+
+#endif
 }
 
 void APDLobbyGameMode::Logout(AController* Exiting)
@@ -214,6 +238,8 @@ void APDLobbyGameMode::Logout(AController* Exiting)
 
 void APDLobbyGameMode::CreateDedicatedSession()
 {
+#if !UE_EDITOR
+    
     IOnlineSubsystem* OSS = IOnlineSubsystem::Get(FName("Steam"));
     if (OSS)
     {
@@ -246,6 +272,8 @@ void APDLobbyGameMode::CreateDedicatedSession()
             SessionInterface->CreateSession(0, NAME_GameSession, Settings);
         }
     }
+
+#endif
 }
 
 void APDLobbyGameMode::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
@@ -313,7 +341,7 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
     }
     else
     {
-
+#if !UE_EDITOR
         IOnlineSubsystem* OSS = IOnlineSubsystem::Get(FName("Steam"));
         if (!OSS)
         {
@@ -334,6 +362,8 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
         Settings->Set(FName(TEXT("MAX_FIT")), 0, EOnlineDataAdvertisementType::ViaOnlineService);
         SessionInterface->UpdateSession(NAME_GameSession, *Settings);
+#endif
+
     }
 
     //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
