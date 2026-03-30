@@ -21,6 +21,12 @@ class PROJECTD_API APDPlayerController : public APlayerController
 public:
 	APDPlayerController();
 
+	UFUNCTION(Exec)
+	void KillSelfCheat();
+
+	UFUNCTION(Exec)
+	void ReviveSelfCheat();
+	
 	FORCEINLINE UPDShopComponent* GetShopComponent() const { return ShopComponent; }
 
 	virtual void BeginPlay() override;
@@ -45,6 +51,12 @@ public:
 	void Client_OnGameStarted();
 
 protected:
+
+	UFUNCTION(Server, Reliable)
+	void Server_KillSelfCheat();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ReviveSelfCheat();
 
 	virtual void OnRep_PlayerState() override;
 

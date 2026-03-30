@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineTypes.h"
 #include "GameFramework/Pawn.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
@@ -25,6 +26,10 @@ class APDCarriableObjectBase;
 class UInteractionComponent;
 class UPDPlayerUIComponent;
 class UWidgetComponent;
+class UAnimMontage;
+class UNiagaraSystem;
+class USoundAttenuation;
+class USoundBase;
 struct FInputActionValue;
 struct FOnAttributeChangeData;
 
@@ -206,6 +211,52 @@ protected:
 	virtual void OnDeathTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 
 	virtual void HandleDeathState(bool bIsDead);
+
+	void CacheMeshDeathState();
+	void SetDeathMontageEnabled(bool bEnable);
+	void HandleDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void SpawnDeathVFX() const;
+	void SpawnDeathSound() const;
+	void SetDeathVisualHidden(bool bShouldHide) const;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
+	TObjectPtr<UAnimMontage> DeathMontage = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
+	float DeathMontagePlayRate = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
+	float DeathMontageStopBlendOutTime = 0.15f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|VFX")
+	TObjectPtr<UNiagaraSystem> DeathVFX = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|VFX")
+	FVector DeathVFXLocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|VFX")
+	FVector DeathVFXScale = FVector(1.0f, 1.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Sound")
+	TObjectPtr<USoundBase> DeathSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Sound")
+	TObjectPtr<USoundAttenuation> DeathSoundAttenuation = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Sound")
+	FVector DeathSoundLocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Sound")
+	float DeathSoundVolumeMultiplier = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Sound")
+	float DeathSoundPitchMultiplier = 1.0f;
+
+	bool bMeshDeathStateCached = false;
+	bool bCachedMeshOwnerNoSee = false;
+	bool bRootCollisionStateCached = false;
+	FName CachedRootCollisionProfileName = NAME_None;
+	TEnumAsByte<ECollisionEnabled::Type> CachedRootCollisionEnabled = ECollisionEnabled::NoCollision;
 
 #pragma endregion Respawn
 
