@@ -4,6 +4,24 @@
 #include "GameMode/PDGameModeBase.h"
 #include "Controller/PDPlayerController.h"
 
+namespace
+{
+constexpr int32 TeamScoreArrayOffset = 1;
+
+int32 GetScoreArrayIndexFromTeam(const ETeamType Team)
+{
+    const int32 TeamId = static_cast<int32>(Team);
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+
+    if (TeamId < 0 || TeamId >= PlayableTeamCount)
+    {
+        return INDEX_NONE;
+    }
+
+    return TeamId + TeamScoreArrayOffset;
+}
+}
+
 APDGameStateBase::APDGameStateBase()
 {
 	TeamCount = static_cast<int32>(ETeamType::MAX);
@@ -34,7 +52,7 @@ void APDGameStateBase::InitScores()
         return;
     }
 
-    TeamScores.Init(0, TeamCount);
+    TeamScores.Init(0, TeamCount + TeamScoreArrayOffset);
     
     for(int32 &TeamScore : TeamScores)
     {
@@ -49,16 +67,16 @@ void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
         return;
     }
 
-    if (WinnerTeamId != INDEX_NONE)
+	if (WinnerTeamId != INDEX_NONE)
     {
         return; 
     }
 
-	const int32 TeamId = static_cast<int32>(Team);
+    const int32 ScoreIndex = GetScoreArrayIndexFromTeam(Team);
 
-    if (TeamScores.IsValidIndex(static_cast<int32>(TeamId)))
+    if (TeamScores.IsValidIndex(ScoreIndex))
     {
-        TeamScores[TeamId] += Points;
+        TeamScores[ScoreIndex] += Points;
     }
 }
 
@@ -102,9 +120,25 @@ void APDGameStateBase::GoalScored()
         return;
     }
 
+    if (!IsValid(GoalInstigator))
+    {
+        return;
+    }
+
 	ETeamType Team = GoalInstigator->GetTeamID();
 
 	AddScore(Team, GoalHoldScore);
+}
+
+int32 APDGameStateBase::GetScoreByTeam(const ETeamType Team) const
+{
+    const int32 ScoreIndex = GetScoreArrayIndexFromTeam(Team);
+    return TeamScores.IsValidIndex(ScoreIndex) ? TeamScores[ScoreIndex] : 0;
+}
+
+int32 APDGameStateBase::GetScoreByTeamNumber(const int32 TeamNumber) const
+{
+    return TeamScores.IsValidIndex(TeamNumber) ? TeamScores[TeamNumber] : 0;
 }
 
 void APDGameStateBase::OnRep_RemainingTime()

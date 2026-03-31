@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Interface/PDTeamInterface.h"
 #include "Object/PDCarriableObjectBase.h"
 #include "BallCore.generated.h"
 
@@ -20,6 +21,7 @@ public:
 	ABallCore();
 
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 	virtual void DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection) override;
 	virtual void Tick(float DeltaTime) override;
@@ -39,7 +41,12 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_ApplyRoundReset(const FVector& SpawnLocation);
 
+	UFUNCTION()
+	void OnRep_ObjectInfoTeamID();
+
 	void ApplyRoundResetLocal(const FVector& SpawnLocation);
+	void UpdateInfoWidgetColor();
+	void SetObjectInfoTeamID(ETeamType NewTeamID);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -51,8 +58,15 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UObjectInfo> CachedInfoWidget;
 
+	UPROPERTY(ReplicatedUsing = OnRep_ObjectInfoTeamID, VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	ETeamType ObjectInfoTeamID = ETeamType::None;
+
 private:
 
 	UPROPERTY()
 	TObjectPtr<APawn> CachedPlayer;
+
+	ETeamType LastAppliedViewerTeamID = ETeamType::None;
+
+	ETeamType LastAppliedObjectInfoTeamID = ETeamType::None;
 };

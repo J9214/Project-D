@@ -31,12 +31,12 @@ private:
 	
 	void SendFlashTargetData(const FHitResult& HitResult);
 
-	void SpawnFlashProjectileFromData(
+	bool SpawnFlashProjectileFromData(
 		APDPawnBase* OwnerPawn,
 		const FGameplayAbilityTargetDataHandle& DataHandle
 	);
 	
-	void SpawnFlashProjectile(APDPawnBase* OwnerPawn);
+	bool SpawnFlashProjectile(APDPawnBase* OwnerPawn);
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category="Flash")

@@ -4,10 +4,12 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 #include "GameState/PDGameStateBase.h"
 #include "Controller/PDPlayerController.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
@@ -15,6 +17,71 @@
 #include "ProjectD/ProjectD.h"
 #include "AI/MassAI/DroneSpawner.h"
 #include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
+
+namespace
+{
+APDPlayerState* ResolveRewardPlayerStateFromActor(AActor* Actor)
+{
+    if (IsValid(Actor) == false)
+    {
+        return nullptr;
+    }
+
+    if (APDPlayerState* PlayerState = Cast<APDPlayerState>(Actor))
+    {
+        return PlayerState;
+    }
+
+    if (AController* Controller = Cast<AController>(Actor))
+    {
+        return Controller->GetPlayerState<APDPlayerState>();
+    }
+
+    if (APawn* Pawn = Cast<APawn>(Actor))
+    {
+        return Pawn->GetPlayerState<APDPlayerState>();
+    }
+
+    if (AController* InstigatorController = Actor->GetInstigatorController())
+    {
+        if (APDPlayerState* PlayerState = InstigatorController->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (APawn* InstigatorPawn = Actor->GetInstigator())
+    {
+        if (APDPlayerState* PlayerState = InstigatorPawn->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (AActor* Owner = Actor->GetOwner())
+    {
+        return ResolveRewardPlayerStateFromActor(Owner);
+    }
+
+    return nullptr;
+}
+
+void RewardPlayerGold(APDPlayerState* PlayerState, const int32 RewardGold)
+{
+    if (IsValid(PlayerState) == false || RewardGold <= 0)
+    {
+        return;
+    }
+
+    UPDInventoryComponent* InventoryComponent = PlayerState->GetInventoryComponent();
+    if (IsValid(InventoryComponent) == false)
+    {
+        return;
+    }
+
+    InventoryComponent->AddGold(RewardGold);
+}
+}
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -235,6 +302,7 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
     }
 
     bDroneSpawnTriggeredThisRound = true;
+    RewardPlayerGold(HolderPlayerState, FirstBallPickupRewardGold);
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
 }
 
@@ -296,6 +364,7 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         return;
     }
 
+    RewardPlayerGold(GS->GoalInstigator, GoalScoredRewardGold);
     GS->GoalScored();
 
     UE_LOG(
@@ -564,6 +633,16 @@ void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor*
         return;
     }
 
+    APDPlayerState* VictimPlayerState = VictimController->GetPlayerState<APDPlayerState>();
+    APDPlayerState* KillerPlayerState = ResolveRewardPlayerStateFromActor(DamageCauser);
+    if (IsValid(VictimPlayerState) == true &&
+        IsValid(KillerPlayerState) == true &&
+        VictimPlayerState != KillerPlayerState &&
+        VictimPlayerState->GetTeamID() != KillerPlayerState->GetTeamID())
+    {
+        RewardPlayerGold(KillerPlayerState, KillRewardGold);
+    }
+
     PlayerDied(VictimController);
 }
 
@@ -711,7 +790,8 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
         return INDEX_NONE;
     }
 
-    if (GS->TeamScores.Num() <= 0)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    if (GS->TeamScores.Num() < (PlayableTeamCount + 1))
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CalculateBestTeamId failed. TeamScores is empty."));
         return INDEX_NONE;
@@ -720,9 +800,9 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
     int32 BestTeamId = INDEX_NONE;
     int32 BestScore = MIN_int32;
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 Score = GS->TeamScores[TeamId];
+        const int32 Score = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (Score > BestScore)
         {
@@ -1060,9 +1140,10 @@ bool APDGameModeBase::TryFinishGameByScoreCondition()
         return false;
     }
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 TeamScore = GS->TeamScores[TeamId];
+        const int32 TeamScore = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (TeamScore >= TargetScoreToWin)
         {

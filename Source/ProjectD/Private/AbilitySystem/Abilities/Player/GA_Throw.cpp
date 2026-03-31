@@ -193,6 +193,7 @@ void UGA_Throw::OnTargetDataReady(const FGameplayAbilityTargetDataHandle& DataHa
 	
 	if (HasAuthority(&CurrentActivationInfo))
 	{
+		UWeaponManageComponent* WMC = GetWMC();
 		UDataAsset_Throwable* DA = GetEquippedThrowableDA();
 		if (!DA || !DA->ProjectileClass)
 		{
@@ -226,29 +227,32 @@ void UGA_Throw::OnTargetDataReady(const FGameplayAbilityTargetDataHandle& DataHa
 			return;
 		}
 
-		SpawnProjectile(*TargetData, DA);
+		if (SpawnProjectile(*TargetData, DA) && WMC)
+		{
+			WMC->ConsumeEquippedThrowable();
+		}
 	}
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UGA_Throw::SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Throwable* DA)
+bool UGA_Throw::SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Throwable* DA)
 {
 	if (!DA || !DA->ProjectileClass)
 	{
-		return;
+		return false;
 	}
 	
 	APDPawnBase* OwnerPawn = GetPlayerPawnFromActorInfo();
 	if (!OwnerPawn)
 	{
-		return;
+		return false;
 	}
 	
 	UWorld* World = OwnerPawn->GetWorld();
 	if (!World)
 	{
-		return;
+		return false;
 	}
 	
 	FActorSpawnParameters Params;
@@ -262,8 +266,9 @@ void UGA_Throw::SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Th
 	APDThrowableProjectile* Projectile = World->SpawnActor<APDThrowableProjectile>(DA->ProjectileClass, SpawnLoc, SpawnRot, Params);
 	if (!Projectile)
 	{
-		return;
+		return false;
 	}
 	
 	Projectile->InitFromData(DA, TD.StartLocation, TD.InitialVelocity);
+	return true;
 }
