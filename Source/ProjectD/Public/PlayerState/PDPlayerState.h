@@ -79,6 +79,11 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UPROPERTY(Replicated)
+	bool bClientReady = false;
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetReady();
 protected:
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 	void HandleCharacterCustomInfoChanged();

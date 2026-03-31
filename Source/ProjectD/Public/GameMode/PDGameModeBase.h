@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
@@ -43,6 +43,7 @@ public:
 	void HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball);
 	void HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball);
 
+	void CheckAllPlayersReady();
 public:
 	// GM Spawn BallCore
 	// If Need To LocalSide, BallCore Move To GS
@@ -96,13 +97,19 @@ protected:
 	void RegisterTravelReadyPlayer(APlayerController* NewPlayer);
 	void TryStartInitialPreRound();
 
+	void OnReadyTimeout();
+
 	UFUNCTION()
 	void OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser);
 
 protected:
 	FTimerHandle GameTimerHandle;
 	FTimerHandle NextRoundTimerHandle;
-	FTimerHandle InitialPreRoundTimerHandle;
+	FTimerHandle InitialPreRoundTimerHandle; 
+	FTimerHandle ReadyTimeoutTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Game Rules")
+	float ReadyTimeoutSeconds = 30.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 TargetScoreToWin;

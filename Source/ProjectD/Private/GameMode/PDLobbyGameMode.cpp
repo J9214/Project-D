@@ -46,6 +46,14 @@ void APDLobbyGameMode::TravelToLobby10()
 void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        TeamInfos[i].LeaderSteamId = TEXT("");
+        TeamInfos[i].PlayerCount = 0;
+        TeamInfos[i].PendingCount = 0;
+    }
+    LoginInfo.Empty();
     LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
     if (IsRunningDedicatedServer() && !bIsSessionCreating)
@@ -369,7 +377,6 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
     }
 
-    //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
     const int32 PlayerNums = GetNumPlayers();
     const FString TravelURL = FString::Printf(
         TEXT("/Game/LakeTown/Maps/Demonstration?ExpectedPlayers=%d"),

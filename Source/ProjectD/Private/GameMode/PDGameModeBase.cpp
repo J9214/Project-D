@@ -73,8 +73,14 @@ void APDGameModeBase::BeginPlay()
     bWorldReady = true;
 
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
-
-    TryStartInitialPreRound();
+    GetWorldTimerManager().SetTimer(
+        ReadyTimeoutTimerHandle,
+        this,
+        &APDGameModeBase::OnReadyTimeout,
+        ReadyTimeoutSeconds,
+        false
+    );
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Ready Timeout Timer Started: %.2f seconds"), ReadyTimeoutSeconds);
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -183,6 +189,25 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
     GetWorldTimerManager().ClearTimer(GameTimerHandle);
     GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
 
+    FTimerHandle TimerHandle;
+    GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+        {
+            for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+            {
+                if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+                {
+                    PC->ClientTravel(TEXT("/Game/Lobby/Lobby10"), ETravelType::TRAVEL_Absolute);
+                }
+            }
+
+            FTimerHandle TimerHandle;
+
+            GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+                {
+                    const FString LobbyMapPath = TEXT("/Game/ProjectD/Maps/ServerLobbyLevel?listen");
+                    GetWorld()->ServerTravel(LobbyMapPath);
+                }, 2.0f, false);
+        }, 20.0f, false); 
 }
 
 void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball)
@@ -309,6 +334,50 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
     PrepareNextRound();
 }
 
+void APDGameModeBase::CheckAllPlayersReady()
+{
+    if (bInitialPreRoundStarted || bInitialPreRoundFinished)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    AGameStateBase* GS = World->GetGameState();
+    if (!GS)
+    {
+        return;
+    }
+
+    if (GS->PlayerArray.Num() < ExpectedTravelPlayerCount)
+    {
+        return;
+    }
+
+    int32 ReadyCount = 0;
+    for (APlayerState* PS : GS->PlayerArray)
+    {
+        if (APDPlayerState* PDPS = Cast<APDPlayerState>(PS))
+        {
+            if (PDPS->bClientReady)
+            {
+                ReadyCount++;
+            }
+        }
+    }
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Checking Ready Status: %d / %d"), ReadyCount, ExpectedTravelPlayerCount);
+
+    if (ReadyCount >= ExpectedTravelPlayerCount)
+    {
+        TryStartInitialPreRound();
+    }
+}
+
 void APDGameModeBase::PlayerRespawn(AController* Controller)
 {
     if (IsValid(Controller) == false)
@@ -381,14 +450,6 @@ void APDGameModeBase::StartInitialPreRound()
 
     RoundPhase = ERoundPhase::InitPreRound;
 
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-    {
-        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
-        {
-            PC->Client_OnGameStarted();
-        }
-    }
-
     GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         InitialPreRoundTimerHandle,
@@ -450,6 +511,11 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    if (APDPlayerController* PC = Cast<APDPlayerController>(NewPlayer))
+    {
+        PC->Client_SetExpectedPlayerCount(ExpectedTravelPlayerCount);
+    }
+
     UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin Try"));
     if (IsValid(NewPlayer) == false)
     {
@@ -467,7 +533,6 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -490,7 +555,6 @@ void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* 
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
@@ -1141,7 +1205,6 @@ void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLoc
         return;
     }
 
-    // TODO : Movement Block & UI Open? (By bLocked)
     UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked Success."));
 }
 
@@ -1272,24 +1335,32 @@ void APDGameModeBase::TryStartInitialPreRound()
         return;
     }
 
-    if (TravelReadyPlayerStates.Num() < ExpectedTravelPlayerCount)
-    {
-        UE_LOG(
-            LogProjectD,
-            Log,
-            TEXT("[GameMode] TryStartInitialPreRound waiting. ReadyCount=%d ExpectedTravelPlayerCount=%d"),
-            TravelReadyPlayerStates.Num(),
-            ExpectedTravelPlayerCount
-        );
-        return;
-    }
-
     if (IsValid(CachedBallCore) == false)
     {
         UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. CachedBallCore is invalid."));
         return;
     }
 
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+        {
+            PC->Client_OnGameStarted();
+        }
+    }
+
     bInitialPreRoundStarted = true;
     StartInitialPreRound();
+}
+
+void APDGameModeBase::OnReadyTimeout()
+{
+    if (bInitialPreRoundStarted)
+    {
+        return;
+    }
+
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] Ready Timeout! Starting game forcibly."));
+
+    TryStartInitialPreRound();
 }
