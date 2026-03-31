@@ -35,6 +35,8 @@ public:
 	bool AddItem_Weapon(const FPDItemInfo* ItemInfo);
 	bool AddItem_Grenade(const FPDItemInfo* ItemInfo);
 	bool AddItem_Skill(const FPDItemInfo* ItemInfo);
+	bool ConsumeGrenadeAtSlot(int32 SlotIndex);
+	bool HasGrenadeAtSlot(int32 SlotIndex) const;
 
 	void AddGold(int InGold);
 	bool CheckGold(int Cost) const { return Gold >= Cost; };

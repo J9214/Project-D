@@ -195,6 +195,50 @@ bool UPDInventoryComponent::AddItem_Grenade(const FPDItemInfo* ItemInfo)
 	return true;
 }
 
+bool UPDInventoryComponent::ConsumeGrenadeAtSlot(const int32 SlotIndex)
+{
+	if (GrenadeSlot.IsValidIndex(SlotIndex) == false)
+	{
+		return false;
+	}
+
+	FPDItemData& SlotData = GrenadeSlot[SlotIndex];
+	if (SlotData.ItemID.IsNone() || SlotData.Count <= 0)
+	{
+		return false;
+	}
+
+	const TArray<FPDItemData> OldGrenadeSlot = GrenadeSlot;
+
+	SlotData.Count = FMath::Max(0, SlotData.Count - 1);
+	if (SlotData.Count == 0)
+	{
+		SlotData.ItemID = NAME_None;
+	}
+
+	if (APDPlayerState* PS = Cast<APDPlayerState>(GetOwner()))
+	{
+		PS->ForceNetUpdate();
+
+		if (APDPlayerController* PC = Cast<APDPlayerController>(PS->GetPlayerController()))
+		{
+			if (PC->IsLocalController())
+			{
+				ItemChanged(EItemType::Grenade, OldGrenadeSlot);
+			}
+		}
+	}
+
+	return true;
+}
+
+bool UPDInventoryComponent::HasGrenadeAtSlot(const int32 SlotIndex) const
+{
+	return GrenadeSlot.IsValidIndex(SlotIndex) &&
+		GrenadeSlot[SlotIndex].ItemID.IsNone() == false &&
+		GrenadeSlot[SlotIndex].Count > 0;
+}
+
 bool UPDInventoryComponent::AddItem_Skill(const FPDItemInfo* ItemInfo)
 {
 
