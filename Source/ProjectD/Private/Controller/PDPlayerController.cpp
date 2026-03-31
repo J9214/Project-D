@@ -81,6 +81,18 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
+#if UE_EDITOR
+
+		if (PlayerHUDClass && !PlayerHUDWidget)
+		{
+			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+
+			if (PlayerHUDWidget)
+			{
+				PlayerHUDWidget->AddToViewport();
+			}
+		}
+#else
 		if (LoadingHUDClass && !LoadingHUD)
 		{
 			LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
@@ -91,6 +103,8 @@ void APDPlayerController::BeginPlay()
 		}
 
 		StartReadyCheck();
+	
+#endif
 
 	}
 }
