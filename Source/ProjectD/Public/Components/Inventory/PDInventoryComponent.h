@@ -39,6 +39,7 @@ public:
 	bool HasGrenadeAtSlot(int32 SlotIndex) const;
 
 	void AddGold(int InGold);
+	int32 GetGold() const { return Gold; }
 	bool CheckGold(int Cost) const { return Gold >= Cost; };
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -78,6 +79,7 @@ protected:
 	void ItemChanged(EItemType ItemType, const TArray<FPDItemData>& OldItemSlot);
 
 	TArray<FPDItemData>& GetItemSlot(EItemType ItemType);
+	void RefreshOwningPlayerGoldUI() const;
 
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Gold, BlueprintReadOnly)
 	int Gold = 10;

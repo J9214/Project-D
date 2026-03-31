@@ -477,6 +477,12 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 	}
 
 	const ETeamType LocalTeamID = LocalPDPlayerState->GetTeamID();
+	bool bBoundTeamMateSlot = false;
+
+	if (UPDInventoryComponent* InventoryComponent = LocalPDPlayerState->GetInventoryComponent())
+	{
+		InitGoldDisplay(InventoryComponent->GetGold());
+	}
 
 	for (APlayerState* PS : GS->PlayerArray)
 	{
@@ -491,19 +497,26 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 
 		if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
 		{
-			if (!bIsMe)
+			if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
 			{
-				if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
-				{
-					UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
-					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), LocalTeamID, PDPS->GetTeamID());
-				}
+				UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
+				UIComp->SetPlayerNickName(PDPS->GetDisplayName(), LocalTeamID, PDPS->GetTeamID());
 			}
 		}
 
-		if (bIsMyTeam && PlayerHUDWidget)
+		if (!PlayerHUDWidget)
+		{
+			continue;
+		}
+
+		if (bIsMe)
+		{
+			PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+		}
+		else if (bIsMyTeam && !bBoundTeamMateSlot)
 		{
 			PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			bBoundTeamMateSlot = true;
 		}
 	}
 

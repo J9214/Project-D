@@ -38,6 +38,9 @@ public:
 	void HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue);
 
 	UFUNCTION()
+	void HandleMaxHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue);
+
+	UFUNCTION()
 	void ToggleGameUI();
 
 	UFUNCTION()

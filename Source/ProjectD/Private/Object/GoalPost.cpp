@@ -16,7 +16,7 @@
 
 namespace
 {
-ETeamType ResolveLocalViewerTeamID(const AActor* ContextActor)
+ETeamType ResolveGoalPostLocalViewerTeamID(const AActor* ContextActor)
 {
 	if (IsValid(ContextActor) == false)
 	{
@@ -342,7 +342,7 @@ void AGoalPost::UpdateInfoWidgetColor()
 		return;
 	}
 
-	const ETeamType ViewerTeamID = ResolveLocalViewerTeamID(this);
+	const ETeamType ViewerTeamID = ResolveGoalPostLocalViewerTeamID(this);
 	if (LastAppliedViewerTeamID == ViewerTeamID && LastAppliedObjectInfoTeamID == ObjectInfoTeamID)
 	{
 		return;

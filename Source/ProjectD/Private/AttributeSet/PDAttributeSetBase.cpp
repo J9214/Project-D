@@ -38,6 +38,14 @@ void UPDAttributeSetBase::PreAttributeChange(const FGameplayAttribute& Attribute
 
 void UPDAttributeSetBase::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
+	if (Attribute == GetMaxHealthAttribute())
+	{
+		OnMaxHealthChanged.Broadcast(OldValue, NewValue);
+	}
+	else if (Attribute == GetHealthAttribute())
+	{
+		OnHealthChanged.Broadcast(OldValue, NewValue);
+	}
 }
 
 void UPDAttributeSetBase::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)
@@ -90,6 +98,7 @@ void UPDAttributeSetBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 void UPDAttributeSetBase::OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPDAttributeSetBase, MaxHealth, OldMaxHealth);
+	OnMaxHealthChanged.Broadcast(OldMaxHealth.GetCurrentValue(), MaxHealth.GetCurrentValue());
 }
 
 void UPDAttributeSetBase::OnRep_Health(const FGameplayAttributeData& OldHealth)

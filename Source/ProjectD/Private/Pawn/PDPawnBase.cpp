@@ -181,6 +181,10 @@ void APDPawnBase::PostInitializeComponents()
 		UE_LOG(LogTemp, Warning, TEXT("Set WidgetComponent"));
 		WidgetComponent = GetWidgetComponent;
 	}
+	else
+	{
+		WidgetComponent = FindComponentByClass<UWidgetComponent>();
+	}
 }
 
 void APDPawnBase::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)

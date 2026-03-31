@@ -53,9 +53,26 @@ void UPDPlayerUIComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 void UPDPlayerUIComponent::InitComponents(APDPawnBase* InOwnerCharacter, UWidgetComponent* InHeadHPWidgetComp, UPDAttributeSetBase* InCharacterAttributeSet)
 {
+	if (CharacterAttributeSet.IsValid())
+	{
+		CharacterAttributeSet->OnHealthChanged.RemoveDynamic(this, &ThisClass::OnHealthChanged);
+		CharacterAttributeSet->OnMaxHealthChanged.RemoveDynamic(this, &ThisClass::OnMaxHealthChanged);
+	}
+
 	OwnerCharacter = InOwnerCharacter;
 	HeadHPWidgetComp = InHeadHPWidgetComp;
 	CharacterAttributeSet = InCharacterAttributeSet;
+
+	SetupHeadHPWidget();
+
+	if (CharacterAttributeSet.IsValid())
+	{
+		CharacterAttributeSet->OnHealthChanged.AddUniqueDynamic(this, &ThisClass::OnHealthChanged);
+		CharacterAttributeSet->OnMaxHealthChanged.AddUniqueDynamic(this, &ThisClass::OnMaxHealthChanged);
+
+		OnMaxHealthChanged(CharacterAttributeSet->GetMaxHealth(), CharacterAttributeSet->GetMaxHealth());
+		OnHealthChanged(CharacterAttributeSet->GetHealth(), CharacterAttributeSet->GetHealth());
+	}
 }
 
 void UPDPlayerUIComponent::SetupHeadHPWidget()
@@ -65,12 +82,7 @@ void UPDPlayerUIComponent::SetupHeadHPWidget()
 		return;
 	}
 
-	if (!HeadHPWidgetClass)
-	{
-		return;
-	}
-
-	if (HeadHPWidgetComp->GetWidgetClass() != HeadHPWidgetClass)
+	if (HeadHPWidgetClass && HeadHPWidgetComp->GetWidgetClass() != HeadHPWidgetClass)
 	{
 		HeadHPWidgetComp->SetWidgetClass(HeadHPWidgetClass);
 	}
@@ -96,13 +108,23 @@ void UPDPlayerUIComponent::OnHealthChanged(float OldValue, float NewValue)
 	HeadHPWidget->HandleHealthChanged(OldValue, NewValue);
 }
 
+void UPDPlayerUIComponent::OnMaxHealthChanged(float OldValue, float NewValue)
+{
+	if (!IsValid(HeadHPWidget))
+	{
+		return;
+	}
+
+	HeadHPWidget->SetMaxHealth(NewValue);
+}
+
 void UPDPlayerUIComponent::SetPlayerNickName(const FString& InNickName, ETeamType LocalTeamID, ETeamType TargetTeamID)
 {
 	if (!IsValid(HeadHPWidget))
 	{
 		return;
 	}
-	HeadHPWidget->Init(InNickName);
+	HeadHPWidget->SetDisplayName(InNickName);
 	HeadHPWidget->SetTeamTextColor(LocalTeamID, TargetTeamID);
 	HeadHPWidget->SetTeamColor(LocalTeamID == TargetTeamID);
 }

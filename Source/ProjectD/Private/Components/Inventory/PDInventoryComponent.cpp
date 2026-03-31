@@ -317,6 +317,7 @@ void UPDInventoryComponent::AddGold(int InGold)
 	//}
 
 	Gold = FMath::Max(0, Gold + InGold);
+	RefreshOwningPlayerGoldUI();
 }
 
 void UPDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -632,13 +633,18 @@ void UPDInventoryComponent::SwapItem_Implementation(EItemType FromItemType, FNam
 
 void UPDInventoryComponent::OnRep_Gold()
 {
-	APawn* OwnerPawn = Cast<APawn>(GetOwner());
-	if (!OwnerPawn)
+	RefreshOwningPlayerGoldUI();
+}
+
+void UPDInventoryComponent::RefreshOwningPlayerGoldUI() const
+{
+	const APDPlayerState* PS = Cast<APDPlayerState>(GetOwner());
+	if (!PS)
 	{
 		return;
 	}
 
-	APDPlayerController* PC = Cast<APDPlayerController>(OwnerPawn->GetController());
+	APDPlayerController* PC = Cast<APDPlayerController>(PS->GetPlayerController());
 	if (PC)
 	{
 		PC->InitGoldDisplay(Gold);

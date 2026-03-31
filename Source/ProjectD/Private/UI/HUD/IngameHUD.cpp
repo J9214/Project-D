@@ -146,12 +146,15 @@ void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttr
 {
     if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
     {
-        if (Bar->CheckInit())
+        if (!Bar->CheckInit())
         {
-            return;
+            Bar->Init(DisplayName);
+        }
+        else
+        {
+            Bar->SetDisplayName(DisplayName);
         }
 
-        Bar->Init(DisplayName);
         switch (InSlot)
         {
         case EHPBarSlot::Player:
@@ -187,6 +190,14 @@ void UIngameHUD::HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, fl
     if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
     {
         float Value = Bar->HandleHealthChanged(OldValue, NewValue);
+    }
+}
+
+void UIngameHUD::HandleMaxHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue)
+{
+    if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
+    {
+        Bar->SetMaxHealth(NewValue);
     }
 }
 
