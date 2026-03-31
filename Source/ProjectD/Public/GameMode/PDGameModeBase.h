@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "PDGameModeBase.generated.h"
 
 class APDPlayerState;
+class AActor;
 class ABallCore;
 class AGoalPost;
 class ADroneSpawner;
@@ -42,6 +43,7 @@ public:
 	void HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball);
 	void HandleGoalEntered(AGoalPost* GoalPost, ABallCore* Ball);
 	void HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball);
+	void RewardDroneKill(AActor* KillerActor);
 
 	void CheckAllPlayersReady();
 public:
@@ -121,6 +123,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
 	int32 KillRewardGold = 500;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
+	int32 DroneKillRewardGold = 50;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
 	int32 FirstBallPickupRewardGold = 500;
