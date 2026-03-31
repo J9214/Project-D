@@ -22,6 +22,12 @@ public:
     void SetBallHolder(APDPlayerState* NewHolder);
     void SetGoalInstigator(APDPlayerState* NewInstigator);
     void GoalScored();
+
+    UFUNCTION(BlueprintPure, Category = "Score")
+    int32 GetScoreByTeam(ETeamType Team) const;
+
+    UFUNCTION(BlueprintPure, Category = "Score")
+    int32 GetScoreByTeamNumber(int32 TeamNumber) const;
     
     UFUNCTION()
     void OnRep_RemainingTime();
@@ -29,6 +35,8 @@ public:
 	UFUNCTION()
 	void OnRep_ChangeWinnerTeamId();
     
+    // Blueprint HUD reads team scores using 1-based display indices (Team1=1, Team2=2, Team3=3).
+    // Index 0 is reserved so existing BP bindings stay aligned with the visible team numbers.
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Score")
 	TArray<int32> TeamScores;
 
@@ -48,6 +56,8 @@ public:
 	bool bOvertime;
   
 private:
+    static constexpr int32 TeamScoreArrayOffset = 1;
+
     UPROPERTY(EditAnywhere);
     int32 BallHoldScore;
 
