@@ -712,7 +712,8 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
         return INDEX_NONE;
     }
 
-    if (GS->TeamScores.Num() <= 0)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    if (GS->TeamScores.Num() < (PlayableTeamCount + 1))
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CalculateBestTeamId failed. TeamScores is empty."));
         return INDEX_NONE;
@@ -721,9 +722,9 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
     int32 BestTeamId = INDEX_NONE;
     int32 BestScore = MIN_int32;
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 Score = GS->TeamScores[TeamId];
+        const int32 Score = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (Score > BestScore)
         {
@@ -1061,9 +1062,10 @@ bool APDGameModeBase::TryFinishGameByScoreCondition()
         return false;
     }
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 TeamScore = GS->TeamScores[TeamId];
+        const int32 TeamScore = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (TeamScore >= TargetScoreToWin)
         {

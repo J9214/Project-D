@@ -1,5 +1,6 @@
 #include "Object/GoalPost.h"
 #include "Object/BallCore.h"
+#include "GameFramework/PlayerController.h"
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
@@ -10,7 +11,29 @@
 #include "Components/WidgetComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/Ingame/ObjectInfo.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+
+namespace
+{
+ETeamType ResolveLocalViewerTeamID(const AActor* ContextActor)
+{
+	if (IsValid(ContextActor) == false)
+	{
+		return ETeamType::None;
+	}
+
+	const UWorld* World = ContextActor->GetWorld();
+	if (World == nullptr)
+	{
+		return ETeamType::None;
+	}
+
+	const APlayerController* PlayerController = UGameplayStatics::GetPlayerController(World, 0);
+	const APDPlayerState* LocalPlayerState = IsValid(PlayerController) ? PlayerController->GetPlayerState<APDPlayerState>() : nullptr;
+	return IsValid(LocalPlayerState) ? LocalPlayerState->GetTeamID() : ETeamType::None;
+}
+}
 
 AGoalPost::AGoalPost()
 {
@@ -43,6 +66,8 @@ void AGoalPost::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("GoalWidget's UserWidget is not UObjectInfo!"));
 		}
 	}
+
+	UpdateInfoWidgetColor();
 }
 
 void AGoalPost::OnInteract_Implementation(AActor* Interactor)
@@ -83,6 +108,8 @@ void AGoalPost::Tick(float DeltaTime)
 		float Dist = GetDistanceTo(CachedPlayer);
 		CachedInfoWidget->UpdateDistanceUI((int32)(Dist / 100.0f));
 	}
+
+	UpdateInfoWidgetColor();
 }
 
 void AGoalPost::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -90,6 +117,7 @@ void AGoalPost::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGoalPost, RemainingHoldTime);
+	DOREPLIFETIME(AGoalPost, ObjectInfoTeamID);
 }
 
 void AGoalPost::ResetGoalPost()
@@ -105,6 +133,7 @@ void AGoalPost::ResetGoalPost()
 	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
 
 	PlacedBall = nullptr;
+	SetObjectInfoTeamID(ETeamType::None);
 	SetRemainingHoldTime(GoalHoldTime);
 }
 
@@ -139,6 +168,7 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 		APDPlayerState* PS = Pawn->GetPlayerState<APDPlayerState>();
 		if (IsValid(PS) == true)
 		{
+			SetObjectInfoTeamID(PS->GetTeamID());
 			GS->SetGoalInstigator(PS);
 		}
 	}
@@ -167,6 +197,7 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 	World->GetTimerManager().ClearTimer(HoldTimer);
 	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
+	SetObjectInfoTeamID(ETeamType::None);
 	SetRemainingHoldTime(GoalHoldTime);
 
 	ABallCore* BallToSteal = PlacedBall;
@@ -297,4 +328,38 @@ void AGoalPost::HandleGoalHoldRemainingTimeChanged(float InRemainingHoldTime)
 void AGoalPost::OnRep_RemainingHoldTime()
 {
 	HandleGoalHoldRemainingTimeChanged(RemainingHoldTime);
+}
+
+void AGoalPost::OnRep_ObjectInfoTeamID()
+{
+	UpdateInfoWidgetColor();
+}
+
+void AGoalPost::UpdateInfoWidgetColor()
+{
+	if (IsValid(CachedInfoWidget) == false)
+	{
+		return;
+	}
+
+	const ETeamType ViewerTeamID = ResolveLocalViewerTeamID(this);
+	if (LastAppliedViewerTeamID == ViewerTeamID && LastAppliedObjectInfoTeamID == ObjectInfoTeamID)
+	{
+		return;
+	}
+
+	CachedInfoWidget->SetInterfaceColor(UPDTeamColorFunctionLibrary::GetRelativeTeamColor(ViewerTeamID, ObjectInfoTeamID));
+	LastAppliedViewerTeamID = ViewerTeamID;
+	LastAppliedObjectInfoTeamID = ObjectInfoTeamID;
+}
+
+void AGoalPost::SetObjectInfoTeamID(const ETeamType NewTeamID)
+{
+	if (ObjectInfoTeamID == NewTeamID)
+	{
+		return;
+	}
+
+	ObjectInfoTeamID = NewTeamID;
+	UpdateInfoWidgetColor();
 }

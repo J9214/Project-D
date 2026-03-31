@@ -1,6 +1,7 @@
 ﻿#include "Object/BallCore.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "Components/StaticMeshComponent.h"
 #include "Pawn/PDPawnBase.h" 
 #include "GameState/PDGameStateBase.h"
@@ -10,7 +11,35 @@
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "UI/Ingame/ObjectInfo.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 #include <Kismet/GameplayStatics.h>
+
+namespace
+{
+ETeamType ResolvePawnTeamID(const APawn* Pawn)
+{
+	const APDPlayerState* PlayerState = IsValid(Pawn) ? Pawn->GetPlayerState<APDPlayerState>() : nullptr;
+	return IsValid(PlayerState) ? PlayerState->GetTeamID() : ETeamType::None;
+}
+
+ETeamType ResolveLocalViewerTeamID(const AActor* ContextActor)
+{
+	if (IsValid(ContextActor) == false)
+	{
+		return ETeamType::None;
+	}
+
+	const UWorld* World = ContextActor->GetWorld();
+	if (World == nullptr)
+	{
+		return ETeamType::None;
+	}
+
+	const APlayerController* PlayerController = UGameplayStatics::GetPlayerController(World, 0);
+	const APDPlayerState* LocalPlayerState = IsValid(PlayerController) ? PlayerController->GetPlayerState<APDPlayerState>() : nullptr;
+	return IsValid(LocalPlayerState) ? LocalPlayerState->GetTeamID() : ETeamType::None;
+}
+}
 
 ABallCore::ABallCore()
 {
@@ -47,6 +76,13 @@ ABallCore::ABallCore()
 	BallWidget->SetDrawAtDesiredSize(true);
 }
 
+void ABallCore::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABallCore, ObjectInfoTeamID);
+}
+
 void ABallCore::BeginPlay()
 {
 	Super::BeginPlay();
@@ -60,6 +96,8 @@ void ABallCore::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("BallWidget's UserWidget is not UObjectInfo!"));
 		}
 	}
+
+	UpdateInfoWidgetColor();
 }
 
 void ABallCore::OnInteract_Implementation(AActor* Interactor)
@@ -79,6 +117,11 @@ void ABallCore::OnInteract_Implementation(AActor* Interactor)
 void ABallCore::DropPhysics(const FVector& DropLocation, const FVector& Impulse, const FVector& InCamDirection)
 {
 	Super::DropPhysics(DropLocation, Impulse, InCamDirection);
+
+	if (HasAuthority())
+	{
+		SetObjectInfoTeamID(ETeamType::None);
+	}
 
 	if (IsValid(Sphere) == false)
 	{
@@ -109,6 +152,8 @@ void ABallCore::Tick(float DeltaTime)
 		float Dist = GetDistanceTo(CachedPlayer);
 		CachedInfoWidget->UpdateDistanceUI((int32)(Dist / 100.0f));
 	}
+
+	UpdateInfoWidgetColor();
 }
 
 void ABallCore::ResetBallForRound(const FVector& SpawnLocation)
@@ -118,6 +163,7 @@ void ABallCore::ResetBallForRound(const FVector& SpawnLocation)
 		return;
 	}
 
+	SetObjectInfoTeamID(ETeamType::None);
 	Multicast_ApplyRoundReset(SpawnLocation);
 }
 
@@ -128,6 +174,13 @@ void ABallCore::PlaceIntoGoal(USceneComponent* GoalAttachParent)
 		return;
 	}
 
+	ETeamType CarrierTeamID = ResolvePawnTeamID(CarrierPawn.Get());
+	if (CarrierTeamID == ETeamType::None)
+	{
+		CarrierTeamID = ObjectInfoTeamID;
+	}
+
+	SetObjectInfoTeamID(CarrierTeamID);
 	CarrierPawn = nullptr;
 
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -150,8 +203,9 @@ void ABallCore::PlaceIntoGoal(USceneComponent* GoalAttachParent)
 	StaticMesh->SetRelativeLocation(FVector::ZeroVector);
 	StaticMesh->SetRelativeRotation(FRotator::ZeroRotator);
 
-	bIsPlacedInGoal = true;
+	SetPlacedInGoal(true);
 	SetActorEnableCollision(false);
+	UpdateInfoWidgetColor();
 }
 
 void ABallCore::HandleCarrierChanged()
@@ -165,6 +219,11 @@ void ABallCore::HandleCarrierChanged()
 				if (APDPlayerState* MyPS = Cast<APDPlayerState>(PS))
 				{
 					GS->SetBallHolder(MyPS);
+
+					if (HasAuthority())
+					{
+						SetObjectInfoTeamID(MyPS->GetTeamID());
+					}
 
 					if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
 					{
@@ -197,8 +256,14 @@ void ABallCore::HandleCarrierChanged()
 	}
 	else
 	{
+		if (HasAuthority() && bIsPlacedInGoal == false)
+		{
+			SetObjectInfoTeamID(ETeamType::None);
+		}
+
 		if (bIsPlacedInGoal)
 		{
+			UpdateInfoWidgetColor();
 			return;
 		}
 
@@ -211,6 +276,8 @@ void ABallCore::HandleCarrierChanged()
 		Sphere->SetSimulatePhysics(true);
 		Sphere->WakeAllRigidBodies();
 	}
+
+	UpdateInfoWidgetColor();
 }
 
 UPrimitiveComponent* ABallCore::GetPhysicsComponent() const
@@ -253,6 +320,9 @@ void ABallCore::ApplyRoundResetLocal(const FVector& SpawnLocation)
 
 	bIsCanInteract = true;
 	bIsPlacedInGoal = false;
+	ObjectInfoTeamID = ETeamType::None;
+
+	UpdateInfoWidgetColor();
 
 	UE_LOG(
 		LogProjectD,
@@ -267,4 +337,38 @@ void ABallCore::ApplyRoundResetLocal(const FVector& SpawnLocation)
 void ABallCore::Multicast_ApplyRoundReset_Implementation(const FVector& SpawnLocation)
 {
 	ApplyRoundResetLocal(SpawnLocation);
+}
+
+void ABallCore::OnRep_ObjectInfoTeamID()
+{
+	UpdateInfoWidgetColor();
+}
+
+void ABallCore::UpdateInfoWidgetColor()
+{
+	if (IsValid(CachedInfoWidget) == false)
+	{
+		return;
+	}
+
+	const ETeamType ViewerTeamID = ResolveLocalViewerTeamID(this);
+	if (LastAppliedViewerTeamID == ViewerTeamID && LastAppliedObjectInfoTeamID == ObjectInfoTeamID)
+	{
+		return;
+	}
+
+	CachedInfoWidget->SetInterfaceColor(UPDTeamColorFunctionLibrary::GetRelativeTeamColor(ViewerTeamID, ObjectInfoTeamID));
+	LastAppliedViewerTeamID = ViewerTeamID;
+	LastAppliedObjectInfoTeamID = ObjectInfoTeamID;
+}
+
+void ABallCore::SetObjectInfoTeamID(const ETeamType NewTeamID)
+{
+	if (ObjectInfoTeamID == NewTeamID)
+	{
+		return;
+	}
+
+	ObjectInfoTeamID = NewTeamID;
+	UpdateInfoWidgetColor();
 }
