@@ -9,10 +9,31 @@
 #include "UI/Ingame/PDTeamHPInfo.h"
 #include "Components/TextBlock.h"
 #include "PlayerState/PDPlayerState.h"
+#include "GameState/PDGameStateBase.h"
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "UI/PDTeamColorFunctionLibrary.h"
+
+namespace
+{
+void UpdateScoreText(UTextBlock* TextBlock, const int32 NewScore, int32& CachedScore, const bool bForce)
+{
+    if (!IsValid(TextBlock))
+    {
+        return;
+    }
+
+    if (!bForce && CachedScore == NewScore)
+    {
+        return;
+    }
+
+    // Force native score text so stale BP array bindings cannot shift teams by index.
+    TextBlock->SetText(FText::AsNumber(NewScore));
+    CachedScore = NewScore;
+}
+}
 
 void UIngameHUD::NativeOnInitialized()
 {
@@ -45,6 +66,8 @@ void UIngameHUD::NativeOnInitialized()
     PC->bShowMouseCursor = false;
 
     RefreshTeamScoreColors();
+    BindTeamScoreUpdates();
+    RefreshTeamScoreTexts(true);
 }
 
 void UIngameHUD::NativeConstruct()
@@ -53,6 +76,19 @@ void UIngameHUD::NativeConstruct()
 
     bIsFocusable = true;
     RefreshTeamScoreColors();
+    BindTeamScoreUpdates();
+    RefreshTeamScoreTexts(true);
+}
+
+void UIngameHUD::NativeDestruct()
+{
+    if (ObservedGameState.IsValid())
+    {
+        ObservedGameState->OnTeamScoresChanged().RemoveAll(this);
+        ObservedGameState.Reset();
+    }
+
+    Super::NativeDestruct();
 }
 
 void UIngameHUD::RefreshTeamScoreColors()
@@ -85,6 +121,25 @@ void UIngameHUD::RefreshTeamScoreColors()
     {
         Team3Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 2));
     }
+}
+
+void UIngameHUD::RefreshTeamScoreTexts(const bool bForce)
+{
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC)
+    {
+        return;
+    }
+
+    APDGameStateBase* GS = PC->GetWorld() ? PC->GetWorld()->GetGameState<APDGameStateBase>() : nullptr;
+    if (!GS)
+    {
+        return;
+    }
+
+    UpdateScoreText(Team1Score, GS->GetScoreByTeam(ETeamType::TeamOne), LastDisplayedTeam1Score, bForce);
+    UpdateScoreText(Team2Score, GS->GetScoreByTeam(ETeamType::TeamTwo), LastDisplayedTeam2Score, bForce);
+    UpdateScoreText(Team3Score, GS->GetScoreByTeam(ETeamType::TeamThree), LastDisplayedTeam3Score, bForce);
 }
 
 void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set, ETeamType LocalTeamID, ETeamType TargetTeamID)
@@ -321,4 +376,37 @@ void UIngameHUD::OnUICloseFinished()
     FInputModeGameOnly InputMode;
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = false; 
+}
+
+void UIngameHUD::BindTeamScoreUpdates()
+{
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC)
+    {
+        return;
+    }
+
+    APDGameStateBase* GS = PC->GetWorld() ? PC->GetWorld()->GetGameState<APDGameStateBase>() : nullptr;
+    if (!GS)
+    {
+        return;
+    }
+
+    if (ObservedGameState.Get() == GS)
+    {
+        return;
+    }
+
+    if (ObservedGameState.IsValid())
+    {
+        ObservedGameState->OnTeamScoresChanged().RemoveAll(this);
+    }
+
+    ObservedGameState = GS;
+    GS->OnTeamScoresChanged().AddUObject(this, &ThisClass::HandleTeamScoresChanged);
+}
+
+void UIngameHUD::HandleTeamScoresChanged()
+{
+    RefreshTeamScoreTexts(true);
 }
