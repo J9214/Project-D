@@ -488,6 +488,10 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			{
 				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase());
 			}
+			if (bIsMe)
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase());
+			}
 		}
 	}
 
