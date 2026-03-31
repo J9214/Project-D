@@ -4,10 +4,12 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 #include "GameState/PDGameStateBase.h"
 #include "Controller/PDPlayerController.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
@@ -15,6 +17,71 @@
 #include "ProjectD/ProjectD.h"
 #include "AI/MassAI/DroneSpawner.h"
 #include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
+
+namespace
+{
+APDPlayerState* ResolveRewardPlayerStateFromActor(AActor* Actor)
+{
+    if (IsValid(Actor) == false)
+    {
+        return nullptr;
+    }
+
+    if (APDPlayerState* PlayerState = Cast<APDPlayerState>(Actor))
+    {
+        return PlayerState;
+    }
+
+    if (AController* Controller = Cast<AController>(Actor))
+    {
+        return Controller->GetPlayerState<APDPlayerState>();
+    }
+
+    if (APawn* Pawn = Cast<APawn>(Actor))
+    {
+        return Pawn->GetPlayerState<APDPlayerState>();
+    }
+
+    if (AController* InstigatorController = Actor->GetInstigatorController())
+    {
+        if (APDPlayerState* PlayerState = InstigatorController->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (APawn* InstigatorPawn = Actor->GetInstigator())
+    {
+        if (APDPlayerState* PlayerState = InstigatorPawn->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (AActor* Owner = Actor->GetOwner())
+    {
+        return ResolveRewardPlayerStateFromActor(Owner);
+    }
+
+    return nullptr;
+}
+
+void RewardPlayerGold(APDPlayerState* PlayerState, const int32 RewardGold)
+{
+    if (IsValid(PlayerState) == false || RewardGold <= 0)
+    {
+        return;
+    }
+
+    UPDInventoryComponent* InventoryComponent = PlayerState->GetInventoryComponent();
+    if (IsValid(InventoryComponent) == false)
+    {
+        return;
+    }
+
+    InventoryComponent->AddGold(RewardGold);
+}
+}
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -243,6 +310,7 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
     }
 
     bDroneSpawnTriggeredThisRound = true;
+    RewardPlayerGold(HolderPlayerState, FirstBallPickupRewardGold);
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
 }
 
@@ -304,6 +372,7 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         return;
     }
 
+    RewardPlayerGold(GS->GoalInstigator, GoalScoredRewardGold);
     GS->GoalScored();
 
     UE_LOG(
@@ -563,6 +632,16 @@ void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor*
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnPlayerOutOfHealth failed. VictimController is invalid."));
         return;
+    }
+
+    APDPlayerState* VictimPlayerState = VictimController->GetPlayerState<APDPlayerState>();
+    APDPlayerState* KillerPlayerState = ResolveRewardPlayerStateFromActor(DamageCauser);
+    if (IsValid(VictimPlayerState) == true &&
+        IsValid(KillerPlayerState) == true &&
+        VictimPlayerState != KillerPlayerState &&
+        VictimPlayerState->GetTeamID() != KillerPlayerState->GetTeamID())
+    {
+        RewardPlayerGold(KillerPlayerState, KillRewardGold);
     }
 
     PlayerDied(VictimController);
