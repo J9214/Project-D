@@ -145,14 +145,32 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     {
         return;
     }
-    int32 TestTeamIdx = 0;
-    PlayerState->SetTeamID(static_cast<ETeamType>(TestTeamIdx));
-    TeamInfos[TestTeamIdx].PlayerCount++;
+    int32 SelectedTeam = -1;
+    ETeamType AssignedTeamID = ETeamType::None;
 
-    UE_LOG(LogTemp, Warning, TEXT("[Editor] Player %s assigned to Team %d"), *PlayerState->GetPlayerName(), TestTeamIdx);
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        if ( (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + 1 <= MaxTeamSize))
+        {
+            SelectedTeam = i;
+            break;
+        }
+    }
+
+    TeamInfos[SelectedTeam].PlayerCount++;
+    AssignedTeamID = TeamInfos[SelectedTeam].TeamID;
+
+    if (--TeamInfos[SelectedTeam].PendingCount <= 0)
+    {
+        TeamInfos[SelectedTeam].PendingCount = 0;
+        TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
+    }
+
+    PlayerState->SetTeamID(AssignedTeamID);
+    UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
 
     BroadcastLobbyTeamInfos();
-    TryGameStart(true);
+    TryGameStart(false);
 #else
     APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
     if (!PlayerState)
@@ -160,7 +178,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    const FString NetIdKey = PlayerState->GetUniqueId().ToString(); 
+    const FString NetIdKey = PlayerState->GetUniqueId().ToString();
     ETeamType AssignedTeamID = ETeamType::None;
 
     {
@@ -220,7 +238,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
-	TryGameStart(false);
+    TryGameStart(false);
 
 #endif
 }

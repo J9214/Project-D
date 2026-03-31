@@ -19,7 +19,7 @@ void UServerLobby::RefreshLobbyTeamInfos()
 
 	const FTeamInfo* TeamAInfoData = nullptr;
 	const FTeamInfo* TeamBInfoData = nullptr;
-	const FTeamInfo* TeamCInfoData = nullptr;
+	//const FTeamInfo* TeamCInfoData = nullptr;
 
 	for (const FTeamInfo& TeamInfo : InTeamInfos)
 	{
@@ -31,15 +31,15 @@ void UServerLobby::RefreshLobbyTeamInfos()
 		{
 			TeamBInfoData = &TeamInfo;
 		}
-		else if (TeamInfo.TeamID == ETeamType::TeamThree)
-		{
-			TeamCInfoData = &TeamInfo;
-		}
+		//else if (TeamInfo.TeamID == ETeamType::TeamThree)
+		//{
+		//	TeamCInfoData = &TeamInfo;
+		//}
 	}
 
 	UpdateTeamInfoText(TeamAInfo, TEXT("A Team"), TeamAInfoData, InLocalTeamID == ETeamType::TeamOne);
 	UpdateTeamInfoText(TeamBInfo, TEXT("B Team"), TeamBInfoData, InLocalTeamID == ETeamType::TeamTwo);
-	UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, InLocalTeamID == ETeamType::TeamThree);
+	//UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, InLocalTeamID == ETeamType::TeamThree);
 
 	UpdateLocalTeamPanels(InLocalTeamID);
 	UpdateOtherTeamAvatars(InLocalTeamID);
