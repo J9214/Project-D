@@ -46,6 +46,14 @@ void APDLobbyGameMode::TravelToLobby10()
 void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        TeamInfos[i].LeaderSteamId = TEXT("");
+        TeamInfos[i].PlayerCount = 0;
+        TeamInfos[i].PendingCount = 0;
+    }
+    LoginInfo.Empty();
     LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
     if (IsRunningDedicatedServer() && !bIsSessionCreating)
@@ -81,33 +89,33 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
         {
             if (TeamInfos[i].LeaderSteamId == LeaderSteamID && !LeaderSteamID.IsEmpty())
             {
-                if (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize)
-                {
-                    SelectedTeamIdx = i;
-                    break;
-                }
+                SelectedTeamIdx = i;
+                break;
             }
         }
+
+        bool isLeader = false;
 
         if (SelectedTeamIdx == -1)
         {
             for (int32 i = 0; i < TEAM_COUNT; i++)
             {
-                if (TeamInfos[i].LeaderSteamId.IsEmpty() && (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount == 0))
+                if (TeamInfos[i].LeaderSteamId.IsEmpty() && (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize))
                 {
-                    if (IncomingSize <= MaxTeamSize)
-                    {
-                        SelectedTeamIdx = i;
-                        TeamInfos[i].LeaderSteamId = LeaderSteamID;
-                        break;
-                    }
+                    SelectedTeamIdx = i;
+                    TeamInfos[i].LeaderSteamId = LeaderSteamID;
+                    isLeader = true;
+                    break;
                 }
             }
         }
 
         if (SelectedTeamIdx != -1)
         {
-            TeamInfos[SelectedTeamIdx].PendingCount += IncomingSize;
+            if (isLeader)
+            {
+                TeamInfos[SelectedTeamIdx].PendingCount += IncomingSize;
+            }
             LoginInfo.Add(UniqueId.ToString(), LeaderSteamID);
 
             UE_LOG(LogTemp, Log, TEXT("[PreLogin] Team %d Reserved (Leader: %s)"), SelectedTeamIdx, *LeaderSteamID);
@@ -134,14 +142,32 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
     {
         return;
     }
-    int32 TestTeamIdx = 0;
-    PlayerState->SetTeamID(static_cast<ETeamType>(TestTeamIdx));
-    TeamInfos[TestTeamIdx].PlayerCount++;
+    int32 SelectedTeam = -1;
+    ETeamType AssignedTeamID = ETeamType::None;
 
-    UE_LOG(LogTemp, Warning, TEXT("[Editor] Player %s assigned to Team %d"), *PlayerState->GetPlayerName(), TestTeamIdx);
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        if ( (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + 1 <= MaxTeamSize))
+        {
+            SelectedTeam = i;
+            break;
+        }
+    }
+
+    TeamInfos[SelectedTeam].PlayerCount++;
+    AssignedTeamID = TeamInfos[SelectedTeam].TeamID;
+
+    if (--TeamInfos[SelectedTeam].PendingCount <= 0)
+    {
+        TeamInfos[SelectedTeam].PendingCount = 0;
+        TeamInfos[SelectedTeam].LeaderSteamId = TEXT("");
+    }
+
+    PlayerState->SetTeamID(AssignedTeamID);
+    UE_LOG(LogTemp, Warning, TEXT("플레이어 %s가 %d번 팀에 배정됨. 현재 팀 인원: %d"), *PlayerState->GetPlayerName(), SelectedTeam, TeamInfos[SelectedTeam].PlayerCount);
 
     BroadcastLobbyTeamInfos();
-    TryGameStart(true);
+    TryGameStart(false);
 #else
     APDPlayerState* PlayerState = NewPlayer->GetPlayerState<APDPlayerState>();
     if (!PlayerState)
@@ -149,7 +175,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    const FString NetIdKey = PlayerState->GetUniqueId().ToString(); 
+    const FString NetIdKey = PlayerState->GetUniqueId().ToString();
     ETeamType AssignedTeamID = ETeamType::None;
 
     {
@@ -214,7 +240,7 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
     BroadcastLobbyTeamInfos();
     UpdateSessionMetadata();
-	TryGameStart(false);
+    TryGameStart(false);
 
 #endif
 }
@@ -311,7 +337,7 @@ void APDLobbyGameMode::UpdateSessionMetadata()
     }
 
     int32 MaxFit = 0;
-    for (int32 i = 0; i < 3; i++)
+    for (int32 i = 0; i < static_cast<int32>(ETeamType::MAX); i++)
     {
         int32 FreeSpace = MaxTeamSize - TeamInfos[i].PlayerCount;
         if (FreeSpace > MaxFit)
@@ -336,7 +362,7 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
     if (!bIsTest)
     {
-        for(int i = 0 ; i < 3; i++)
+        for(int i = 0 ; i < static_cast<int32>(ETeamType::MAX); i++)
         {
             if (TeamInfos[i].PlayerCount != MaxTeamSize)
             {
@@ -371,7 +397,6 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
     }
 
-    //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
     const int32 PlayerNums = GetNumPlayers();
     const FString TravelURL = FString::Printf(
         TEXT("/Game/LakeTown/Maps/Demonstration?ExpectedPlayers=%d"),

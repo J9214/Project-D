@@ -3,6 +3,7 @@
 #include "AbilitySystemComponent.h"
 #include "DataAssets/Weapon/DataAsset_Throwable.h"
 #include "Pawn/PDPawnBase.h"
+#include "Components/Combat/WeaponManageComponent.h"
 #include "Weapon/PDThrowableProjectile.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -147,32 +148,37 @@ void UGA_Flash::OnFlashTargetDataReady(
 		return;
 	}
 
-	SpawnFlashProjectileFromData(OwnerPawn, DataHandle);
+	UWeaponManageComponent* WMC = GetWeaponManageComponentFromActorInfo();
+	if (WMC && GetAvatarActorFromActorInfo() && GetAvatarActorFromActorInfo()->HasAuthority() &&
+		SpawnFlashProjectileFromData(OwnerPawn, DataHandle))
+	{
+		WMC->ConsumeEquippedThrowable();
+	}
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UGA_Flash::SpawnFlashProjectileFromData(
+bool UGA_Flash::SpawnFlashProjectileFromData(
 	APDPawnBase* OwnerPawn,
 	const FGameplayAbilityTargetDataHandle& DataHandle
 )
 {
 	if (!OwnerPawn || !FlashData || !FlashData->ProjectileClass || DataHandle.Num() <= 0)
 	{
-		return;
+		return false;
 	}
 
 	const FGameplayAbilityTargetData* TargetData = DataHandle.Get(0);
 	if (!TargetData)
 	{
-		return;
+		return false;
 	}
 
 	const FGameplayAbilityTargetData_SingleTargetHit* HitData =
 		static_cast<const FGameplayAbilityTargetData_SingleTargetHit*>(TargetData);
 	if (!HitData)
 	{
-		return;
+		return false;
 	}
 
 	const FHitResult& HitResult = HitData->HitResult;
@@ -180,7 +186,7 @@ void UGA_Flash::SpawnFlashProjectileFromData(
 	UWorld* World = OwnerPawn->GetWorld();
 	if (!World)
 	{
-		return;
+		return false;
 	}
 
 	FVector Start = OwnerPawn->GetActorLocation();
@@ -225,20 +231,23 @@ void UGA_Flash::SpawnFlashProjectileFromData(
 	if (Projectile)
 	{
 		Projectile->InitFromData(FlashData, Start, Velocity);
+		return true;
 	}
+
+	return false;
 }
 
-void UGA_Flash::SpawnFlashProjectile(APDPawnBase* OwnerPawn)
+bool UGA_Flash::SpawnFlashProjectile(APDPawnBase* OwnerPawn)
 {
 	if (!OwnerPawn || !FlashData || !FlashData->ProjectileClass)
 	{
-		return;
+		return false;
 	}
 
 	UWorld* World = OwnerPawn->GetWorld();
 	if (!World)
 	{
-		return;
+		return false;
 	}
 
 	const FRotator AimRot = OwnerPawn->GetBaseAimRotation();
@@ -271,5 +280,8 @@ void UGA_Flash::SpawnFlashProjectile(APDPawnBase* OwnerPawn)
 	if (Projectile)
 	{
 		Projectile->InitFromData(FlashData, Start, Velocity);
+		return true;
 	}
+
+	return false;
 }

@@ -56,6 +56,23 @@ public:
 
 protected:
 
+	void StartReadyCheck();
+	void TickReadyCheck();
+	bool AreAllPlayersReplicatedOnThisClient() const;
+
+	FTimerHandle ReadyCheckTimerHandle;
+	int32 ExpectedPlayerCount = -1;
+	bool bLocalReadyReported = false;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_ReportClientReady();
+
+public:
+	UFUNCTION(Client, Reliable)
+	void Client_SetExpectedPlayerCount(int32 InExpectedCount);
+
+protected:
+
 	UFUNCTION(Server, Reliable)
 	void Server_KillSelfCheat();
 

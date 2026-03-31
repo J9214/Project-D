@@ -4,11 +4,33 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Weapon/PDThrowableItemBase.h"
 #include "Pawn/PDPawnBase.h"
+#include "PlayerState/PDPlayerState.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/PDGameplayAbility.h"
 #include "Structs/PDPlayerAbilitySet.h"
 #include "Net/UnrealNetwork.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameplayTagContainer.h"
+
+namespace
+{
+bool IsOwnerPawnDead(const APDPawnBase* OwnerPawn)
+{
+    if (!OwnerPawn)
+    {
+        return false;
+    }
+
+    if (UAbilitySystemComponent* ASC = OwnerPawn->GetAbilitySystemComponent())
+    {
+        static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+        return ASC->HasMatchingGameplayTag(DeadTag);
+    }
+
+    return false;
+}
+}
 
 UWeaponManageComponent::UWeaponManageComponent()
 {
@@ -141,6 +163,28 @@ void UWeaponManageComponent::Server_RemoveWeaponFromSlot_Implementation(int32 Sl
     }
 
     ApplyRemove_Global(SlotIndex, true);
+    ScheduleRefreshAttachments();
+}
+
+void UWeaponManageComponent::RemoveAllEquipmentOnDeath()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return;
+    }
+
+    UnequipCurrentWeapon();
+
+    for (int32 SlotIndex = 0; SlotIndex < Slots.Num(); ++SlotIndex)
+    {
+        ApplyRemove(SlotIndex, true);
+    }
+
+    for (int32 SlotIndex = 0; SlotIndex < ThrowableSlots.Num(); ++SlotIndex)
+    {
+        ApplyRemove_Throwable(SlotIndex, true);
+    }
+
     ScheduleRefreshAttachments();
 }
 
@@ -420,6 +464,51 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
     RefreshEquipIMC();
 }
 
+bool UWeaponManageComponent::ConsumeEquippedThrowable()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+
+    if (IsThrowableSlotIndex(EquippedSlotIndex) == false)
+    {
+        return false;
+    }
+
+    const int32 LocalSlotIndex = ToThrowableLocalIndex(EquippedSlotIndex);
+    if (ThrowableSlots.IsValidIndex(LocalSlotIndex) == false || IsValid(ThrowableSlots[LocalSlotIndex].ThrowableItemActor) == false)
+    {
+        return false;
+    }
+
+    APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
+    if (!OwnerPawn)
+    {
+        return false;
+    }
+
+    APDPlayerState* PlayerState = OwnerPawn->GetPlayerState<APDPlayerState>();
+    if (!PlayerState)
+    {
+        return false;
+    }
+
+    UPDInventoryComponent* InventoryComponent = PlayerState->GetInventoryComponent();
+    if (!InventoryComponent || !InventoryComponent->ConsumeGrenadeAtSlot(LocalSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventoryComponent->HasGrenadeAtSlot(LocalSlotIndex) == false)
+    {
+        ApplyRemove_Throwable(LocalSlotIndex, true);
+        ScheduleRefreshAttachments();
+    }
+
+    return true;
+}
+
 APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBase> WeaponClass)
 {
     APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
@@ -510,6 +599,8 @@ void UWeaponManageComponent::AttachToHand(APDWeaponBase* Weapon)
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         HandSocketName
     );
+
+    Weapon->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::AttachToBack(APDWeaponBase* Weapon, int32 SlotIndex)
@@ -531,6 +622,8 @@ void UWeaponManageComponent::AttachToBack(APDWeaponBase* Weapon, int32 SlotIndex
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         BackSocket
     );
+
+    Weapon->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::ThrowableAttachToHand(APDThrowableItemBase* Throwable)
@@ -546,6 +639,8 @@ void UWeaponManageComponent::ThrowableAttachToHand(APDThrowableItemBase* Throwab
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         ThrowableHandSocketName
     );
+
+    Throwable->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::ThrowableAttachToBack(APDThrowableItemBase* Throwable, int32 SlotIndex)
@@ -567,6 +662,8 @@ void UWeaponManageComponent::ThrowableAttachToBack(APDThrowableItemBase* Throwab
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         BackSocket
     );
+
+    Throwable->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const

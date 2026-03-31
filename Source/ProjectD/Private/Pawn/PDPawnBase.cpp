@@ -35,6 +35,9 @@
 #include "Animation/AnimInstance.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Controller/PDPlayerController.h"
+#include "UI/HUD/IngameHUD.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 
 APDPawnBase::APDPawnBase()
 {
@@ -83,11 +86,10 @@ void APDPawnBase::ClientDrawFireDebug_Implementation(
 	const FVector& HitPoint
 )
 {
-	DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 1.f, 0, 1.f);
-	if (bHit)
-	{
-		DrawDebugPoint(GetWorld(), HitPoint, 8.f, FColor::Yellow, false, 1.f);
-	}
+	(void)Start;
+	(void)End;
+	(void)bHit;
+	(void)HitPoint;
 }
 
 void APDPawnBase::BeginPlay()
@@ -500,6 +502,25 @@ void APDPawnBase::ExitFirstPerson()
 	}
 }
 
+void APDPawnBase::ForceExitFirstPersonOnDeath()
+{
+	bAimHoldDown = false;
+
+	if (bIsFirstPerson)
+	{
+		ExitFirstPerson();
+	}
+	else
+	{
+		SetIsAiming(false);
+	}
+
+	if (USkeletalMeshComponent* Body = GetSkeletalMeshComponent())
+	{
+		Body->SetOwnerNoSee(false);
+	}
+}
+
 void APDPawnBase::UpdateFirstPersonCamera(float DeltaSeconds)
 {
 	if (!CachedCamera)
@@ -599,8 +620,49 @@ void APDPawnBase::HandleDeathState(bool bIsDead)
 {
 	if (bIsDead)
 	{
+		ForceExitFirstPersonOnDeath();
+
+		if (IsLocallyControlled())
+		{
+			BP_OnDeathFirstPersonReset();
+		}
+
 		CacheMeshDeathState();
 		CancelMovementGA();
+
+		if (SkillManageComponent)
+		{
+			SkillManageComponent->CancelPlacement();
+		}
+
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+		{
+			if (HasAuthority() || IsLocallyControlled())
+			{
+				ASC->CancelAllAbilities();
+			}
+		}
+
+		if (HasAuthority())
+		{
+			if (SkillManageComponent)
+			{
+				SkillManageComponent->RemoveAllSkillsOnDeath();
+			}
+
+			if (WeaponManageComponent)
+			{
+				WeaponManageComponent->RemoveAllEquipmentOnDeath();
+			}
+
+			if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+			{
+				if (UPDInventoryComponent* InventoryComponent = PDPlayerState->GetInventoryComponent())
+				{
+					InventoryComponent->ClearCombatInventoryOnDeath();
+				}
+			}
+		}
 
 		if (MovementBridgeComponent)
 		{
@@ -658,6 +720,17 @@ void APDPawnBase::HandleDeathState(bool bIsDead)
 	{
 		if (bIsDead)
 		{
+			if (PC->IsLocalController())
+			{
+				if (APDPlayerController* PDPC = Cast<APDPlayerController>(PC))
+				{
+					if (UIngameHUD* IngameHUD = PDPC->GetIngameHUDWidget())
+					{
+						IngameHUD->ForceOpenDeadShopUI();
+					}
+				}
+			}
+
 			DisableInput(PC);
 		}
 		else

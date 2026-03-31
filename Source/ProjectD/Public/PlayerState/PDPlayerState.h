@@ -29,6 +29,9 @@ public:
 	FORCEINLINE UPDInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 
 	virtual ETeamType GetTeamID() const override { return TeamID; }
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	ETeamType GetTeamID_BP() const { return TeamID; }
 	
 	UFUNCTION(BlueprintPure)
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponent() const { return AbilitySystemComponent; }
@@ -79,6 +82,11 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UPROPERTY(Replicated)
+	bool bClientReady = false;
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetReady();
 protected:
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 	void HandleCharacterCustomInfoChanged();

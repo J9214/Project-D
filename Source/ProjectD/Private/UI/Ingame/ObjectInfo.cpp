@@ -11,6 +11,11 @@ void UObjectInfo::SetInterfaceColor(FLinearColor NewColor)
 	{
 		InfoImage->SetColorAndOpacity(NewColor);
 	}
+
+	if (FillImage)
+	{
+		FillImage->SetColorAndOpacity(NewColor);
+	}
 }
 
 void UObjectInfo::SetFillAmount(float Percent)

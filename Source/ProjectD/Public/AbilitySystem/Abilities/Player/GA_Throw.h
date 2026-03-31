@@ -43,7 +43,7 @@ private:
 	UDataAsset_Throwable* GetEquippedThrowableDA();
 	UWeaponManageComponent* GetWMC();
 	
-	void SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Throwable* DA);
+	bool SpawnProjectile(const FPDTargetData_Throwable& TD, UDataAsset_Throwable* DA);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Throw")

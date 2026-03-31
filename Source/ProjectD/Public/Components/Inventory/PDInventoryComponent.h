@@ -35,6 +35,8 @@ public:
 	bool AddItem_Weapon(const FPDItemInfo* ItemInfo);
 	bool AddItem_Grenade(const FPDItemInfo* ItemInfo);
 	bool AddItem_Skill(const FPDItemInfo* ItemInfo);
+	bool ConsumeGrenadeAtSlot(int32 SlotIndex);
+	bool HasGrenadeAtSlot(int32 SlotIndex) const;
 
 	void AddGold(int InGold);
 	bool CheckGold(int Cost) const { return Gold >= Cost; };
@@ -47,6 +49,7 @@ public:
 	void SwapETCItem(int32 FromSlotIndex, int32 SlotIndex, FPDItemData ItemInfo);
 
 	void ClearInventoryToDefault();
+	void ClearCombatInventoryOnDeath();
 
 	UFUNCTION(Server, Reliable)
 	void SwapItem(EItemType FromItemType, FName FromItemId, int32 FromSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count);

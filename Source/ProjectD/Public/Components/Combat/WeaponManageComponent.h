@@ -96,6 +96,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category="Weapon")
 	void Server_RemoveWeaponFromSlot(int32 SlotIndex);
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void RemoveAllEquipmentOnDeath();
 	
 	void EquipSlot(int32 SlotIndex);
 	void UnequipCurrentWeapon();
@@ -103,6 +106,7 @@ public:
     FORCEINLINE APDWeaponBase* GetEquippedWeapon() const { return EquippedWeapon; }
 	FORCEINLINE APDThrowableItemBase* GetEquippedThrowable() const { return EquippedThrowable; }
 	FORCEINLINE int32 GetEquippedSlotIndex() const { return EquippedSlotIndex; }
+	bool ConsumeEquippedThrowable();
 	APDWeaponBase* GetWeaponInSlot(int32 SlotIndex) const;
 	APDThrowableItemBase* GetThrowableInSlot(int32 SlotIndex) const;
 	int32 FindNextThrowableGlobalSlotIndex() const;

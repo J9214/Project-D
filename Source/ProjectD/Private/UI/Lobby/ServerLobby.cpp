@@ -3,6 +3,7 @@
 #include "Components/Border.h"
 #include "GameFramework/GameStateBase.h"
 #include "PlayerState/PDPlayerState.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 
 void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID)
 {
@@ -38,18 +39,12 @@ void UServerLobby::RefreshLobbyTeamInfos()
 		}
 	}
 
-	UpdateTeamInfoText(TeamAInfo, TEXT("A Team"), TeamAInfoData, InLocalTeamID == ETeamType::TeamOne);
-	UpdateTeamInfoText(TeamBInfo, TEXT("B Team"), TeamBInfoData, InLocalTeamID == ETeamType::TeamTwo);
-	UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, InLocalTeamID == ETeamType::TeamThree);
+	UpdateTeamInfoText(TeamAInfo, TEXT("A Team"), TeamAInfoData, ETeamType::TeamOne, InLocalTeamID);
+	UpdateTeamInfoText(TeamBInfo, TEXT("B Team"), TeamBInfoData, ETeamType::TeamTwo, InLocalTeamID);
+	UpdateTeamInfoText(TeamCInfo, TEXT("C Team"), TeamCInfoData, ETeamType::TeamThree, InLocalTeamID);
 
 	UpdateLocalTeamPanels(InLocalTeamID);
 	UpdateOtherTeamAvatars(InLocalTeamID);
-
-	if (AreAllExpectedPlayerStatesReady())
-	{
-		StopLobbyTeamRefreshRetry();
-		return;
-	}
 
 	StartLobbyTeamRefreshRetry();
 }
@@ -58,17 +53,15 @@ void UServerLobby::UpdateTeamInfoText(
 	UTextBlock* TextBlock,
 	const TCHAR* TeamLabel,
 	const FTeamInfo* TeamInfo,
-	bool bIsMyTeam)
+	ETeamType TeamID,
+	ETeamType LocalTeamID)
 {
 	if (!TextBlock)
 	{
 		return;
 	}
 
-	TextBlock->SetColorAndOpacity(
-		bIsMyTeam
-		? FSlateColor(FLinearColor::Yellow)
-		: FSlateColor(FLinearColor::White));
+	TextBlock->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, TeamID));
 
 	const int32 CurrentPlayerCount = TeamInfo ? TeamInfo->PlayerCount : 0;
 	const int32 MaxPlayerCount = TeamInfo ? TeamInfo->MaxPlayerCount : 0;
@@ -216,11 +209,13 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 	if (TeamNickName_0)
 	{
 		TeamNickName_0->SetText(FText::FromString(bHasSlot0 ? Slot0PlayerState->GetResolvedDisplayName() : FString()));
+		TeamNickName_0->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, LocalTeamID));
 	}
 
 	if (TeamNickName_1)
 	{
 		TeamNickName_1->SetText(FText::FromString(bHasSlot1 ? Slot1PlayerState->GetResolvedDisplayName() : FString()));
+		TeamNickName_1->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, LocalTeamID));
 	}
 
 	if (bHasSlot0)
@@ -467,17 +462,6 @@ void UServerLobby::StartLobbyTeamRefreshRetry()
 		return;
 	}
 
-	if (LobbyTeamRefreshRetryCount >= 20)
-	{
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[LobbyTeamRefreshRetry] Max retries reached. CachedTeamInfoCount=%d"),
-			CachedTeamInfos.Num());
-		StopLobbyTeamRefreshRetry();
-		return;
-	}
-
 	if (GetWorld()->GetTimerManager().IsTimerActive(LobbyTeamRefreshRetryHandle))
 	{
 		return;
@@ -486,15 +470,14 @@ void UServerLobby::StartLobbyTeamRefreshRetry()
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[LobbyTeamRefreshRetry] Scheduling retry Attempt=%d"),
-		LobbyTeamRefreshRetryCount + 1);
+		TEXT("[LobbyTeamRefreshRetry] Starting 1s polling refresh"));
 
 	GetWorld()->GetTimerManager().SetTimer(
 		LobbyTeamRefreshRetryHandle,
 		this,
 		&UServerLobby::RetryRefreshLobbyTeamInfos,
-		0.2f,
-		false);
+		1.0f,
+		true);
 }
 
 void UServerLobby::StopLobbyTeamRefreshRetry()

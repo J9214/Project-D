@@ -68,7 +68,8 @@ private:
 		UTextBlock* TextBlock,
 		const TCHAR* TeamLabel,
 		const FTeamInfo* TeamInfo,
-		bool bIsMyTeam);
+		ETeamType TeamID,
+		ETeamType LocalTeamID);
 	void RefreshLobbyTeamInfos();
 	void RebindCharacterCustomInfoDelegates();
 	void UnbindCharacterCustomInfoDelegates();

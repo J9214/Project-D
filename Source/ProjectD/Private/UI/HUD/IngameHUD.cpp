@@ -7,10 +7,12 @@
 #include "UI/Shop/PD_ShopUI.h"
 #include "UI/Ingame/PDIngameInfo.h"
 #include "UI/Ingame/PDTeamHPInfo.h"
+#include "Components/TextBlock.h"
 #include "PlayerState/PDPlayerState.h"
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 
 void UIngameHUD::NativeOnInitialized()
 {
@@ -41,6 +43,11 @@ void UIngameHUD::NativeOnInitialized()
     FInputModeGameOnly InputMode;
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = false;
+
+    HPBars.Add(EHPBarSlot::Player, PlayerHPBar);
+    HPBars.Add(EHPBarSlot::Team1, TeamHPBar);
+
+    RefreshTeamScoreColors();
 }
 
 void UIngameHUD::NativeConstruct()
@@ -48,9 +55,42 @@ void UIngameHUD::NativeConstruct()
     Super::NativeConstruct();
 
     bIsFocusable = true;
+    RefreshTeamScoreColors();
 }
 
-void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set)
+void UIngameHUD::RefreshTeamScoreColors()
+{
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC)
+    {
+        return;
+    }
+
+    const APDPlayerState* PS = PC->GetPlayerState<APDPlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    const ETeamType LocalTeamID = PS->GetTeamID();
+
+    if (Team1Score)
+    {
+        Team1Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 0));
+    }
+
+    if (Team2Score)
+    {
+        Team2Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 1));
+    }
+
+    if (Team3Score)
+    {
+        Team3Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 2));
+    }
+}
+
+void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set, ETeamType LocalTeamID, ETeamType TargetTeamID)
 {
     if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
     {
@@ -65,11 +105,13 @@ void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttr
         case EHPBarSlot::Player:
         {
             Bar->SetPlayerColor();
+            Bar->SetTeamTextColor(LocalTeamID, TargetTeamID);
             break;
         }
         case EHPBarSlot::Team1:
         {
             Bar->SetTeamColor(0);
+            Bar->SetTeamTextColor(LocalTeamID, TargetTeamID);
             break;
         }
         default: break;
@@ -104,7 +146,7 @@ void UIngameHUD::ToggleGameUI()
         return;
     }
 
-    bool bIsDead = true; 
+    bool bIsDead = false; 
 
     APlayerController* PC = GetOwningPlayer();
     if (PC)
@@ -124,22 +166,69 @@ void UIngameHUD::ToggleGameUI()
         {
             PlayAnimation(OpenShopUI);
             PlayAnimation(OpenInventoryUI);
+            bIsShopOpen = true;
         }
         else
         {
             PlayAnimation(OpenInventoryUI);
+            bIsShopOpen = false;
         }
         bIsUIPanelOpen = true;
     }
     else
     {
-        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
+        if (bIsShopOpen)
         {
             PlayAnimation(CloseShopUI);
+            bIsShopOpen = false;
         }
 
         PlayAnimation(CloseInventoryUI);
         bIsUIPanelOpen = false;
+    }
+}
+
+void UIngameHUD::ForceOpenDeadShopUI()
+{
+    if (CloseShopUI)
+    {
+        StopAnimation(CloseShopUI);
+    }
+
+    if (CloseInventoryUI)
+    {
+        StopAnimation(CloseInventoryUI);
+    }
+
+    if (!bIsUIPanelOpen)
+    {
+        OpenedUIPriority = 0;
+        bIsShopOpen = false;
+
+        if (OpenInventoryUI)
+        {
+            PlayAnimation(OpenInventoryUI);
+        }
+        else if (OpenedUIPriority <= 0)
+        {
+            OnUIOpenFinished();
+        }
+
+        bIsUIPanelOpen = true;
+    }
+    else if (OpenedUIPriority <= 0)
+    {
+        OnUIOpenFinished();
+    }
+
+    if (!bIsShopOpen)
+    {
+        if (OpenShopUI)
+        {
+            PlayAnimation(OpenShopUI);
+        }
+
+        bIsShopOpen = true;
     }
 }
 
@@ -176,37 +265,7 @@ void UIngameHUD::UpdateCurrentAmmo(int32 CurrentAmmo)
 
 void UIngameHUD::OnShopUI()
 {
-    if (IsAnimationPlaying(OpenShopUI) || IsAnimationPlaying(CloseShopUI) ||
-        IsAnimationPlaying(OpenInventoryUI) || IsAnimationPlaying(CloseInventoryUI))
-    {
-        return;
-    }
-
-    bool bIsDead = true;
-
-    if (!bIsUIPanelOpen)
-    {
-        if (bIsDead)
-        {
-            PlayAnimation(OpenShopUI);
-            PlayAnimation(OpenInventoryUI);
-        }
-        else
-        {
-            PlayAnimation(OpenInventoryUI);
-        }
-        bIsUIPanelOpen = true;
-    }
-    else
-    {
-        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
-        {
-            PlayAnimation(CloseShopUI);
-        }
-
-        PlayAnimation(CloseInventoryUI);
-        bIsUIPanelOpen = false;
-    }
+    ForceOpenDeadShopUI();
 }
 
 void UIngameHUD::InitGold(int NewGold)

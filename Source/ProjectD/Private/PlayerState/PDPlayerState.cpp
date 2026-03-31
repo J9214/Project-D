@@ -4,6 +4,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/Inventory/PDInventoryComponent.h"
 #include <Controller/PDPlayerController.h>
+#include <GameMode/PDGameModeBase.h>
+#include <Controller/PDLobbyPlayerController.h>
 
 APDPlayerState::APDPlayerState()
 {
@@ -152,6 +154,11 @@ void APDPlayerState::SetReviveState()
 void APDPlayerState::OnRep_CharacterCustomInfo()
 {
 	HandleCharacterCustomInfoChanged();
+
+	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->RefreshLocalLobbyUI();
+	}
 }
 
 void APDPlayerState::HandleCharacterCustomInfoChanged()
@@ -170,6 +177,10 @@ void APDPlayerState::OnRep_DisplayName()
 		*GetResolvedDisplayName(),
 		*GetUniqueId().ToString());
 
+	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->RefreshLocalLobbyUI();
+	}
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -178,7 +189,23 @@ void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME_CONDITION_NOTIFY(APDPlayerState, CharacterCustomInfo, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME(APDPlayerState, TeamID);
-	DOREPLIFETIME(APDPlayerState, DisplayName);
+	DOREPLIFETIME(APDPlayerState, DisplayName); 
+	DOREPLIFETIME(APDPlayerState, bClientReady);
+}
+
+void APDPlayerState::Server_SetReady_Implementation()
+{
+	if (bClientReady)
+	{
+		return;
+	}
+
+	bClientReady = true;
+
+	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+	{
+		GM->CheckAllPlayersReady();
+	}
 }
 
 void APDPlayerState::CopyProperties(APlayerState* PlayerState)

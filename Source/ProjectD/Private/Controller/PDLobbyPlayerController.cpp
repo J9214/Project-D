@@ -326,3 +326,15 @@ void APDLobbyPlayerController::Client_UpdateLobbyUI_Implementation()
         }
     }
 }
+
+void APDLobbyPlayerController::RefreshLocalLobbyUI()
+{
+    if (IsLocalController() && UIWidgetInstance)
+    {
+        UFriendsLobby* FriendsLobby = Cast<UFriendsLobby>(UIWidgetInstance);
+        if (FriendsLobby)
+        {
+            FriendsLobby->BP_InitTeamInfoDisplay();
+        }
+    }
+}

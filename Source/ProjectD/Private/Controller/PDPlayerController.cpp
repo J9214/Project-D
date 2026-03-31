@@ -82,14 +82,7 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		//if (LoadingHUDClass && !LoadingHUD)
-		//{
-		//	LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
-		//	if (LoadingHUD)
-		//	{
-		//		LoadingHUD->AddToViewport(100);
-		//	}
-		//}
+#if UE_EDITOR
 
 		if (PlayerHUDClass && !PlayerHUDWidget)
 		{
@@ -100,6 +93,18 @@ void APDPlayerController::BeginPlay()
 				PlayerHUDWidget->AddToViewport();
 			}
 		}
+#else
+		if (LoadingHUDClass && !LoadingHUD)
+		{
+			LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
+			if (LoadingHUD)
+			{
+				LoadingHUD->AddToViewport(100);
+			}
+		}
+
+		StartReadyCheck();
+#endif
 
 		if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
 		{
@@ -338,6 +343,99 @@ void APDPlayerController::UpdateCurrentAmmo(int32 CurrentAmmo)
 	PlayerHUDWidget->UpdateCurrentAmmo(CurrentAmmo);
 }
 
+void APDPlayerController::StartReadyCheck()
+{
+	if (!GetWorld())
+	{
+		UE_LOG(LogTemp, Error, TEXT("APDPlayerController::StartReadyCheck GetWorld false"));
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(ReadyCheckTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		ReadyCheckTimerHandle,
+		this,
+		&APDPlayerController::TickReadyCheck,
+		0.2f,
+		true
+	);
+}
+
+void APDPlayerController::TickReadyCheck()
+{
+	if (bLocalReadyReported)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("APDPlayerController::TickReadyCheck IsReady"));
+		return;
+	}
+
+	if (!AreAllPlayersReplicatedOnThisClient())
+	{
+		return;
+	}
+
+	bLocalReadyReported = true;
+	ServerRPC_ReportClientReady();
+	GetWorldTimerManager().ClearTimer(ReadyCheckTimerHandle);
+}
+
+bool APDPlayerController::AreAllPlayersReplicatedOnThisClient() const
+{
+	UWorld* World = GetWorld();
+	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
+	if (!GS || ExpectedPlayerCount < 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player GS Loading Yet"));
+		return false;
+	}
+
+	if (!GetPlayerState<APDPlayerState>() || !GetPawn())
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player Pawn Loading Yet"));
+		return false;
+	}
+
+	if (GS->PlayerArray.Num() < ExpectedPlayerCount)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient All GS Loading Yet"));
+		return false;
+	}
+
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		if (!PS || !PS->GetPawn() || !PS->GetPawn()->HasActorBegunPlay())
+		{
+			UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient All Pawn Loading Yet"));
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void APDPlayerController::Client_SetExpectedPlayerCount_Implementation(int32 InExpectedCount)
+{
+	ExpectedPlayerCount = InExpectedCount;
+	UE_LOG(LogTemp, Log, TEXT("Expected Player Count Set to: %d"), ExpectedPlayerCount);
+}
+
+void APDPlayerController::ServerRPC_ReportClientReady_Implementation()
+{
+	APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	if (PS)
+	{
+		PS->bClientReady = true;
+
+		UE_LOG(LogTemp, Log, TEXT("Server: Player %s reported Ready!"), *PS->GetPlayerName());
+
+		if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+		{
+			GM->CheckAllPlayersReady();
+		}
+	}
+}
+
 void APDPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
@@ -384,38 +482,66 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 	}
 
 	APDGameStateBase* GS = World->GetGameState<APDGameStateBase>();
-	if (GS)
+	APDPlayerState* LocalPDPlayerState = GetPlayerState<APDPlayerState>();
+	if (!GS || !LocalPDPlayerState)
 	{
-		for (APlayerState* PS : GS->PlayerArray)
+		if (LoadingHUD)
 		{
-			APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
-			if (!PDPS)
+			LoadingHUD->RemoveFromParent();
+			LoadingHUD = nullptr;
+		}
+
+		if (PlayerHUDWidget)
+		{
+			PlayerHUDWidget->AddToViewport();
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted !GS !LocalPDPlayerState"));
+		return;
+	}
+
+	const ETeamType LocalTeamID = LocalPDPlayerState->GetTeamID();
+
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
+		if (!PDPS)
+		{
+			continue;
+		}
+
+		const bool bIsMe = (PDPS == LocalPDPlayerState);
+		const bool bIsMyTeam = (PDPS->GetTeamID() == LocalTeamID);
+
+		if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
+		{
+			if (!bIsMe)
 			{
-				continue;
-			}
-
-			bool bIsMe = (PDPS == PlayerState);
-			bool bIsMyTeam = (PDPS->GetTeamID() == Cast<APDPlayerState>(PlayerState)->GetTeamID());
-
-			if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
-			{
-				if (bIsMe)
-				{
-					continue;
-				}
-
 				if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
 				{
 					UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
-					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), bIsMyTeam);
+					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), LocalTeamID, PDPS->GetTeamID());
 				}
 			}
+		}
 
-			if (bIsMyTeam)
+		if (PlayerHUDWidget)
+		{
+			if (bIsMe)
 			{
-				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase());
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			}
+
+			if (bIsMyTeam )
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
 			}
 		}
+	}
+
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->OnShopUI();
 	}
 
 	if (LoadingHUD)
@@ -424,9 +550,10 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 		LoadingHUD = nullptr;
 	}
  
-	//if (PlayerHUDWidget)
-	//{
-	//	PlayerHUDWidget->AddToViewport();
-	//}
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->RefreshTeamScoreColors();
+		PlayerHUDWidget->AddToViewport();
+	}
 }
 

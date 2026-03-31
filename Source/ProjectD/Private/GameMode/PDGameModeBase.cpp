@@ -4,10 +4,12 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectTypes.h"
 #include "AttributeSet/PDAttributeSetBase.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 #include "GameState/PDGameStateBase.h"
 #include "Controller/PDPlayerController.h"
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/BallCore.h"
 #include "Object/GoalPost.h"
@@ -15,6 +17,71 @@
 #include "ProjectD/ProjectD.h"
 #include "AI/MassAI/DroneSpawner.h"
 #include "AI/MassAI/CheckDroneAllExplodeSubsystem.h"
+
+namespace
+{
+APDPlayerState* ResolveRewardPlayerStateFromActor(AActor* Actor)
+{
+    if (IsValid(Actor) == false)
+    {
+        return nullptr;
+    }
+
+    if (APDPlayerState* PlayerState = Cast<APDPlayerState>(Actor))
+    {
+        return PlayerState;
+    }
+
+    if (AController* Controller = Cast<AController>(Actor))
+    {
+        return Controller->GetPlayerState<APDPlayerState>();
+    }
+
+    if (APawn* Pawn = Cast<APawn>(Actor))
+    {
+        return Pawn->GetPlayerState<APDPlayerState>();
+    }
+
+    if (AController* InstigatorController = Actor->GetInstigatorController())
+    {
+        if (APDPlayerState* PlayerState = InstigatorController->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (APawn* InstigatorPawn = Actor->GetInstigator())
+    {
+        if (APDPlayerState* PlayerState = InstigatorPawn->GetPlayerState<APDPlayerState>())
+        {
+            return PlayerState;
+        }
+    }
+
+    if (AActor* Owner = Actor->GetOwner())
+    {
+        return ResolveRewardPlayerStateFromActor(Owner);
+    }
+
+    return nullptr;
+}
+
+void RewardPlayerGold(APDPlayerState* PlayerState, const int32 RewardGold)
+{
+    if (IsValid(PlayerState) == false || RewardGold <= 0)
+    {
+        return;
+    }
+
+    UPDInventoryComponent* InventoryComponent = PlayerState->GetInventoryComponent();
+    if (IsValid(InventoryComponent) == false)
+    {
+        return;
+    }
+
+    InventoryComponent->AddGold(RewardGold);
+}
+}
 
 APDGameModeBase::APDGameModeBase()
 {
@@ -73,8 +140,6 @@ void APDGameModeBase::BeginPlay()
     bWorldReady = true;
 
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
-
-    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -183,6 +248,25 @@ void APDGameModeBase::FinishGame(int32 WinnerTeamId)
     GetWorldTimerManager().ClearTimer(GameTimerHandle);
     GetWorldTimerManager().ClearTimer(NextRoundTimerHandle);
 
+    FTimerHandle TimerHandle;
+    GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+        {
+            for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+            {
+                if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+                {
+                    PC->ClientTravel(TEXT("/Game/Lobby/Lobby10"), ETravelType::TRAVEL_Absolute);
+                }
+            }
+
+            FTimerHandle TimerHandle;
+
+            GetWorldTimerManager().SetTimer(TimerHandle, [this]()
+                {
+                    const FString LobbyMapPath = TEXT("/Game/ProjectD/Maps/ServerLobbyLevel?listen");
+                    GetWorld()->ServerTravel(LobbyMapPath);
+                }, 2.0f, false);
+        }, 20.0f, false); 
 }
 
 void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABallCore* Ball)
@@ -218,6 +302,7 @@ void APDGameModeBase::HandleBallPickedUp(APDPlayerState* HolderPlayerState, ABal
     }
 
     bDroneSpawnTriggeredThisRound = true;
+    RewardPlayerGold(HolderPlayerState, FirstBallPickupRewardGold);
     TriggerDroneSpawnOnBallPickup(HolderPlayerState);
 }
 
@@ -279,6 +364,7 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
         return;
     }
 
+    RewardPlayerGold(GS->GoalInstigator, GoalScoredRewardGold);
     GS->GoalScored();
 
     UE_LOG(
@@ -307,6 +393,56 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
 
     RoundPhase = ERoundPhase::RoundEnded;
     PrepareNextRound();
+}
+
+void APDGameModeBase::RewardDroneKill(AActor* KillerActor)
+{
+    APDPlayerState* KillerPlayerState = ResolveRewardPlayerStateFromActor(KillerActor);
+    RewardPlayerGold(KillerPlayerState, DroneKillRewardGold);
+}
+
+void APDGameModeBase::CheckAllPlayersReady()
+{
+    if (bInitialPreRoundStarted || bInitialPreRoundFinished)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    AGameStateBase* GS = World->GetGameState();
+    if (!GS)
+    {
+        return;
+    }
+
+    if (GS->PlayerArray.Num() < ExpectedTravelPlayerCount)
+    {
+        return;
+    }
+
+    int32 ReadyCount = 0;
+    for (APlayerState* PS : GS->PlayerArray)
+    {
+        if (APDPlayerState* PDPS = Cast<APDPlayerState>(PS))
+        {
+            if (PDPS->bClientReady)
+            {
+                ReadyCount++;
+            }
+        }
+    }
+
+    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Checking Ready Status: %d / %d"), ReadyCount, ExpectedTravelPlayerCount);
+
+    if (ReadyCount >= ExpectedTravelPlayerCount)
+    {
+        TryStartInitialPreRound();
+    }
 }
 
 void APDGameModeBase::PlayerRespawn(AController* Controller)
@@ -381,14 +517,6 @@ void APDGameModeBase::StartInitialPreRound()
 
     RoundPhase = ERoundPhase::InitPreRound;
 
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-    {
-        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
-        {
-            PC->Client_OnGameStarted();
-        }
-    }
-
     GetWorldTimerManager().ClearTimer(InitialPreRoundTimerHandle);
     GetWorldTimerManager().SetTimer(
         InitialPreRoundTimerHandle,
@@ -450,6 +578,11 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
 
+    if (APDPlayerController* PC = Cast<APDPlayerController>(NewPlayer))
+    {
+        PC->Client_SetExpectedPlayerCount(ExpectedTravelPlayerCount);
+    }
+
     UE_LOG(LogProjectD, Warning, TEXT("[GameMode] PostLogin Try"));
     if (IsValid(NewPlayer) == false)
     {
@@ -467,12 +600,18 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
     Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+    if (APDPlayerController* PC = Cast<APDPlayerController>(NewPlayer))
+    {
+        PC->Client_SetExpectedPlayerCount(ExpectedTravelPlayerCount);
+
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] Seamless Travel Player Started: %s"), *PC->GetName());
+    }
 
     if (IsValid(NewPlayer) == false)
     {
@@ -490,7 +629,6 @@ void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* 
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    TryStartInitialPreRound();
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
@@ -499,6 +637,16 @@ void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor*
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] OnPlayerOutOfHealth failed. VictimController is invalid."));
         return;
+    }
+
+    APDPlayerState* VictimPlayerState = VictimController->GetPlayerState<APDPlayerState>();
+    APDPlayerState* KillerPlayerState = ResolveRewardPlayerStateFromActor(DamageCauser);
+    if (IsValid(VictimPlayerState) == true &&
+        IsValid(KillerPlayerState) == true &&
+        VictimPlayerState != KillerPlayerState &&
+        VictimPlayerState->GetTeamID() != KillerPlayerState->GetTeamID())
+    {
+        RewardPlayerGold(KillerPlayerState, KillRewardGold);
     }
 
     PlayerDied(VictimController);
@@ -648,7 +796,8 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
         return INDEX_NONE;
     }
 
-    if (GS->TeamScores.Num() <= 0)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    if (GS->TeamScores.Num() < (PlayableTeamCount + 1))
     {
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] CalculateBestTeamId failed. TeamScores is empty."));
         return INDEX_NONE;
@@ -657,9 +806,9 @@ int32 APDGameModeBase::CalculateBestTeamId(bool& bOutTie) const
     int32 BestTeamId = INDEX_NONE;
     int32 BestScore = MIN_int32;
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 Score = GS->TeamScores[TeamId];
+        const int32 Score = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (Score > BestScore)
         {
@@ -997,9 +1146,10 @@ bool APDGameModeBase::TryFinishGameByScoreCondition()
         return false;
     }
 
-    for (int32 TeamId = 0; TeamId < GS->TeamScores.Num(); ++TeamId)
+    const int32 PlayableTeamCount = static_cast<int32>(ETeamType::MAX);
+    for (int32 TeamId = 0; TeamId < PlayableTeamCount; ++TeamId)
     {
-        const int32 TeamScore = GS->TeamScores[TeamId];
+        const int32 TeamScore = GS->GetScoreByTeam(static_cast<ETeamType>(TeamId));
 
         if (TeamScore >= TargetScoreToWin)
         {
@@ -1141,7 +1291,6 @@ void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLoc
         return;
     }
 
-    // TODO : Movement Block & UI Open? (By bLocked)
     UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked Success."));
 }
 
@@ -1272,24 +1421,32 @@ void APDGameModeBase::TryStartInitialPreRound()
         return;
     }
 
-    if (TravelReadyPlayerStates.Num() < ExpectedTravelPlayerCount)
-    {
-        UE_LOG(
-            LogProjectD,
-            Log,
-            TEXT("[GameMode] TryStartInitialPreRound waiting. ReadyCount=%d ExpectedTravelPlayerCount=%d"),
-            TravelReadyPlayerStates.Num(),
-            ExpectedTravelPlayerCount
-        );
-        return;
-    }
-
     if (IsValid(CachedBallCore) == false)
     {
         UE_LOG(LogProjectD, Log, TEXT("[GameMode] TryStartInitialPreRound waiting. CachedBallCore is invalid."));
         return;
     }
 
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (APDPlayerController* PC = Cast<APDPlayerController>(It->Get()))
+        {
+            PC->Client_OnGameStarted();
+        }
+    }
+
     bInitialPreRoundStarted = true;
     StartInitialPreRound();
+}
+
+void APDGameModeBase::OnReadyTimeout()
+{
+    if (bInitialPreRoundStarted)
+    {
+        return;
+    }
+
+    UE_LOG(LogProjectD, Warning, TEXT("[GameMode] Ready Timeout! Starting game forcibly."));
+
+    TryStartInitialPreRound();
 }

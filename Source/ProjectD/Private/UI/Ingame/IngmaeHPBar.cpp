@@ -4,6 +4,7 @@
 #include "UI/Ingame/IngmaeHPBar.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 #include <PlayerState/PDPlayerState.h>
 #include "AttributeSet/PDAttributeSetBase.h"
 
@@ -42,7 +43,14 @@ void UIngmaeHPBar::Init(const FString& DisplayName)
         return;
     }
 
-    StopAnimation(Damaged);
+    if (IsTeam)
+    {
+        StopAnimation(Damaged);
+    }
+    else
+    {
+        StopAnimation(TeamDamaged);
+    }
 
     CachedBarFillMID->SetScalarParameterValue(TEXT("HealthCurrent"), 1);
     CachedBarFillMID->SetScalarParameterValue(TEXT("HealthUpdate"), 1);
@@ -70,6 +78,15 @@ float UIngmaeHPBar::HandleHealthChanged(float OldValue, float NewValue)
     }
 
     StopAnimation(Damaged);
+
+    if (IsTeam)
+    {
+        StopAnimation(Damaged);
+    }
+    else
+    {
+        StopAnimation(TeamDamaged);
+    }
 
     CachedBarFillMID->SetScalarParameterValue(TEXT("HealthCurrent"), SetOldValue);
     CachedBarFillMID->SetScalarParameterValue(TEXT("HealthUpdate"), SetNewValue);
@@ -123,5 +140,24 @@ void UIngmaeHPBar::SetTeamColor(bool TeamType)
 
     CachedBarFillMID->SetScalarParameterValue(TEXT("PlayerCheck"), 0);
     CachedBarFillMID->SetScalarParameterValue(TEXT("TeamCheck"), TeamType);
+
+	if (IsTeam)
+	{
+		SetVisibility(ESlateVisibility::Hidden);
+	}
+	else
+	{
+		SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UIngmaeHPBar::SetTeamTextColor(ETeamType LocalTeamID, ETeamType TargetTeamID)
+{
+	if (!NickName)
+	{
+		return;
+	}
+
+	NickName->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, TargetTeamID));
 }
 

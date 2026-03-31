@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
+#include "Interface/PDTeamInterface.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
 #include "GoalPost.generated.h"
 
@@ -21,9 +22,11 @@ public:
 	virtual void BeginPlay() override;
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	UWidgetComponent* GetGoadWidget() const { return GoalWidget; }
+
 public:
 	void ResetGoalPost();
 
@@ -33,8 +36,18 @@ protected:
 	void StealBall(APawn* Stealer);
 	
 	void StartHoldTimer();
+	void UpdateRemainingHoldTime();
 	void OnHoldComplete();
+	void SetRemainingHoldTime(float InRemainingHoldTime);
+	void HandleGoalHoldRemainingTimeChanged(float InRemainingHoldTime);
+	void UpdateInfoWidgetColor();
+	void SetObjectInfoTeamID(ETeamType NewTeamID);
 
+	UFUNCTION()
+	void OnRep_RemainingHoldTime();
+
+	UFUNCTION()
+	void OnRep_ObjectInfoTeamID();
 
 protected:
 	UPROPERTY()
@@ -47,12 +60,26 @@ protected:
 	TObjectPtr<UObjectInfo> CachedInfoWidget;
 
 	FTimerHandle HoldTimer;
+	FTimerHandle HoldTimeUpdateTimer;
 
 	UPROPERTY(BlueprintReadWrite)
 	float GoalHoldTime;
+
+	UPROPERTY(BlueprintReadWrite)
+	float GoalHoldTimeUpdateInterval;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RemainingHoldTime, VisibleAnywhere, BlueprintReadOnly, Category = "Goal")
+	float RemainingHoldTime;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ObjectInfoTeamID, VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	ETeamType ObjectInfoTeamID = ETeamType::None;
 
 private:
 
 	UPROPERTY()
 	TObjectPtr<APawn> CachedPlayer;
+
+	ETeamType LastAppliedViewerTeamID = ETeamType::None;
+
+	ETeamType LastAppliedObjectInfoTeamID = ETeamType::None;
 };
