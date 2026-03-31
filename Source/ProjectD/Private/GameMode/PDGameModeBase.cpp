@@ -403,6 +403,12 @@ void APDGameModeBase::HandleGoalScored(AGoalPost* GoalPost, ABallCore* Ball)
     PrepareNextRound();
 }
 
+void APDGameModeBase::RewardDroneKill(AActor* KillerActor)
+{
+    APDPlayerState* KillerPlayerState = ResolveRewardPlayerStateFromActor(KillerActor);
+    RewardPlayerGold(KillerPlayerState, DroneKillRewardGold);
+}
+
 void APDGameModeBase::CheckAllPlayersReady()
 {
     if (bInitialPreRoundStarted || bInitialPreRoundFinished)
