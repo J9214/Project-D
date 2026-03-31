@@ -182,31 +182,9 @@ void UIngameHUD::OnShopUI()
         return;
     }
 
-    bool bIsDead = true;
-
-    if (!bIsUIPanelOpen)
-    {
-        if (bIsDead)
-        {
-            PlayAnimation(OpenShopUI);
-            PlayAnimation(OpenInventoryUI);
-        }
-        else
-        {
-            PlayAnimation(OpenInventoryUI);
-        }
-        bIsUIPanelOpen = true;
-    }
-    else
-    {
-        if (OpenShopUI && IsAnimationPlaying(OpenShopUI) || bIsDead)
-        {
-            PlayAnimation(CloseShopUI);
-        }
-
-        PlayAnimation(CloseInventoryUI);
-        bIsUIPanelOpen = false;
-    }
+    PlayAnimation(OpenShopUI);
+    PlayAnimation(OpenInventoryUI);
+    bIsUIPanelOpen = true;
 }
 
 void UIngameHUD::InitGold(int NewGold)

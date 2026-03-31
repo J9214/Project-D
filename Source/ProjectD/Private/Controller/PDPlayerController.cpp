@@ -81,24 +81,25 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		//if (LoadingHUDClass && !LoadingHUD)
-		//{
-		//	LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
-		//	if (LoadingHUD)
-		//	{
-		//		LoadingHUD->AddToViewport(100);
-		//	}
-		//}
-
-		if (PlayerHUDClass && !PlayerHUDWidget)
+		if (LoadingHUDClass && !LoadingHUD)
 		{
-			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
-
-			if (PlayerHUDWidget)
+			LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
+			if (LoadingHUD)
 			{
-				PlayerHUDWidget->AddToViewport();
+				LoadingHUD->AddToViewport(100);
 			}
 		}
+
+		StartReadyCheck();
+		//if (PlayerHUDClass && !PlayerHUDWidget)
+		//{
+		//	PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+
+		//	if (PlayerHUDWidget)
+		//	{
+		//		PlayerHUDWidget->AddToViewport();
+		//	}
+		//}
 
 	}
 }
@@ -333,6 +334,56 @@ void APDPlayerController::UpdateCurrentAmmo(int32 CurrentAmmo)
 	PlayerHUDWidget->UpdateCurrentAmmo(CurrentAmmo);
 }
 
+void APDPlayerController::StartReadyCheck()
+{
+	if (!GetWorld()) return;
+
+	GetWorldTimerManager().ClearTimer(ReadyCheckTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		ReadyCheckTimerHandle,
+		this,
+		&APDPlayerController::TickReadyCheck,
+		0.2f,
+		true
+	);
+}
+
+void APDPlayerController::TickReadyCheck()
+{
+	if (bLocalReadyReported) return;
+
+	if (!AreAllPlayersReplicatedOnThisClient())
+	{
+		return;
+	}
+
+	bLocalReadyReported = true;
+	ServerRPC_ReportClientReady();
+	GetWorldTimerManager().ClearTimer(ReadyCheckTimerHandle);
+}
+
+bool APDPlayerController::AreAllPlayersReplicatedOnThisClient() const
+{
+	UWorld* World = GetWorld();
+	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
+	if (!GS || ExpectedPlayerCount <= 0) return false;
+
+	if (!GetPlayerState<APDPlayerState>() || !GetPawn()) return false;
+
+	if (GS->PlayerArray.Num() < ExpectedPlayerCount) return false;
+
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		if (!PS || !PS->GetPawn() || !PS->GetPawn()->HasActorBegunPlay())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void APDPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
@@ -399,6 +450,8 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			}
 		}
 	}
+
+	PlayerHUDWidget->OnShopUI();
 
 	if (LoadingHUD)
 	{

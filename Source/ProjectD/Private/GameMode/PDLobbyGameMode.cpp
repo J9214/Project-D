@@ -46,6 +46,14 @@ void APDLobbyGameMode::TravelToLobby10()
 void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    for (int32 i = 0; i < TEAM_COUNT; i++)
+    {
+        TeamInfos[i].LeaderSteamId = TEXT("");
+        TeamInfos[i].PlayerCount = 0;
+        TeamInfos[i].PendingCount = 0;
+    }
+    LoginInfo.Empty();
     LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
     if (IsRunningDedicatedServer() && !bIsSessionCreating)
