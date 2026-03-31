@@ -60,34 +60,38 @@ void UPDTeamHPInfo::SetDisplayName(const FString& DisplayName)
 
 float UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
 {
-    NowHPValue = NewValue;
-
-    if (MaxHPValue == 0)
+    if (MaxHPValue <= 0.0f)
     {
-        return 0.f;
+        return;
     }
 
-    float SetOldValue = OldValue / MaxHPValue;
-    float SetNewValue = NewValue / MaxHPValue;
+    NowHPValue = NewValue;
+
+    if (!CachedBarFillMID && BarFill)
+    {
+        CachedBarFillMID = BarFill->GetDynamicMaterial();
+    }
+    if (!CachedBarGlowMID && BarGlow)
+    {
+        CachedBarGlowMID = BarGlow->GetDynamicMaterial();
+    }
 
     if (!CachedBarFillMID || !CachedBarGlowMID)
     {
-        return 0.f;
+        return;
     }
 
-    StopAnimation(Damaged);
-
-    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthCurrent"), SetOldValue);
-    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthUpdate"), SetNewValue);
-    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Current"), SetOldValue);
-    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Updated"), SetNewValue);
+    const float HealthRatio = FMath::Clamp(NowHPValue / MaxHPValue, 0.0f, 1.0f);
+    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthCurrent"), HealthRatio);
+    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthUpdate"), HealthRatio);
+    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Current"), HealthRatio);
+    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Updated"), HealthRatio);
 
     if (OldValue > NewValue)
     {
         PlayAnimation(Damaged, 0.f, 1, EUMGSequencePlayMode::Forward, 1.f);
     }
 
-    return SetNewValue;
 }
 
 void UPDTeamHPInfo::SetMaxHealth(float NewMaxHealth)

@@ -192,7 +192,7 @@ void UIngameHUD::HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, fl
 {
     if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
     {
-        float Value = Bar->HandleHealthChanged(OldValue, NewValue);
+        Bar->HandleHealthChanged(OldValue, NewValue);
     }
 }
 
