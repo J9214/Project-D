@@ -9,6 +9,26 @@
 #include "Structs/PDPlayerAbilitySet.h"
 #include "Net/UnrealNetwork.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameplayTagContainer.h"
+
+namespace
+{
+bool IsOwnerPawnDead(const APDPawnBase* OwnerPawn)
+{
+    if (!OwnerPawn)
+    {
+        return false;
+    }
+
+    if (UAbilitySystemComponent* ASC = OwnerPawn->GetAbilitySystemComponent())
+    {
+        static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(FName("State.Dead"));
+        return ASC->HasMatchingGameplayTag(DeadTag);
+    }
+
+    return false;
+}
+}
 
 UWeaponManageComponent::UWeaponManageComponent()
 {
@@ -510,6 +530,8 @@ void UWeaponManageComponent::AttachToHand(APDWeaponBase* Weapon)
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         HandSocketName
     );
+
+    Weapon->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::AttachToBack(APDWeaponBase* Weapon, int32 SlotIndex)
@@ -531,6 +553,8 @@ void UWeaponManageComponent::AttachToBack(APDWeaponBase* Weapon, int32 SlotIndex
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         BackSocket
     );
+
+    Weapon->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::ThrowableAttachToHand(APDThrowableItemBase* Throwable)
@@ -546,6 +570,8 @@ void UWeaponManageComponent::ThrowableAttachToHand(APDThrowableItemBase* Throwab
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         ThrowableHandSocketName
     );
+
+    Throwable->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 void UWeaponManageComponent::ThrowableAttachToBack(APDThrowableItemBase* Throwable, int32 SlotIndex)
@@ -567,6 +593,8 @@ void UWeaponManageComponent::ThrowableAttachToBack(APDThrowableItemBase* Throwab
         FAttachmentTransformRules::SnapToTargetNotIncludingScale,
         BackSocket
     );
+
+    Throwable->SetActorHiddenInGame(IsOwnerPawnDead(OwnerPawn));
 }
 
 APDWeaponBase* UWeaponManageComponent::GetWeaponInSlot(int32 SlotIndex) const
