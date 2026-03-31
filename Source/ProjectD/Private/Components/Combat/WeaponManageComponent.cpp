@@ -4,6 +4,8 @@
 #include "Weapon/PDWeaponBase.h"
 #include "Weapon/PDThrowableItemBase.h"
 #include "Pawn/PDPawnBase.h"
+#include "PlayerState/PDPlayerState.h"
+#include "Components/Inventory/PDInventoryComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/PDGameplayAbility.h"
 #include "Structs/PDPlayerAbilitySet.h"
@@ -460,6 +462,51 @@ void UWeaponManageComponent::UnequipCurrentWeapon()
 
     ScheduleRefreshAttachments();
     RefreshEquipIMC();
+}
+
+bool UWeaponManageComponent::ConsumeEquippedThrowable()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+
+    if (IsThrowableSlotIndex(EquippedSlotIndex) == false)
+    {
+        return false;
+    }
+
+    const int32 LocalSlotIndex = ToThrowableLocalIndex(EquippedSlotIndex);
+    if (ThrowableSlots.IsValidIndex(LocalSlotIndex) == false || IsValid(ThrowableSlots[LocalSlotIndex].ThrowableItemActor) == false)
+    {
+        return false;
+    }
+
+    APDPawnBase* OwnerPawn = Cast<APDPawnBase>(GetOwner());
+    if (!OwnerPawn)
+    {
+        return false;
+    }
+
+    APDPlayerState* PlayerState = OwnerPawn->GetPlayerState<APDPlayerState>();
+    if (!PlayerState)
+    {
+        return false;
+    }
+
+    UPDInventoryComponent* InventoryComponent = PlayerState->GetInventoryComponent();
+    if (!InventoryComponent || !InventoryComponent->ConsumeGrenadeAtSlot(LocalSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventoryComponent->HasGrenadeAtSlot(LocalSlotIndex) == false)
+    {
+        ApplyRemove_Throwable(LocalSlotIndex, true);
+        ScheduleRefreshAttachments();
+    }
+
+    return true;
 }
 
 APDWeaponBase* UWeaponManageComponent::SpawnWeaponActor(TSubclassOf<APDWeaponBase> WeaponClass)
