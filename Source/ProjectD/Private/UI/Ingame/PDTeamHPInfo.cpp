@@ -4,6 +4,7 @@
 #include "UI/Ingame/PDTeamHPInfo.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 #include <PlayerState/PDPlayerState.h>
 
 
@@ -113,7 +114,17 @@ void UPDTeamHPInfo::SetTeamColor(bool TeamType)
         return;
     }
 
-    CachedBarFillMID->SetScalarParameterValue(TEXT("PlayerCheck"), 0);
-    CachedBarFillMID->SetScalarParameterValue(TEXT("TeamCheck"), TeamType);
+	CachedBarFillMID->SetScalarParameterValue(TEXT("PlayerCheck"), 0);
+	CachedBarFillMID->SetScalarParameterValue(TEXT("TeamCheck"), TeamType);
+}
+
+void UPDTeamHPInfo::SetTeamTextColor(ETeamType LocalTeamID, ETeamType TargetTeamID)
+{
+	if (!NickName)
+	{
+		return;
+	}
+
+	NickName->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, TargetTeamID));
 }
 

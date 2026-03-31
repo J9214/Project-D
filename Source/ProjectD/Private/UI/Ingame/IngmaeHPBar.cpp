@@ -4,6 +4,7 @@
 #include "UI/Ingame/IngmaeHPBar.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 #include <PlayerState/PDPlayerState.h>
 #include "AttributeSet/PDAttributeSetBase.h"
 
@@ -140,13 +141,23 @@ void UIngmaeHPBar::SetTeamColor(bool TeamType)
     CachedBarFillMID->SetScalarParameterValue(TEXT("PlayerCheck"), 0);
     CachedBarFillMID->SetScalarParameterValue(TEXT("TeamCheck"), TeamType);
 
-    if (IsTeam)
-    {
-        SetVisibility(ESlateVisibility::Hidden);
-    }
-    else
-    {
-        SetVisibility(ESlateVisibility::Visible);
-    }
+	if (IsTeam)
+	{
+		SetVisibility(ESlateVisibility::Hidden);
+	}
+	else
+	{
+		SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UIngmaeHPBar::SetTeamTextColor(ETeamType LocalTeamID, ETeamType TargetTeamID)
+{
+	if (!NickName)
+	{
+		return;
+	}
+
+	NickName->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColor(LocalTeamID, TargetTeamID));
 }
 

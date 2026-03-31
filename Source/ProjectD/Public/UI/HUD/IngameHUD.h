@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Components/Shop/FPDItemInfo.h"
+#include "Interface/PDTeamInterface.h"
 #include "UI/Ingame/PDAttributeSetBindProxy.h"
 #include "IngameHUD.generated.h"
 
@@ -13,6 +14,7 @@ class UPD_ShopUI;
 class UPDIngameInfo;
 class UPDTeamHPInfo;
 class UPDAttributeSetBase;
+class UTextBlock;
 /**
  * 
  */
@@ -26,7 +28,8 @@ public:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 
-	void BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set);
+	void BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set, ETeamType LocalTeamID, ETeamType TargetTeamID);
+	void RefreshTeamScoreColors();
 
 	UFUNCTION()
 	void HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue);
@@ -65,6 +68,15 @@ protected:
 
 	UPROPERTY(Transient, meta = (BindWidget))
 	TObjectPtr<UPDTeamHPInfo> TeamHPBar;
+
+	UPROPERTY(Transient, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Team1Score;
+
+	UPROPERTY(Transient, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Team2Score;
+
+	UPROPERTY(Transient, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Team3Score;
 
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> OpenShopUI;

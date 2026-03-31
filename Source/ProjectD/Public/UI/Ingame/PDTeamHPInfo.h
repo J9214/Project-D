@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "Interface/PDTeamInterface.h"
 #include "PDTeamHPInfo.generated.h"
 
 class UImage;
@@ -34,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetTeamColor(bool TeamType);
+
+	UFUNCTION(BlueprintCallable)
+	void SetTeamTextColor(ETeamType LocalTeamID, ETeamType TargetTeamID);
 
 protected:
 	UPROPERTY()

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Interface/PDTeamInterface.h"
 #include "PDPlayerUIComponent.generated.h"
 
 class APDPawnBase;
@@ -30,7 +31,7 @@ public:
 
 	void OnHealthChanged(float OldValue, float NewValue);
 
-	void SetPlayerNickName(const FString& InNickName, bool CheckTeam = true);
+	void SetPlayerNickName(const FString& InNickName, ETeamType LocalTeamID, ETeamType TargetTeamID);
 
 protected:
 
