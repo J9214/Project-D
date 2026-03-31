@@ -55,7 +55,7 @@ void UGA_WallJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		ETraceTypeQuery::TraceTypeQuery1,
 		false,
 		ActorsToIgnore,
-		EDrawDebugTrace::ForDuration,
+		EDrawDebugTrace::None,
 		HitResult,
 		true
 	);
