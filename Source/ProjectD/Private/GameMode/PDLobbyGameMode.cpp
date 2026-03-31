@@ -335,7 +335,7 @@ void APDLobbyGameMode::UpdateSessionMetadata()
     }
 
     int32 MaxFit = 0;
-    for (int32 i = 0; i < 3; i++)
+    for (int32 i = 0; i < static_cast<int32>(ETeamType::MAX); i++)
     {
         int32 FreeSpace = MaxTeamSize - TeamInfos[i].PlayerCount;
         if (FreeSpace > MaxFit)
@@ -360,7 +360,7 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
     if (!bIsTest)
     {
-        for(int i = 0 ; i < 3; i++)
+        for(int i = 0 ; i < static_cast<int32>(ETeamType::MAX); i++)
         {
             if (TeamInfos[i].PlayerCount != MaxTeamSize)
             {
