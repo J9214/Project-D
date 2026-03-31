@@ -15,6 +15,7 @@ class UPDIngameInfo;
 class UPDTeamHPInfo;
 class UPDAttributeSetBase;
 class UTextBlock;
+class APDGameStateBase;
 /**
  * 
  */
@@ -27,9 +28,11 @@ public:
 
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	void BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set, ETeamType LocalTeamID, ETeamType TargetTeamID);
 	void RefreshTeamScoreColors();
+	void RefreshTeamScoreTexts(bool bForce = false);
 
 	UFUNCTION()
 	void HandleHealthChangedBySlot(EHPBarSlot InSlot, float OldValue, float NewValue);
@@ -105,7 +108,15 @@ protected:
 	UFUNCTION()
 	void OnUICloseFinished();
 
+	void BindTeamScoreUpdates();
+	void HandleTeamScoresChanged();
+
 	int32 OpenedUIPriority = 0;
 	bool bIsUIPanelOpen = false;
 	bool bIsShopOpen = false;
+	int32 LastDisplayedTeam1Score = INDEX_NONE;
+	int32 LastDisplayedTeam2Score = INDEX_NONE;
+	int32 LastDisplayedTeam3Score = INDEX_NONE;
+
+	TWeakObjectPtr<APDGameStateBase> ObservedGameState;
 };

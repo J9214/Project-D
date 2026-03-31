@@ -54,10 +54,12 @@ void APDGameStateBase::InitScores()
 
     TeamScores.Init(0, TeamCount + TeamScoreArrayOffset);
     
-    for(int32 &TeamScore : TeamScores)
+	for(int32 &TeamScore : TeamScores)
     {
         TeamScore = 0;
 	}
+
+    NotifyTeamScoresChanged();
 }
 
 void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
@@ -77,6 +79,7 @@ void APDGameStateBase::AddScore(ETeamType Team, int32 Points)
     if (TeamScores.IsValidIndex(ScoreIndex))
     {
         TeamScores[ScoreIndex] += Points;
+        NotifyTeamScoresChanged();
     }
 }
 
@@ -139,6 +142,16 @@ int32 APDGameStateBase::GetScoreByTeam(const ETeamType Team) const
 int32 APDGameStateBase::GetScoreByTeamNumber(const int32 TeamNumber) const
 {
     return TeamScores.IsValidIndex(TeamNumber) ? TeamScores[TeamNumber] : 0;
+}
+
+void APDGameStateBase::NotifyTeamScoresChanged()
+{
+    TeamScoresChangedNative.Broadcast();
+}
+
+void APDGameStateBase::OnRep_TeamScores()
+{
+    NotifyTeamScoresChanged();
 }
 
 void APDGameStateBase::OnRep_RemainingTime()
