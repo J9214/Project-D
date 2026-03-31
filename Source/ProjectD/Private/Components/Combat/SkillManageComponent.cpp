@@ -158,6 +158,21 @@ void USkillManageComponent::Server_RemoveSkillFromSlot_Implementation(FGameplayT
 	ApplyRemove(SlotIndex);
 }
 
+void USkillManageComponent::RemoveAllSkillsOnDeath()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	CancelPlacement();
+
+	for (int32 SlotIndex = 0; SlotIndex < Slots.Num(); ++SlotIndex)
+	{
+		ApplyRemove(SlotIndex);
+	}
+}
+
 void USkillManageComponent::ApplyRemove(int32 SlotIndex)
 {
 	if (!IsValidOfSlotIndex(SlotIndex))

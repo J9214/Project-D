@@ -96,6 +96,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Server, Reliable, Category="Weapon")
 	void Server_RemoveWeaponFromSlot(int32 SlotIndex);
+
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void RemoveAllEquipmentOnDeath();
 	
 	void EquipSlot(int32 SlotIndex);
 	void UnequipCurrentWeapon();
