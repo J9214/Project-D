@@ -73,6 +73,9 @@ public:
 	
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Skill")
 	void Server_RemoveSkillFromSlot(FGameplayTag SlotTag);
+
+	UFUNCTION(BlueprintCallable, Category="Skill")
+	void RemoveAllSkillsOnDeath();
 	
 	UFUNCTION(BlueprintCallable, Category="Skill")
 	FSkillSlot GetSlotByTag(FGameplayTag SlotTag) const;

@@ -67,7 +67,8 @@ private:
 		UTextBlock* TextBlock,
 		const TCHAR* TeamLabel,
 		const FTeamInfo* TeamInfo,
-		bool bIsMyTeam);
+		ETeamType TeamID,
+		ETeamType LocalTeamID);
 	void RefreshLobbyTeamInfos();
 	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
 	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;

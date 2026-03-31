@@ -81,18 +81,18 @@ void APDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-//#if UE_EDITOR
-//
-//		if (PlayerHUDClass && !PlayerHUDWidget)
-//		{
-//			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
-//
-//			if (PlayerHUDWidget)
-//			{
-//				PlayerHUDWidget->AddToViewport();
-//			}
-//		}
-//#else
+#if UE_EDITOR
+
+		if (PlayerHUDClass && !PlayerHUDWidget)
+		{
+			PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
+
+			if (PlayerHUDWidget)
+			{
+				PlayerHUDWidget->AddToViewport();
+			}
+		}
+#else
 		if (LoadingHUDClass && !LoadingHUD)
 		{
 			LoadingHUD = CreateWidget<UUserWidget>(this, LoadingHUDClass);
@@ -103,7 +103,9 @@ void APDPlayerController::BeginPlay()
 		}
 
 		StartReadyCheck();
-//#endif
+	
+#endif
+
 	}
 }
 
@@ -457,45 +459,58 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 	}
 
 	APDGameStateBase* GS = World->GetGameState<APDGameStateBase>();
-	if (GS)
+	APDPlayerState* LocalPDPlayerState = GetPlayerState<APDPlayerState>();
+	if (!GS || !LocalPDPlayerState)
 	{
-		for (APlayerState* PS : GS->PlayerArray)
+		if (LoadingHUD)
 		{
-			APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
-			if (!PDPS)
+			LoadingHUD->RemoveFromParent();
+			LoadingHUD = nullptr;
+		}
+
+		if (PlayerHUDWidget)
+		{
+			PlayerHUDWidget->AddToViewport();
+		}
+
+		return;
+	}
+
+	const ETeamType LocalTeamID = LocalPDPlayerState->GetTeamID();
+
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		APDPlayerState* PDPS = Cast<APDPlayerState>(PS);
+		if (!PDPS)
+		{
+			continue;
+		}
+
+		const bool bIsMe = (PDPS == LocalPDPlayerState);
+		const bool bIsMyTeam = (PDPS->GetTeamID() == LocalTeamID);
+
+		if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
+		{
+			if (!bIsMe)
 			{
-				continue;
-			}
-
-			bool bIsMe = (PDPS == PlayerState);
-			bool bIsMyTeam = (PDPS->GetTeamID() == Cast<APDPlayerState>(PlayerState)->GetTeamID());
-
-			if (APDPawnBase* TargetPawn = Cast<APDPawnBase>(PDPS->GetPawn()))
-			{
-				if (bIsMe)
-				{
-					continue;
-				}
-
 				if (UPDPlayerUIComponent* UIComp = TargetPawn->GetUIComponent())
 				{
 					UIComp->InitComponents(TargetPawn, TargetPawn->GetWidgetComponent(), PDPS->GetPDAttributeSetBase());
-					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), bIsMyTeam);
+					UIComp->SetPlayerNickName(PDPS->GetDisplayName(), LocalTeamID, PDPS->GetTeamID());
 				}
 			}
+		}
 
-			if (bIsMyTeam)
-			{
-				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase());
-			}
-			if (bIsMe)
-			{
-				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase());
-			}
+		if (bIsMyTeam && PlayerHUDWidget)
+		{
+			PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
 		}
 	}
 
-	PlayerHUDWidget->OnShopUI();
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->OnShopUI();
+	}
 
 	if (LoadingHUD)
 	{
@@ -505,6 +520,7 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
  
 	if (PlayerHUDWidget)
 	{
+		PlayerHUDWidget->RefreshTeamScoreColors();
 		PlayerHUDWidget->AddToViewport();
 	}
 }
