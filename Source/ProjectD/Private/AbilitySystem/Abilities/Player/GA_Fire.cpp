@@ -435,9 +435,7 @@ void UGA_Fire::ApplyWeaponDamageGE(const FHitResult& Hit, const APDWeaponBase* W
 			UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
 			if (IsValid(Bridge) == true)
 			{
-				const float Damage = Weapon->WeaponData->WeaponDamage;
-	
-				if (Bridge->TryApplyDamageFromProxyHit(Hit, Damage) == true)
+				if (Bridge->TryApplyDamageFromProxyHit(Hit, DamageValue) == true)
 				{
 					return;
 				}
