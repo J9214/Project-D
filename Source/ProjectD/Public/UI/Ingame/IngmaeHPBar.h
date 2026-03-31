@@ -32,7 +32,7 @@ public:
 	void SetDisplayName(const FString& DisplayName);
 
 	UFUNCTION()
-	float HandleHealthChanged(float OldValue, float NewValue);
+	void HandleHealthChanged(float OldValue, float NewValue);
 
 	UFUNCTION()
 	void SetMaxHealth(float NewMaxHealth);
