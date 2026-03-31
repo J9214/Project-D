@@ -7,10 +7,12 @@
 #include "UI/Shop/PD_ShopUI.h"
 #include "UI/Ingame/PDIngameInfo.h"
 #include "UI/Ingame/PDTeamHPInfo.h"
+#include "Components/TextBlock.h"
 #include "PlayerState/PDPlayerState.h"
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "UI/PDTeamColorFunctionLibrary.h"
 
 void UIngameHUD::NativeOnInitialized()
 {
@@ -41,6 +43,8 @@ void UIngameHUD::NativeOnInitialized()
     FInputModeGameOnly InputMode;
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = false;
+
+    RefreshTeamScoreColors();
 }
 
 void UIngameHUD::NativeConstruct()
@@ -48,9 +52,42 @@ void UIngameHUD::NativeConstruct()
     Super::NativeConstruct();
 
     bIsFocusable = true;
+    RefreshTeamScoreColors();
 }
 
-void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set)
+void UIngameHUD::RefreshTeamScoreColors()
+{
+    APlayerController* PC = GetOwningPlayer();
+    if (!PC)
+    {
+        return;
+    }
+
+    const APDPlayerState* PS = PC->GetPlayerState<APDPlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    const ETeamType LocalTeamID = PS->GetTeamID();
+
+    if (Team1Score)
+    {
+        Team1Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 0));
+    }
+
+    if (Team2Score)
+    {
+        Team2Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 1));
+    }
+
+    if (Team3Score)
+    {
+        Team3Score->SetColorAndOpacity(UPDTeamColorFunctionLibrary::GetRelativeTeamSlateColorByIndex(LocalTeamID, 2));
+    }
+}
+
+void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttributeSetBase* Set, ETeamType LocalTeamID, ETeamType TargetTeamID)
 {
     if (UPDTeamHPInfo* Bar = HPBars.FindRef(InSlot))
     {
@@ -65,11 +102,13 @@ void UIngameHUD::BindSlot(const FString& DisplayName, EHPBarSlot InSlot, UPDAttr
         case EHPBarSlot::Player:
         {
             Bar->SetPlayerColor();
+            Bar->SetTeamTextColor(LocalTeamID, TargetTeamID);
             break;
         }
         case EHPBarSlot::Team1:
         {
             Bar->SetTeamColor(0);
+            Bar->SetTeamTextColor(LocalTeamID, TargetTeamID);
             break;
         }
         default: break;

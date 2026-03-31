@@ -29,6 +29,9 @@ public:
 	FORCEINLINE UPDInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 
 	virtual ETeamType GetTeamID() const override { return TeamID; }
+
+	UFUNCTION(BlueprintPure, Category = "Team")
+	ETeamType GetTeamID_BP() const { return TeamID; }
 	
 	UFUNCTION(BlueprintPure)
 	UPDAbilitySystemComponent* GetPDAbilitySystemComponent() const { return AbilitySystemComponent; }

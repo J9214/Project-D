@@ -96,13 +96,14 @@ void UPDPlayerUIComponent::OnHealthChanged(float OldValue, float NewValue)
 	HeadHPWidget->HandleHealthChanged(OldValue, NewValue);
 }
 
-void UPDPlayerUIComponent::SetPlayerNickName(const FString& InNickName, bool CheckTeam)
+void UPDPlayerUIComponent::SetPlayerNickName(const FString& InNickName, ETeamType LocalTeamID, ETeamType TargetTeamID)
 {
 	if (!IsValid(HeadHPWidget))
 	{
 		return;
 	}
 	HeadHPWidget->Init(InNickName);
-	HeadHPWidget->SetTeamColor(CheckTeam);
+	HeadHPWidget->SetTeamTextColor(LocalTeamID, TargetTeamID);
+	HeadHPWidget->SetTeamColor(LocalTeamID == TargetTeamID);
 }
 
