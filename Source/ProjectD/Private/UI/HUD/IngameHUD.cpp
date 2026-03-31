@@ -44,6 +44,9 @@ void UIngameHUD::NativeOnInitialized()
     PC->SetInputMode(InputMode);
     PC->bShowMouseCursor = false;
 
+    HPBars.Add(EHPBarSlot::Player, PlayerHPBar);
+    HPBars.Add(EHPBarSlot::Team1, TeamHPBar);
+
     RefreshTeamScoreColors();
 }
 

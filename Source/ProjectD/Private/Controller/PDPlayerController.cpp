@@ -472,6 +472,7 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			PlayerHUDWidget->AddToViewport();
 		}
 
+		UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted !GS !LocalPDPlayerState"));
 		return;
 	}
 
@@ -500,9 +501,17 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			}
 		}
 
-		if (bIsMyTeam && PlayerHUDWidget)
+		if (PlayerHUDWidget)
 		{
-			PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			if (bIsMe)
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			}
+
+			if (bIsMyTeam )
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			}
 		}
 	}
 
