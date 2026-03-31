@@ -89,11 +89,8 @@ void APDLobbyGameMode::PreLogin(const FString& Options, const FString& Address, 
         {
             if (TeamInfos[i].LeaderSteamId == LeaderSteamID && !LeaderSteamID.IsEmpty())
             {
-                if (TeamInfos[i].PlayerCount + TeamInfos[i].PendingCount + IncomingSize <= MaxTeamSize)
-                {
-                    SelectedTeamIdx = i;
-                    break;
-                }
+                SelectedTeamIdx = i;
+                break;
             }
         }
 
