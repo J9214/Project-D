@@ -10,6 +10,7 @@
 #include "AI/MassAI/Replicated/DeathScheduleFragment.h"
 #include "AI/MassAI/DroneExplosionFragment.h"
 #include "AI/MassAI/DroneExplosionSubsystem.h"
+#include "GameMode/PDGameModeBase.h"
 #include "ProjectD/ProjectD.h"
 
 UMassBoidsDestructionProcessor::UMassBoidsDestructionProcessor()
@@ -42,6 +43,7 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 	}
 
 	UMassDamageBridgeSubsystem* Bridge = World->GetSubsystem<UMassDamageBridgeSubsystem>();
+	APDGameModeBase* GameMode = World->GetAuthGameMode<APDGameModeBase>();
 
 	if (IsValid(Bridge) == true)
 	{
@@ -73,7 +75,17 @@ void UMassBoidsDestructionProcessor::Execute(FMassEntityManager& EntityManager, 
 				continue;
 			}
 
-			HealthFrag->Health = FMath::Clamp(HealthFrag->Health - Req.Damage, 0.0f, HealthFrag->MaxHealth);
+			const float PrevHealth = HealthFrag->Health;
+			const float NewHealth = FMath::Clamp(PrevHealth - Req.Damage, 0.0f, HealthFrag->MaxHealth);
+			HealthFrag->Health = NewHealth;
+
+			if (PrevHealth > 0.0f &&
+				NewHealth <= 0.0f &&
+				IsValid(GameMode) == true &&
+				Req.Killer.IsValid() == true)
+			{
+				GameMode->RewardDroneKill(Req.Killer.Get());
+			}
 		}
 	}
 
