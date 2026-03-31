@@ -123,6 +123,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	float NextRoundDelaySec;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
+	int32 KillRewardGold = 500;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
+	int32 FirstBallPickupRewardGold = 500;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
+	int32 GoalScoredRewardGold = 1000;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Spawn")
 	float TeamRespawnRadiusFromBall;
 
