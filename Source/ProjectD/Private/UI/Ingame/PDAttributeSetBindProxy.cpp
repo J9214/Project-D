@@ -10,21 +10,24 @@ void UPDAttributeSetBindProxy::Init(UIngameHUD* InHUD, EHPBarSlot InSlot, UPDAtt
     HUD = InHUD;
     Slot = InSlot;
 
-    if (BindSet == InSet)
+    if (BindSet != InSet)
     {
-        return;
+        Unbind();
+        BindSet = InSet;
+
+        if (IsValid(BindSet))
+        {
+            BindSet->OnHealthChanged.AddUniqueDynamic(this, &ThisClass::OnHealth);
+            BindSet->OnMaxHealthChanged.AddUniqueDynamic(this, &ThisClass::OnMaxHealth);
+        }
     }
 
-    Unbind();
-
-    BindSet = InSet;
     if (!IsValid(BindSet) || !IsValid(HUD))
     {
         return;
     }
 
-    BindSet->OnHealthChanged.AddDynamic(this, &ThisClass::OnHealth);
-
+    OnMaxHealth(BindSet->GetMaxHealth(), BindSet->GetMaxHealth());
     OnHealth(BindSet->GetHealth(), BindSet->GetHealth());
 }
 
@@ -36,6 +39,7 @@ void UPDAttributeSetBindProxy::Unbind()
     }
 
     BindSet->OnHealthChanged.RemoveDynamic(this, &ThisClass::OnHealth);
+    BindSet->OnMaxHealthChanged.RemoveDynamic(this, &ThisClass::OnMaxHealth);
     BindSet = nullptr;
 }
 
@@ -45,6 +49,14 @@ void UPDAttributeSetBindProxy::OnHealth(float OldValue, float NewValue)
     if (IsValid(HUD))
     {
         HUD->HandleHealthChangedBySlot(Slot, OldValue, NewValue);
+    }
+}
+
+void UPDAttributeSetBindProxy::OnMaxHealth(float OldValue, float NewValue)
+{
+    if (IsValid(HUD))
+    {
+        HUD->HandleMaxHealthChangedBySlot(Slot, OldValue, NewValue);
     }
 }
 

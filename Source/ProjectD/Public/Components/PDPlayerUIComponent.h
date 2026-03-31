@@ -29,7 +29,11 @@ public:
 
 	void SetupHeadHPWidget();
 
+	UFUNCTION()
 	void OnHealthChanged(float OldValue, float NewValue);
+
+	UFUNCTION()
+	void OnMaxHealthChanged(float OldValue, float NewValue);
 
 	void SetPlayerNickName(const FString& InNickName, ETeamType LocalTeamID, ETeamType TargetTeamID);
 

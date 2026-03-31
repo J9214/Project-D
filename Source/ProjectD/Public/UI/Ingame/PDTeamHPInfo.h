@@ -28,7 +28,13 @@ public:
 	void Init(const FString& DisplayName);
 
 	UFUNCTION()
+	void SetDisplayName(const FString& DisplayName);
+
+	UFUNCTION()
 	float HandleHealthChanged(float OldValue, float NewValue);
+
+	UFUNCTION()
+	void SetMaxHealth(float NewMaxHealth);
 
 	UFUNCTION(BlueprintCallable)
 	void SetPlayerColor();
@@ -60,6 +66,7 @@ protected:
 
 	UPROPERTY()
 	float NowHPValue;
+
 	UPROPERTY()
 	float MaxHPValue;
 	
