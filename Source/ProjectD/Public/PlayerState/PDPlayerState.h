@@ -45,7 +45,7 @@ public:
 
 	void SetTeamID(ETeamType NewTeamID) { TeamID = NewTeamID; }
 
-	UPROPERTY(ReplicatedUsing = OnRep_CharacterCustomInfo, BlueprintReadOnly, Category = "Custom")
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterCustomInfo, VisibleAnywhere, BlueprintReadOnly, Category = "Custom")
 	FPDCharacterCustomInfo CharacterCustomInfo;
 
 	UFUNCTION(BlueprintCallable, Category = "Custom")

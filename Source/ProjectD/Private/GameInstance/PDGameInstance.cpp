@@ -6,6 +6,9 @@
 #include "CreateSessionCallbackProxyAdvanced.h" 
 #include "AdvancedSessionsLibrary.h"
 #include "Controller/PDLobbyPlayerController.h"
+#include "Controller/PDPlayerController.h"
+#include "Controller/PDServerLobbyPlayerController.h"
+#include "PlayerState/PDPlayerState.h"
 
 
 void UPDGameInstance::Init()
@@ -167,8 +170,12 @@ void UPDGameInstance::TrySubmitCharacterCustomInfo()
     }
 
     APlayerController* PC = World->GetFirstPlayerController();
-    auto* LobbyPC = Cast<APDLobbyPlayerController>(PC);
-    if (!LobbyPC)
+    if (!PC || !PC->IsLocalController())
+    {
+        return;
+    }
+
+    if (SubmitCharacterCustomInfoThroughController(PC))
     {
         return;
     }
@@ -177,6 +184,44 @@ void UPDGameInstance::TrySubmitCharacterCustomInfo()
     {
         return;
     }
+}
 
-    LobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
+bool UPDGameInstance::SubmitCharacterCustomInfoThroughController(APlayerController* PlayerController)
+{
+    if (!PlayerController)
+    {
+        return false;
+    }
+
+    APDPlayerState* PlayerState = PlayerController->GetPlayerState<APDPlayerState>();
+    if (PlayerController->HasAuthority())
+    {
+        if (!PlayerState)
+        {
+            return false;
+        }
+
+        PlayerState->SetCharacterCustomInfo(LocalCharacterCustomInfo);
+        return true;
+    }
+
+    if (APDLobbyPlayerController* LobbyPC = Cast<APDLobbyPlayerController>(PlayerController))
+    {
+        LobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
+        return true;
+    }
+
+    if (APDServerLobbyPlayerController* ServerLobbyPC = Cast<APDServerLobbyPlayerController>(PlayerController))
+    {
+        ServerLobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
+        return true;
+    }
+
+    if (APDPlayerController* GamePC = Cast<APDPlayerController>(PlayerController))
+    {
+        GamePC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
+        return true;
+    }
+
+    return false;
 }

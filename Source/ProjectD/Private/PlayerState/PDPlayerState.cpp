@@ -164,7 +164,6 @@ void APDPlayerState::OnRep_CharacterCustomInfo()
 void APDPlayerState::HandleCharacterCustomInfoChanged()
 {
 	CharacterCustomInfoChangedNative.Broadcast(CharacterCustomInfo);
-	BP_OnCharacterCustomInfoChanged(CharacterCustomInfo);
 }
 
 void APDPlayerState::OnRep_DisplayName()

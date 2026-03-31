@@ -12,6 +12,7 @@ class UWeaponManageComponent;
 class UPDShopComponent;
 class UIngameHUD;
 class UPDAttributeSetBase;
+struct FPDCharacterCustomInfo;
 
 UCLASS()
 class PROJECTD_API APDPlayerController : public APlayerController
@@ -49,6 +50,9 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_OnGameStarted();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
 
 protected:
 

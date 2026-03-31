@@ -9,6 +9,7 @@
 
 class UUserWidget;
 class UServerLobby;
+struct FPDCharacterCustomInfo;
 
 UCLASS()
 class PROJECTD_API APDServerLobbyPlayerController : public APlayerController
@@ -24,6 +25,12 @@ public:
 
     UFUNCTION(Client, Reliable)
     void Client_UpdateLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, float InMatchStartServerTimeSec);
+
+    UFUNCTION(Client, Reliable)
+    void Client_RequestCharacterCustomInfo();
+
+    UFUNCTION(Server, Reliable)
+    void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
 
     UFUNCTION(Server, Reliable)
     void Server_RequestTravelToLobby10();

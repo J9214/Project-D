@@ -7,6 +7,7 @@
 #include "UI/Lobby/ServerLobby.h"
 #include "GameMode/PDLobbyGameMode.h"
 #include "UI/Lobby/ServerLobby.h"
+#include "GameInstance/PDGameInstance.h"
 
 void APDServerLobbyPlayerController::BeginPlay()
 {
@@ -33,11 +34,24 @@ void APDServerLobbyPlayerController::BeginPlay()
 
     FInputModeUIOnly InputMode;
     SetInputMode(InputMode);
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
 }
 
 void APDServerLobbyPlayerController::OnRep_PlayerState()
 {
     Super::OnRep_PlayerState();
+
+    if (IsLocalController())
+    {
+        if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+        {
+            GI->TrySubmitCharacterCustomInfo();
+        }
+    }
 
     const APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>();
     UE_LOG(
@@ -51,6 +65,19 @@ void APDServerLobbyPlayerController::OnRep_PlayerState()
         PDPlayerState ? *PDPlayerState->GetUniqueId().ToString() : TEXT("None"));
 
     RefreshLobbyWidget();
+}
+
+void APDServerLobbyPlayerController::Client_RequestCharacterCustomInfo_Implementation()
+{
+    if (!IsLocalController())
+    {
+        return;
+    }
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
 }
 
 void APDServerLobbyPlayerController::RequestTravelToLobby10()
@@ -70,6 +97,14 @@ void APDServerLobbyPlayerController::Server_RequestTravelToLobby10_Implementatio
 
     UE_LOG(LogTemp, Log, TEXT("[ServerLobbyPC] Server_RequestTravelToLobby10 received."));
     LobbyGameMode->TravelToLobby10();
+}
+
+void APDServerLobbyPlayerController::Server_SubmitCharacterCustomInfo_Implementation(const FPDCharacterCustomInfo& CharacterInfo)
+{
+    if (APDPlayerState* PS = GetPlayerState<APDPlayerState>())
+    {
+        PS->SetCharacterCustomInfo(CharacterInfo);
+    }
 }
 
 void APDServerLobbyPlayerController::Client_UpdateLobbyTeamInfos_Implementation(
