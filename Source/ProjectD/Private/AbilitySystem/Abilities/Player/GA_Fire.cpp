@@ -719,6 +719,17 @@ void UGA_Fire::TraceSingleShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, co
 	bool bHasBlockingHit = false;
 	FHitResult FinalHit;
 
+	{
+		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
+		if (IsValid(Perception))
+		{
+			const FVector TubeEnd = TraceEnd;
+			const float TubeLen = (TubeEnd - TraceStart).Size();
+
+			Perception->SubmitAimTubeRequest(TraceStart, FireDir, TubeLen);
+		}
+	}
+
 	constexpr int32 MaxRetraceCount = 8;
 
 	for (int32 Count = 0; Count < MaxRetraceCount; ++Count)
@@ -778,16 +789,6 @@ void UGA_Fire::TraceSingleShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapon, co
 		break;
 	}
 
-	{
-		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
-		if (IsValid(Perception))
-		{
-			const FVector TubeEnd = bHasBlockingHit ? FinalHit.ImpactPoint : TraceEnd;
-			const float TubeLen = (TubeEnd - TraceStart).Size();
-
-			Perception->SubmitAimTubeRequest(TraceStart, FireDir, TubeLen);
-		}
-	}
 
 #if ENABLE_DRAW_DEBUG
 	OwnerPawn->ClientDrawFireDebug(
@@ -830,6 +831,17 @@ void UGA_Fire::TraceMultiBulletShot(APDPawnBase* OwnerPawn, APDWeaponBase* Weapo
 	const float BulletDamage = GetDamagePerBullet(Weapon);
 	constexpr int32 MaxRetraceCount = 8;
 	
+	{
+		UMassPerceptionSubsystem* Perception = World->GetSubsystem<UMassPerceptionSubsystem>();
+		if (IsValid(Perception))
+		{
+			const FVector TubeEnd = TraceStart + BaseDir * MaxRange;
+			const float TubeLen = (TubeEnd - TraceStart).Size();
+
+			Perception->SubmitAimTubeRequest(TraceStart, BaseDir, TubeLen);
+		}
+	}
+
 	for (const FVector& Dir : BulletDirs)
 	{
 		const FVector TraceEnd = TraceStart + Dir * MaxRange;
