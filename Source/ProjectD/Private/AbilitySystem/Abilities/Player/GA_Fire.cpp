@@ -17,6 +17,7 @@
 #include "AI/MassAI/MassProxyPoolSubsystem.h"
 #include "Skill/PDDamageableSkillActor.h"
 #include "Chaos/PDDestructibleObject.h"
+#include "AI/MassAI/CollisionProxyActor.h"
 
 UGA_Fire::UGA_Fire()
 {
@@ -1086,6 +1087,11 @@ EBulletHitDecision UGA_Fire::EvaluateHitDecision(APDPawnBase* OwnerPawn, AActor*
 			return EBulletHitDecision::BlockOnly;
 		}
 
+		return EBulletHitDecision::BlockAndDamage;
+	}
+
+	if (Cast<ACollisionProxyActor>(HitActor))
+	{
 		return EBulletHitDecision::BlockAndDamage;
 	}
 
