@@ -32,6 +32,9 @@ public:
     UFUNCTION()
     void OnHealth(float OldValue, float NewValue);
 
+    UFUNCTION()
+    void OnMaxHealth(float OldValue, float NewValue);
+
 private:
 
     UPROPERTY()

@@ -30,10 +30,7 @@ void UPDTeamHPInfo::NativeOnInitialized()
 
 void UPDTeamHPInfo::Init(const FString& DisplayName)
 {
-    if (NickName)
-    {
-        NickName->SetText(FText::FromString(DisplayName));
-    }
+    SetDisplayName(DisplayName);
 
     CachedBarFillMID = BarFill->GetDynamicMaterial();
     CachedBarGlowMID = BarGlow->GetDynamicMaterial();
@@ -51,6 +48,14 @@ void UPDTeamHPInfo::Init(const FString& DisplayName)
     CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Updated"), 1);
 
     IsInit = true;
+}
+
+void UPDTeamHPInfo::SetDisplayName(const FString& DisplayName)
+{
+    if (NickName)
+    {
+        NickName->SetText(FText::FromString(DisplayName));
+    }
 }
 
 float UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
@@ -83,6 +88,22 @@ float UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
     }
 
     return SetNewValue;
+}
+
+void UPDTeamHPInfo::SetMaxHealth(float NewMaxHealth)
+{
+    MaxHPValue = FMath::Max(NewMaxHealth, 1.0f);
+
+    if (!CachedBarFillMID || !CachedBarGlowMID)
+    {
+        return;
+    }
+
+    const float HealthRatio = FMath::Clamp(NowHPValue / MaxHPValue, 0.0f, 1.0f);
+    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthCurrent"), HealthRatio);
+    CachedBarFillMID->SetScalarParameterValue(TEXT("HealthUpdate"), HealthRatio);
+    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Current"), HealthRatio);
+    CachedBarGlowMID->SetScalarParameterValue(TEXT("Health_Updated"), HealthRatio);
 }
 
 void UPDTeamHPInfo::SetPlayerColor()
