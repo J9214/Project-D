@@ -119,7 +119,7 @@ void AGoalPost::PlaceBall(APawn* Pawn, ABallCore* Ball)
 		PD->Server_ForceClearCarriedBall();
 	}
 	
-	Ball->PlaceIntoGoal(RootComponent);
+	Ball->PlaceIntoGoal(StaticMesh);
 	
 	if (APDGameStateBase* GS = GetWorld()->GetGameState<APDGameStateBase>())
 	{
