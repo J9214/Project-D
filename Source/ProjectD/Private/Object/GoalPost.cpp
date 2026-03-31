@@ -1,4 +1,4 @@
-﻿#include "Object/GoalPost.h"
+#include "Object/GoalPost.h"
 #include "Object/BallCore.h"
 #include "Pawn/PDPawnBase.h" 
 #include "TimerManager.h"
@@ -8,6 +8,7 @@
 #include "ProjectD/ProjectD.h"
 #include "GameMode/PDGameModeBase.h"
 #include "Components/WidgetComponent.h"
+#include "Blueprint/UserWidget.h"
 #include "UI/Ingame/ObjectInfo.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -16,6 +17,8 @@ AGoalPost::AGoalPost()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	GoalHoldTime = 10.0f;
+	GoalHoldTimeUpdateInterval = 0.5f;
+	RemainingHoldTime = 0.0f;
 
 	GoalWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("GoalWidget"));
 	if (GetRootComponent())
@@ -82,17 +85,27 @@ void AGoalPost::Tick(float DeltaTime)
 	}
 }
 
+void AGoalPost::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGoalPost, RemainingHoldTime);
+}
+
 void AGoalPost::ResetGoalPost()
 {
-	if (GetWorld() == nullptr)
+	UWorld* World = GetWorld();
+	if (World == nullptr)
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] ResetGoalPost failed. World is nullptr."));
 		return;
 	}
 
-	GetWorld()->GetTimerManager().ClearTimer(HoldTimer);
+	World->GetTimerManager().ClearTimer(HoldTimer);
+	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
 
 	PlacedBall = nullptr;
+	SetRemainingHoldTime(GoalHoldTime);
 }
 
 bool AGoalPost::CanPlaceBall(APawn* Pawn, ABallCore* Ball) const
@@ -145,7 +158,16 @@ void AGoalPost::StealBall(APawn* Stealer)
 		return;
 	}
 
-	GetWorld()->GetTimerManager().ClearTimer(HoldTimer);
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] StealBall failed. World is nullptr."));
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(HoldTimer);
+	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
+	SetRemainingHoldTime(GoalHoldTime);
 
 	ABallCore* BallToSteal = PlacedBall;
 	PlacedBall = nullptr;
@@ -166,21 +188,113 @@ void AGoalPost::StealBall(APawn* Stealer)
 
 void AGoalPost::StartHoldTimer()
 {
-	GetWorld()->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, GoalHoldTime, false);
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] StartHoldTimer failed. World is nullptr."));
+		return;
+	}
+
+	if ((GoalHoldTime > 0.0f) == false)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] StartHoldTimer failed. GoalHoldTime must be greater than zero. GoalHoldTime=%.2f"), GoalHoldTime);
+		SetRemainingHoldTime(GoalHoldTime);
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(HoldTimer);
+	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
+	SetRemainingHoldTime(0.0f);
+
+	World->GetTimerManager().SetTimer(HoldTimer, this, &AGoalPost::OnHoldComplete, GoalHoldTime, false);
+	World->GetTimerManager().SetTimer(HoldTimeUpdateTimer, this, &AGoalPost::UpdateRemainingHoldTime, GoalHoldTimeUpdateInterval, true);
+}
+
+void AGoalPost::UpdateRemainingHoldTime()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] UpdateRemainingHoldTime failed. World is nullptr."));
+		return;
+	}
+
+	float NewRemainingHoldTime = 0.0f;
+	const bool bIsHoldTimerActive = World->GetTimerManager().IsTimerActive(HoldTimer);
+	if (bIsHoldTimerActive == true)
+	{
+		NewRemainingHoldTime = FMath::Max(GoalHoldTime - World->GetTimerManager().GetTimerRemaining(HoldTimer), 0.0f);
+	}
+
+	SetRemainingHoldTime(NewRemainingHoldTime);
 }
 
 void AGoalPost::OnHoldComplete()
 {
+	UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] OnHoldComplete failed. World is nullptr."));
+		return;
+	}
+
+	World->GetTimerManager().ClearTimer(HoldTimeUpdateTimer);
+	SetRemainingHoldTime(GoalHoldTime);
+
 	if (IsValid(PlacedBall) == false)
 	{
 		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] OnHoldComplete skipped. PlacedBall is invalid."));
 		return;
 	}
 
-	if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+	APDGameModeBase* GM = World->GetAuthGameMode<APDGameModeBase>();
+	if (IsValid(GM) == true)
 	{
 		GM->HandleGoalScored(this, PlacedBall);
 	}
+	else
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("[GoalPost] OnHoldComplete warning. GameMode is invalid."));
+	}
 
 	PlacedBall = nullptr;
+}
+
+void AGoalPost::SetRemainingHoldTime(float InRemainingHoldTime)
+{
+	const float ClampedRemainingHoldTime = FMath::Max(InRemainingHoldTime, 0.0f);
+
+	if (FMath::IsNearlyEqual(RemainingHoldTime, ClampedRemainingHoldTime, KINDA_SMALL_NUMBER) == true)
+	{
+		return;
+	}
+
+	RemainingHoldTime = ClampedRemainingHoldTime;
+	HandleGoalHoldRemainingTimeChanged(RemainingHoldTime);
+}
+
+void AGoalPost::HandleGoalHoldRemainingTimeChanged(float InRemainingHoldTime)
+{
+	if (IsValid(CachedInfoWidget) == false)
+	{
+		return;
+	}
+
+	float FillAmount = 0.0f;
+	if ((GoalHoldTime > 0.0f) == true)
+	{
+		FillAmount = FMath::Clamp(InRemainingHoldTime / GoalHoldTime, 0.0f, 1.0f);
+	}
+
+	CachedInfoWidget->SetFillAmount(FillAmount);
+}
+
+void AGoalPost::OnRep_RemainingHoldTime()
+{
+	HandleGoalHoldRemainingTimeChanged(RemainingHoldTime);
 }

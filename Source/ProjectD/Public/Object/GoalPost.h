@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Gimmick/PDDirectlyInteractGimmickBase.h"
@@ -21,9 +21,11 @@ public:
 	virtual void BeginPlay() override;
 	virtual void OnInteract_Implementation(AActor* Interactor) override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	UWidgetComponent* GetGoadWidget() const { return GoalWidget; }
+
 public:
 	void ResetGoalPost();
 
@@ -33,8 +35,13 @@ protected:
 	void StealBall(APawn* Stealer);
 	
 	void StartHoldTimer();
+	void UpdateRemainingHoldTime();
 	void OnHoldComplete();
+	void SetRemainingHoldTime(float InRemainingHoldTime);
+	void HandleGoalHoldRemainingTimeChanged(float InRemainingHoldTime);
 
+	UFUNCTION()
+	void OnRep_RemainingHoldTime();
 
 protected:
 	UPROPERTY()
@@ -47,9 +54,16 @@ protected:
 	TObjectPtr<UObjectInfo> CachedInfoWidget;
 
 	FTimerHandle HoldTimer;
+	FTimerHandle HoldTimeUpdateTimer;
 
 	UPROPERTY(BlueprintReadWrite)
 	float GoalHoldTime;
+
+	UPROPERTY(BlueprintReadWrite)
+	float GoalHoldTimeUpdateInterval;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RemainingHoldTime, VisibleAnywhere, BlueprintReadOnly, Category = "Goal")
+	float RemainingHoldTime;
 
 private:
 
