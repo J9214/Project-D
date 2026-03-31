@@ -65,6 +65,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Custom")
 	void BP_ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Death")
+	void BP_OnDeathFirstPersonReset();
 	
 	UFUNCTION(Client, Unreliable)
 	void ClientDrawFireDebug(const FVector& Start, const FVector& End, bool bHit, const FVector& HitPoint);
@@ -175,6 +178,7 @@ protected:
 
 	void EnterFirstPerson();
 	void ExitFirstPerson();
+	void ForceExitFirstPersonOnDeath();
 	void UpdateFirstPersonCamera(float DeltaSeconds);
 
 	APDWeaponBase* GetEquippedWeapon() const;

@@ -164,6 +164,28 @@ void UWeaponManageComponent::Server_RemoveWeaponFromSlot_Implementation(int32 Sl
     ScheduleRefreshAttachments();
 }
 
+void UWeaponManageComponent::RemoveAllEquipmentOnDeath()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return;
+    }
+
+    UnequipCurrentWeapon();
+
+    for (int32 SlotIndex = 0; SlotIndex < Slots.Num(); ++SlotIndex)
+    {
+        ApplyRemove(SlotIndex, true);
+    }
+
+    for (int32 SlotIndex = 0; SlotIndex < ThrowableSlots.Num(); ++SlotIndex)
+    {
+        ApplyRemove_Throwable(SlotIndex, true);
+    }
+
+    ScheduleRefreshAttachments();
+}
+
 void UWeaponManageComponent::ApplyBuy_Weapon(TSubclassOf<APDWeaponBase> WeaponClass)
 {
     const int32 EmptyIndex = FindFirstEmptySlot();

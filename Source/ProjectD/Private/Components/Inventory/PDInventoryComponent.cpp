@@ -522,6 +522,37 @@ void UPDInventoryComponent::ClearInventoryToDefault()
 	}
 }
 
+void UPDInventoryComponent::ClearCombatInventoryOnDeath()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	const TArray<FPDItemData> OldWeaponSlot = WeaponSlot;
+	const TArray<FPDItemData> OldSkillSlot = SkillSlot;
+	const TArray<FPDItemData> OldGrenadeSlot = GrenadeSlot;
+
+	WeaponSlot.Init(FPDItemData(), WeaponSlot.Num());
+	SkillSlot.Init(FPDItemData(), SkillSlot.Num());
+	GrenadeSlot.Init(FPDItemData(), GrenadeSlot.Num());
+
+	if (APDPlayerState* PS = Cast<APDPlayerState>(GetOwner()))
+	{
+		PS->ForceNetUpdate();
+
+		if (APDPlayerController* PC = Cast<APDPlayerController>(PS->GetPlayerController()))
+		{
+			if (PC->IsLocalController())
+			{
+				ItemChanged(EItemType::Weapon, OldWeaponSlot);
+				ItemChanged(EItemType::Skill, OldSkillSlot);
+				ItemChanged(EItemType::Grenade, OldGrenadeSlot);
+			}
+		}
+	}
+}
+
 void UPDInventoryComponent::SwapItem_Implementation(EItemType FromItemType, FName FromItemId, int32 FromSlot, int32 OringinCount, EItemType ItemType, FName ItemId, int32 Slot, int32 Count)
 {
 	bool bIsSameType = (FromItemType == ItemType);
