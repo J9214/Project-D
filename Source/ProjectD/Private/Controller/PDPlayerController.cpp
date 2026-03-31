@@ -12,6 +12,7 @@
 #include "Pawn/PDPawnBase.h"
 #include "Components/PDPlayerUIComponent.h"
 #include "GameMode/PDGameModeBase.h"
+#include "GameInstance/PDGameInstance.h"
 
 APDPlayerController::APDPlayerController()
 {
@@ -100,6 +101,10 @@ void APDPlayerController::BeginPlay()
 			}
 		}
 
+		if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+		{
+			GI->TrySubmitCharacterCustomInfo();
+		}
 	}
 }
 
@@ -342,12 +347,25 @@ void APDPlayerController::OnRep_PlayerState()
 		return;
 	}
 
+	if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+	{
+		GI->TrySubmitCharacterCustomInfo();
+	}
+
 	//APDPlayerState* PS = GetPlayerState<APDPlayerState>();
 	//if (PS)
 	//{
 	//	InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
 	//}
 
+}
+
+void APDPlayerController::Server_SubmitCharacterCustomInfo_Implementation(const FPDCharacterCustomInfo& CharacterInfo)
+{
+	if (APDPlayerState* PS = GetPlayerState<APDPlayerState>())
+	{
+		PS->SetCharacterCustomInfo(CharacterInfo);
+	}
 }
 
 void APDPlayerController::Client_OnGameStarted_Implementation()

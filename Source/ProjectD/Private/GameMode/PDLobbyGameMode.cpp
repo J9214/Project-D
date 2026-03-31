@@ -197,6 +197,11 @@ void APDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
     PlayerState->SetTeamID(AssignedTeamID);
 
+    if (APDServerLobbyPlayerController* ServerLobbyPC = Cast<APDServerLobbyPlayerController>(NewPlayer))
+    {
+        ServerLobbyPC->Client_RequestCharacterCustomInfo();
+    }
+
     UE_LOG(
         LogTemp,
         Warning,

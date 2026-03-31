@@ -71,6 +71,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -81,6 +82,7 @@ protected:
 	void BindAttributeChangeDelegates();
 	void BindCustomizationSyncFromPlayerState();
 	void UnbindCustomizationSyncFromPlayerState();
+	void ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo);
 	void HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo);
 	
 private:
