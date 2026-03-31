@@ -7,6 +7,7 @@
 #include "ConnectCheckLight.generated.h"
 
 class UPointLightComponent;
+struct FPDCharacterCustomInfo;
 
 UENUM(BlueprintType)
 enum class EPDLobbyTeam : uint8
@@ -45,6 +46,8 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Lobby")
 	void BP_OnSlotStateChanged(bool bIsActive);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Custom")
+	void BP_ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo);
 private:
 	void RegisterToGameState();
 };
