@@ -81,7 +81,6 @@ void APDGameModeBase::BeginPlay()
         false
     );
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] Ready Timeout Timer Started: %.2f seconds"), ReadyTimeoutSeconds);
-    //TryStartInitialPreRound();
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -534,7 +533,6 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    //TryStartInitialPreRound();
 }
 
 void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -557,7 +555,6 @@ void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* 
 
     BindPlayerDelegates(NewPlayer);
     RegisterTravelReadyPlayer(NewPlayer);
-    //TryStartInitialPreRound();
 }
 
 void APDGameModeBase::OnPlayerOutOfHealth(AController* VictimController, AActor* DamageCauser)
@@ -1208,7 +1205,6 @@ void APDGameModeBase::SetPlayerMovementLocked(AController* Controller, bool bLoc
         return;
     }
 
-    // TODO : Movement Block & UI Open? (By bLocked)
     UE_LOG(LogProjectD, Warning, TEXT("[GameMode] SetPlayerMovementLocked Success."));
 }
 
@@ -1338,18 +1334,6 @@ void APDGameModeBase::TryStartInitialPreRound()
         UE_LOG(LogProjectD, Warning, TEXT("[GameMode] TryStartInitialPreRound skipped. ExpectedTravelPlayerCount must be greater than 0."));
         return;
     }
-
-    //if (TravelReadyPlayerStates.Num() < ExpectedTravelPlayerCount)
-    //{
-    //    UE_LOG(
-    //        LogProjectD,
-    //        Log,
-    //        TEXT("[GameMode] TryStartInitialPreRound waiting. ReadyCount=%d ExpectedTravelPlayerCount=%d"),
-    //        TravelReadyPlayerStates.Num(),
-    //        ExpectedTravelPlayerCount
-    //    );
-    //    return;
-    //}
 
     if (IsValid(CachedBallCore) == false)
     {

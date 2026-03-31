@@ -377,7 +377,6 @@ void APDLobbyGameMode::TryGameStart(bool bIsTest)
 
     }
 
-    //const FString TravelURL = TEXT("/Game/MiddleEasternTown/Levels/L_MiddleEasternTown");
     const int32 PlayerNums = GetNumPlayers();
     const FString TravelURL = FString::Printf(
         TEXT("/Game/LakeTown/Maps/Demonstration?ExpectedPlayers=%d"),

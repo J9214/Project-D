@@ -91,15 +91,6 @@ void APDPlayerController::BeginPlay()
 		}
 
 		StartReadyCheck();
-		//if (PlayerHUDClass && !PlayerHUDWidget)
-		//{
-		//	PlayerHUDWidget = CreateWidget<UIngameHUD>(this, PlayerHUDClass);
-
-		//	if (PlayerHUDWidget)
-		//	{
-		//		PlayerHUDWidget->AddToViewport();
-		//	}
-		//}
 
 	}
 }
@@ -435,12 +426,6 @@ void APDPlayerController::OnRep_PlayerState()
 	{
 		return;
 	}
-
-	//APDPlayerState* PS = GetPlayerState<APDPlayerState>();
-	//if (PS)
-	//{
-	//	InitPlayerHPBar(PS->GetDisplayName(), PS->GetPDAttributeSetBase());
-	//}
 
 }
 
