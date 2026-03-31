@@ -336,7 +336,11 @@ void APDPlayerController::UpdateCurrentAmmo(int32 CurrentAmmo)
 
 void APDPlayerController::StartReadyCheck()
 {
-	if (!GetWorld()) return;
+	if (!GetWorld())
+	{
+		UE_LOG(LogTemp, Error, TEXT("APDPlayerController::StartReadyCheck GetWorld false"));
+		return;
+	}
 
 	GetWorldTimerManager().ClearTimer(ReadyCheckTimerHandle);
 
@@ -351,7 +355,11 @@ void APDPlayerController::StartReadyCheck()
 
 void APDPlayerController::TickReadyCheck()
 {
-	if (bLocalReadyReported) return;
+	if (bLocalReadyReported)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("APDPlayerController::TickReadyCheck IsReady"));
+		return;
+	}
 
 	if (!AreAllPlayersReplicatedOnThisClient())
 	{
@@ -367,21 +375,56 @@ bool APDPlayerController::AreAllPlayersReplicatedOnThisClient() const
 {
 	UWorld* World = GetWorld();
 	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
-	if (!GS || ExpectedPlayerCount <= 0) return false;
+	if (!GS || ExpectedPlayerCount <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player GS Loading Yet"));
+		return false;
+	}
 
-	if (!GetPlayerState<APDPlayerState>() || !GetPawn()) return false;
+	if (!GetPlayerState<APDPlayerState>() || !GetPawn())
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player Pawn Loading Yet"));
+		return false;
+	}
 
-	if (GS->PlayerArray.Num() < ExpectedPlayerCount) return false;
+	if (GS->PlayerArray.Num() < ExpectedPlayerCount)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient All GS Loading Yet"));
+		return false;
+	}
 
 	for (APlayerState* PS : GS->PlayerArray)
 	{
 		if (!PS || !PS->GetPawn() || !PS->GetPawn()->HasActorBegunPlay())
 		{
+			UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient All Pawn Loading Yet"));
 			return false;
 		}
 	}
 
 	return true;
+}
+
+void APDPlayerController::Client_SetExpectedPlayerCount_Implementation(int32 InExpectedCount)
+{
+	ExpectedPlayerCount = InExpectedCount;
+	UE_LOG(LogTemp, Log, TEXT("Expected Player Count Set to: %d"), ExpectedPlayerCount);
+}
+
+void APDPlayerController::ServerRPC_ReportClientReady_Implementation()
+{
+	APDPlayerState* PS = GetPlayerState<APDPlayerState>();
+	if (PS)
+	{
+		PS->bClientReady = true;
+
+		UE_LOG(LogTemp, Log, TEXT("Server: Player %s reported Ready!"), *PS->GetPlayerName());
+
+		if (APDGameModeBase* GM = GetWorld()->GetAuthGameMode<APDGameModeBase>())
+		{
+			GM->CheckAllPlayersReady();
+		}
+	}
 }
 
 void APDPlayerController::OnRep_PlayerState()
@@ -459,9 +502,9 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 		LoadingHUD = nullptr;
 	}
  
-	//if (PlayerHUDWidget)
-	//{
-	//	PlayerHUDWidget->AddToViewport();
-	//}
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->AddToViewport();
+	}
 }
 
