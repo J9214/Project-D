@@ -33,6 +33,26 @@ void APDLobbyPlayerController::BeginPlay()
 
     FInputModeUIOnly InputMode;
     SetInputMode(InputMode);
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
+}
+
+void APDLobbyPlayerController::OnRep_PlayerState()
+{
+    Super::OnRep_PlayerState();
+
+    if (!IsLocalController())
+    {
+        return;
+    }
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
 }
 
 void APDLobbyPlayerController::ConnectToDedicatedServer()

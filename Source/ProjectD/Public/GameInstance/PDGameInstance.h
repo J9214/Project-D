@@ -36,6 +36,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FString GetPlayerLocalDisplayName() const { return PlayerLocalDisplayName; }
 
+	void TrySubmitCharacterCustomInfo();
+
 private:
 
 	UPROPERTY()
@@ -64,7 +66,7 @@ private:
 
 	void HandleJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
-	void TrySubmitCharacterCustomInfo();
+	bool SubmitCharacterCustomInfoThroughController(class APlayerController* PlayerController);
 
 	UPROPERTY()
 	FPDCharacterCustomInfo LocalCharacterCustomInfo;
