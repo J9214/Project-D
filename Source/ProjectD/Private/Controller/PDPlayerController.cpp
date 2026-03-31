@@ -103,7 +103,6 @@ void APDPlayerController::BeginPlay()
 		}
 
 		StartReadyCheck();
-	
 #endif
 
 	}
@@ -380,7 +379,7 @@ bool APDPlayerController::AreAllPlayersReplicatedOnThisClient() const
 {
 	UWorld* World = GetWorld();
 	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
-	if (!GS || ExpectedPlayerCount <= 0)
+	if (!GS || ExpectedPlayerCount < 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player GS Loading Yet"));
 		return false;

@@ -73,14 +73,6 @@ void APDGameModeBase::BeginPlay()
     bWorldReady = true;
 
     UE_LOG(LogProjectD, Log, TEXT("[GameMode] World ready."));
-    GetWorldTimerManager().SetTimer(
-        ReadyTimeoutTimerHandle,
-        this,
-        &APDGameModeBase::OnReadyTimeout,
-        ReadyTimeoutSeconds,
-        false
-    );
-    UE_LOG(LogProjectD, Log, TEXT("[GameMode] Ready Timeout Timer Started: %.2f seconds"), ReadyTimeoutSeconds);
 }
 
 void APDGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -538,6 +530,13 @@ void APDGameModeBase::PostLogin(APlayerController* NewPlayer)
 void APDGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
     Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+    if (APDPlayerController* PC = Cast<APDPlayerController>(NewPlayer))
+    {
+        PC->Client_SetExpectedPlayerCount(ExpectedTravelPlayerCount);
+
+        UE_LOG(LogProjectD, Log, TEXT("[GameMode] Seamless Travel Player Started: %s"), *PC->GetName());
+    }
 
     if (IsValid(NewPlayer) == false)
     {

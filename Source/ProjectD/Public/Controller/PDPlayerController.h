@@ -57,7 +57,7 @@ protected:
 	bool AreAllPlayersReplicatedOnThisClient() const;
 
 	FTimerHandle ReadyCheckTimerHandle;
-	int32 ExpectedPlayerCount = 0;
+	int32 ExpectedPlayerCount = -1;
 	bool bLocalReadyReported = false;
 
 	UFUNCTION(Server, Reliable)

@@ -106,10 +106,6 @@ protected:
 	FTimerHandle GameTimerHandle;
 	FTimerHandle NextRoundTimerHandle;
 	FTimerHandle InitialPreRoundTimerHandle; 
-	FTimerHandle ReadyTimeoutTimerHandle;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Game Rules")
-	float ReadyTimeoutSeconds = 30.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Game Rules")
 	int32 TargetScoreToWin;
@@ -156,7 +152,7 @@ protected:
 	UPROPERTY(Transient)
 	TSet<TWeakObjectPtr<APlayerState>> TravelReadyPlayerStates;
 
-	int32 ExpectedTravelPlayerCount = 0;
+	int32 ExpectedTravelPlayerCount = -1;
 
 	bool bDroneSpawnTriggeredThisRound = false;
 	bool bGoalProcessingThisRound = false;
