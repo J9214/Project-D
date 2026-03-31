@@ -5,6 +5,7 @@
 #include "Components/Inventory/PDInventoryComponent.h"
 #include <Controller/PDPlayerController.h>
 #include <GameMode/PDGameModeBase.h>
+#include <Controller/PDLobbyPlayerController.h>
 
 APDPlayerState::APDPlayerState()
 {
@@ -153,6 +154,11 @@ void APDPlayerState::SetReviveState()
 void APDPlayerState::OnRep_CharacterCustomInfo()
 {
 	HandleCharacterCustomInfoChanged();
+
+	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->RefreshLocalLobbyUI();
+	}
 }
 
 void APDPlayerState::HandleCharacterCustomInfoChanged()
@@ -172,6 +178,10 @@ void APDPlayerState::OnRep_DisplayName()
 		*GetResolvedDisplayName(),
 		*GetUniqueId().ToString());
 
+	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
+	{
+		LocalPC->RefreshLocalLobbyUI();
+	}
 }
 
 void APDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -103,7 +103,6 @@ void APDPlayerController::BeginPlay()
 		}
 
 		StartReadyCheck();
-	
 #endif
 
 	}
@@ -380,7 +379,7 @@ bool APDPlayerController::AreAllPlayersReplicatedOnThisClient() const
 {
 	UWorld* World = GetWorld();
 	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
-	if (!GS || ExpectedPlayerCount <= 0)
+	if (!GS || ExpectedPlayerCount < 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT(" APDPlayerController::AreAllPlayersReplicatedOnThisClient Player GS Loading Yet"));
 		return false;
@@ -473,6 +472,7 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			PlayerHUDWidget->AddToViewport();
 		}
 
+		UE_LOG(LogTemp, Log, TEXT("Client_OnGameStarted !GS !LocalPDPlayerState"));
 		return;
 	}
 
@@ -501,9 +501,17 @@ void APDPlayerController::Client_OnGameStarted_Implementation()
 			}
 		}
 
-		if (bIsMyTeam && PlayerHUDWidget)
+		if (PlayerHUDWidget)
 		{
-			PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			if (bIsMe)
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Player, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			}
+
+			if (bIsMyTeam )
+			{
+				PlayerHUDWidget->BindSlot(PDPS->GetDisplayName(), EHPBarSlot::Team1, PDPS->GetPDAttributeSetBase(), LocalTeamID, PDPS->GetTeamID());
+			}
 		}
 	}
 

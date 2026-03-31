@@ -16,6 +16,7 @@ class PROJECTD_API UFriendsLobby : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
+	virtual void NativeConstruct() override;
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
 	void BP_InitTeamInfoDisplay();
@@ -29,6 +30,8 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> FriendsPopupButton;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> GameStart;
 protected:
 
 	UPROPERTY(Transient, meta = (BindWidgetAnimOptional))
