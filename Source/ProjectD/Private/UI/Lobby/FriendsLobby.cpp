@@ -4,7 +4,24 @@
 #include "UI/Lobby/FriendsLobby.h"
 #include "Components/Button.h"
 
+void UFriendsLobby::NativeConstruct()
+{
+    Super::NativeConstruct();
 
+    if (GameStart)
+    {
+        APlayerController* PC = GetOwningPlayer();
+
+        if (PC && !PC->HasAuthority())
+        {
+            GameStart->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        else
+        {
+            GameStart->SetVisibility(ESlateVisibility::Visible);
+        }
+    }
+}
 
 void UFriendsLobby::InitFriendsPopupButton(bool Active)
 {

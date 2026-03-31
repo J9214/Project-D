@@ -33,6 +33,26 @@ void APDLobbyPlayerController::BeginPlay()
 
     FInputModeUIOnly InputMode;
     SetInputMode(InputMode);
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
+}
+
+void APDLobbyPlayerController::OnRep_PlayerState()
+{
+    Super::OnRep_PlayerState();
+
+    if (!IsLocalController())
+    {
+        return;
+    }
+
+    if (UPDGameInstance* GI = GetGameInstance<UPDGameInstance>())
+    {
+        GI->TrySubmitCharacterCustomInfo();
+    }
 }
 
 void APDLobbyPlayerController::ConnectToDedicatedServer()
@@ -298,6 +318,18 @@ void APDLobbyPlayerController::OnDestroySessionComplete(FName SessionName, bool 
 void APDLobbyPlayerController::Client_UpdateLobbyUI_Implementation()
 {
     if (UIWidgetInstance)
+    {
+        UFriendsLobby* FriendsLobby = Cast<UFriendsLobby>(UIWidgetInstance);
+        if (FriendsLobby)
+        {
+            FriendsLobby->BP_InitTeamInfoDisplay();
+        }
+    }
+}
+
+void APDLobbyPlayerController::RefreshLocalLobbyUI()
+{
+    if (IsLocalController() && UIWidgetInstance)
     {
         UFriendsLobby* FriendsLobby = Cast<UFriendsLobby>(UIWidgetInstance);
         if (FriendsLobby)

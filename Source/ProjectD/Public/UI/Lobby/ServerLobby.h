@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "BlueprintDataDefinitions.h"
+#include "GameInstance/PDCharacterCustomInfo.h"
 #include "GameMode/PDLobbyGameMode.h"
 #include "TimerManager.h"
 #include "ServerLobby.generated.h"
@@ -36,7 +37,7 @@ protected:
 	virtual void NativeDestruct() override;
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, bool bHasPlayer, const FBPUniqueNetId& UniqueNetId);
+	void BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, bool bHasPlayer, const FBPUniqueNetId& UniqueNetId, const FPDCharacterCustomInfo& CharacterCustomInfo);
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TeamAInfo;
@@ -70,11 +71,14 @@ private:
 		ETeamType TeamID,
 		ETeamType LocalTeamID);
 	void RefreshLobbyTeamInfos();
+	void RebindCharacterCustomInfoDelegates();
+	void UnbindCharacterCustomInfoDelegates();
 	void UpdateLocalTeamPanels(ETeamType LocalTeamID);
 	void CollectLocalTeamPlayerStates(ETeamType LocalTeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 	void CollectTeamPlayerStates(ETeamType TeamID, TArray<const APDPlayerState*>& OutTeamMembers) const;
 	void UpdateOtherTeamAvatars(ETeamType LocalTeamID);
 	void NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 SlotIndex, const APDPlayerState* SlotPlayerState, ETeamType SourceTeamID);
+	void HandleLobbyPlayerCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo);
 	int32 GetExpectedReadyPlayerCount(ETeamType TeamID) const;
 	int32 CountReadyPlayerStates(ETeamType TeamID) const;
 	bool AreAllExpectedPlayerStatesReady() const;
@@ -88,6 +92,7 @@ private:
 
 	TArray<FTeamInfo> CachedTeamInfos;
 	ETeamType CachedLocalTeamID = ETeamType::None;
+	TMap<TWeakObjectPtr<APDPlayerState>, FDelegateHandle> CharacterCustomInfoChangedHandles;
 	FTimerHandle LobbyTeamRefreshRetryHandle;
 	int32 LobbyTeamRefreshRetryCount = 0;
 

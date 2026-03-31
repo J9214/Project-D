@@ -10,6 +10,7 @@ void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETe
 	CachedTeamInfos = InTeamInfos;
 	CachedLocalTeamID = InLocalTeamID;
 	LobbyTeamRefreshRetryCount = 0;
+	RebindCharacterCustomInfoDelegates();
 	RefreshLobbyTeamInfos();
 }
 
@@ -224,7 +225,7 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Slot=0 Team=%d Empty"), static_cast<int32>(LocalTeamID));
-		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 0, false, FBPUniqueNetId());
+		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 0, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
 	}
 
 	if (bHasSlot1)
@@ -234,7 +235,7 @@ void UServerLobby::UpdateLocalTeamPanels(ETeamType LocalTeamID)
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[LobbyTeamPanel] Slot=1 Team=%d Empty"), static_cast<int32>(LocalTeamID));
-		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 1, false, FBPUniqueNetId());
+		BP_UpdateLobbyMemberAvatar(ELobbyAvatarTarget::LocalTeam, 1, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
 	}
 }
 
@@ -242,7 +243,7 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 {
 	if (!SlotPlayerState)
 	{
-		BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId());
+		BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
 		return;
 	}
 
@@ -260,7 +261,7 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 		*SlotPlayerState->GetUniqueId().ToString(),
 		AvatarUniqueNetId.IsValid() ? 1 : 0);
 
-	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId);
+	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId, SlotPlayerState->GetCharacterCustomInfo());
 }
 
 void UServerLobby::UpdateOtherTeamAvatars(ETeamType LocalTeamID)
@@ -287,8 +288,8 @@ void UServerLobby::UpdateOtherTeamAvatars(ETeamType LocalTeamID)
 
 		if (SourceTeamID == ETeamType::None)
 		{
-			BP_UpdateLobbyMemberAvatar(AvatarTarget, 0, false, FBPUniqueNetId());
-			BP_UpdateLobbyMemberAvatar(AvatarTarget, 1, false, FBPUniqueNetId());
+			BP_UpdateLobbyMemberAvatar(AvatarTarget, 0, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
+			BP_UpdateLobbyMemberAvatar(AvatarTarget, 1, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
 			continue;
 		}
 
@@ -306,7 +307,7 @@ void UServerLobby::UpdateOtherTeamAvatars(ETeamType LocalTeamID)
 					static_cast<int32>(AvatarTarget),
 					static_cast<int32>(SourceTeamID),
 					SlotIndex);
-				BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId());
+				BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, false, FBPUniqueNetId(), FPDCharacterCustomInfo());
 				continue;
 			}
 
@@ -402,6 +403,55 @@ void UServerLobby::RetryRefreshLobbyTeamInfos()
 		TEXT("[LobbyTeamRefreshRetry] RetryRefreshLobbyTeamInfos Attempt=%d"),
 		LobbyTeamRefreshRetryCount);
 
+	RebindCharacterCustomInfoDelegates();
+	RefreshLobbyTeamInfos();
+}
+
+void UServerLobby::RebindCharacterCustomInfoDelegates()
+{
+	UnbindCharacterCustomInfoDelegates();
+
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	const AGameStateBase* CurrentGameState = GetWorld()->GetGameState();
+	if (!CurrentGameState)
+	{
+		return;
+	}
+
+	for (APlayerState* BasePlayerState : CurrentGameState->PlayerArray)
+	{
+		APDPlayerState* PDPlayerState = Cast<APDPlayerState>(BasePlayerState);
+		if (!PDPlayerState)
+		{
+			continue;
+		}
+
+		const FDelegateHandle Handle = PDPlayerState->OnCharacterCustomInfoChangedNative().AddUObject(
+			this,
+			&ThisClass::HandleLobbyPlayerCharacterCustomInfoChanged);
+		CharacterCustomInfoChangedHandles.Add(PDPlayerState, Handle);
+	}
+}
+
+void UServerLobby::UnbindCharacterCustomInfoDelegates()
+{
+	for (TPair<TWeakObjectPtr<APDPlayerState>, FDelegateHandle>& Pair : CharacterCustomInfoChangedHandles)
+	{
+		if (APDPlayerState* PDPlayerState = Pair.Key.Get())
+		{
+			PDPlayerState->OnCharacterCustomInfoChangedNative().Remove(Pair.Value);
+		}
+	}
+
+	CharacterCustomInfoChangedHandles.Reset();
+}
+
+void UServerLobby::HandleLobbyPlayerCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
+{
 	RefreshLobbyTeamInfos();
 }
 
@@ -451,6 +501,7 @@ void UServerLobby::ApplyMatchStartServerTime(float InMatchStartServerTimeSec)
 
 void UServerLobby::NativeDestruct()
 {
+	UnbindCharacterCustomInfoDelegates();
 	StopLobbyTeamRefreshRetry();
 	StopMatchingTimeRefresh();
 	Super::NativeDestruct();

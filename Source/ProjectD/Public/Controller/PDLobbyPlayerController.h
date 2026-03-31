@@ -20,6 +20,7 @@ class PROJECTD_API APDLobbyPlayerController : public APlayerController
 
 public:
     virtual void BeginPlay() override;
+    virtual void OnRep_PlayerState() override;
 
     UFUNCTION(BlueprintCallable)
     void ConnectToDedicatedServer();
@@ -44,6 +45,9 @@ public:
 
     UFUNCTION(Client, Reliable)
     void Client_UpdateLobbyUI();
+
+    UFUNCTION(BlueprintCallable)
+    void RefreshLocalLobbyUI();
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess))
     TSubclassOf<UUserWidget> UIWidgetClass;

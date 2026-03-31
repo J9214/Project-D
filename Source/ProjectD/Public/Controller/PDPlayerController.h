@@ -12,6 +12,7 @@ class UWeaponManageComponent;
 class UPDShopComponent;
 class UIngameHUD;
 class UPDAttributeSetBase;
+struct FPDCharacterCustomInfo;
 
 UCLASS()
 class PROJECTD_API APDPlayerController : public APlayerController
@@ -50,6 +51,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_OnGameStarted();
 
+	UFUNCTION(Server, Reliable)
+	void Server_SubmitCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo);
+
 protected:
 
 	void StartReadyCheck();
@@ -57,7 +61,7 @@ protected:
 	bool AreAllPlayersReplicatedOnThisClient() const;
 
 	FTimerHandle ReadyCheckTimerHandle;
-	int32 ExpectedPlayerCount = 0;
+	int32 ExpectedPlayerCount = -1;
 	bool bLocalReadyReported = false;
 
 	UFUNCTION(Server, Reliable)

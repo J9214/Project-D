@@ -118,6 +118,12 @@ void APDPawnBase::BeginPlay()
 	}
 }
 
+void APDPawnBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindCustomizationSyncFromPlayerState();
+	Super::EndPlay(EndPlayReason);
+}
+
 void APDPawnBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
@@ -303,7 +309,12 @@ void APDPawnBase::UnbindCustomizationSyncFromPlayerState()
 
 void APDPawnBase::HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
 {
-	BP_ApplyCharacterCustomization(NewCharacterCustomInfo);
+	ApplyCharacterCustomization(NewCharacterCustomInfo);
+}
+
+void APDPawnBase::ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo)
+{
+	BP_ApplyCharacterCustomization(CharacterCustomInfo);
 }
 
 void APDPawnBase::ApplyCustomizationFromPlayerState()
@@ -314,7 +325,7 @@ void APDPawnBase::ApplyCustomizationFromPlayerState()
 		return;
 	}
 
-	BP_ApplyCharacterCustomization(PS->GetCharacterCustomInfo());
+	ApplyCharacterCustomization(PS->GetCharacterCustomInfo());
 }
 
 void APDPawnBase::OnHealthChanged(const FOnAttributeChangeData& Data)

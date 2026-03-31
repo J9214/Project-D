@@ -79,6 +79,7 @@ void UPDPlayerUIComponent::SetupHeadHPWidget()
 {
 	if (!IsValid(HeadHPWidgetComp))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("UPDPlayerUIComponent::SetupHeadHPWidget HeadHPWidgetComp"));
 		return;
 	}
 
@@ -88,14 +89,13 @@ void UPDPlayerUIComponent::SetupHeadHPWidget()
 	}
 
 	HeadHPWidgetComp->InitWidget();
-
 	HeadHPWidget = Cast<UIngmaeHPBar>(HeadHPWidgetComp->GetUserWidgetObject());
 
 	if (!IsValid(HeadHPWidget))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("UPDPlayerUIComponent::SetupHeadHPWidget HeadHPWidget"));
 		return;
 	}
-
 }
 
 void UPDPlayerUIComponent::OnHealthChanged(float OldValue, float NewValue)
