@@ -22,7 +22,7 @@ ETeamType ResolvePawnTeamID(const APawn* Pawn)
 	return IsValid(PlayerState) ? PlayerState->GetTeamID() : ETeamType::None;
 }
 
-ETeamType ResolveLocalViewerTeamID(const AActor* ContextActor)
+ETeamType ResolveBallLocalViewerTeamID(const AActor* ContextActor)
 {
 	if (IsValid(ContextActor) == false)
 	{
@@ -351,7 +351,7 @@ void ABallCore::UpdateInfoWidgetColor()
 		return;
 	}
 
-	const ETeamType ViewerTeamID = ResolveLocalViewerTeamID(this);
+	const ETeamType ViewerTeamID = ResolveBallLocalViewerTeamID(this);
 	if (LastAppliedViewerTeamID == ViewerTeamID && LastAppliedObjectInfoTeamID == ObjectInfoTeamID)
 	{
 		return;
