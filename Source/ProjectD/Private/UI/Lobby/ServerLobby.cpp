@@ -5,6 +5,43 @@
 #include "PlayerState/PDPlayerState.h"
 #include "UI/PDTeamColorFunctionLibrary.h"
 
+namespace
+{
+FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+{
+	FString Summary = FString::Printf(
+		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
+		CharacterInfo.CharacterId,
+		CharacterInfo.EnumParameters.Num(),
+		CharacterInfo.FloatParameters.Num(),
+		CharacterInfo.ColorParameters.Num(),
+		CharacterInfo.BoolParameters.Num());
+
+	for (int32 Index = 0; Index < CharacterInfo.EnumParameters.Num(); ++Index)
+	{
+		const FPDMutableEnumParameter& Param = CharacterInfo.EnumParameters[Index];
+		Summary += FString::Printf(TEXT(" | Enum[%d]={Name='%s',Option='%s',Range=%d}"), Index, *Param.ParameterName, *Param.SelectedOptionName, Param.RangeIndex);
+	}
+
+	return Summary;
+}
+
+const TCHAR* LobbyAvatarTargetToString(ELobbyAvatarTarget AvatarTarget)
+{
+	switch (AvatarTarget)
+	{
+	case ELobbyAvatarTarget::LocalTeam:
+		return TEXT("LocalTeam");
+	case ELobbyAvatarTarget::OtherTeamB:
+		return TEXT("OtherTeamB");
+	case ELobbyAvatarTarget::OtherTeamC:
+		return TEXT("OtherTeamC");
+	default:
+		return TEXT("Unknown");
+	}
+}
+}
+
 void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID)
 {
 	CachedTeamInfos = InTeamInfos;
@@ -251,7 +288,8 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[LobbyAvatarTarget] Target=%d SourceTeam=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d"),
+		TEXT("[LobbyAvatarTarget] Target=%s(%d) SourceTeam=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d %s"),
+		LobbyAvatarTargetToString(AvatarTarget),
 		static_cast<int32>(AvatarTarget),
 		static_cast<int32>(SourceTeamID),
 		SlotIndex,
@@ -259,7 +297,22 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 		*SlotPlayerState->GetPlayerName(),
 		*SlotPlayerState->GetResolvedDisplayName(),
 		*SlotPlayerState->GetUniqueId().ToString(),
-		AvatarUniqueNetId.IsValid() ? 1 : 0);
+		AvatarUniqueNetId.IsValid() ? 1 : 0,
+			*DescribeCharacterCustomInfo(SlotPlayerState->GetCharacterCustomInfo()));
+
+	const APDPlayerState* LocalPlayerState = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<APDPlayerState>() : nullptr;
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[LobbyAvatarDispatch] Widget=%s LocalPS=%s LocalNetId=[%s] -> Target=%s Slot=%d SourcePS=%s SourceNetId=[%s] CharacterId=%d"),
+		*GetNameSafe(this),
+		*GetNameSafe(LocalPlayerState),
+		LocalPlayerState ? *LocalPlayerState->GetUniqueId().ToString() : TEXT("None"),
+		LobbyAvatarTargetToString(AvatarTarget),
+		SlotIndex,
+		*GetNameSafe(SlotPlayerState),
+		*SlotPlayerState->GetUniqueId().ToString(),
+		SlotPlayerState->GetCharacterCustomInfo().CharacterId);
 
 	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId, SlotPlayerState->GetCharacterCustomInfo());
 }
@@ -452,6 +505,12 @@ void UServerLobby::UnbindCharacterCustomInfoDelegates()
 
 void UServerLobby::HandleLobbyPlayerCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
 {
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][ServerLobby::HandleLobbyPlayerCharacterCustomInfoChanged] Widget=%s %s"),
+		*GetNameSafe(this),
+		*DescribeCharacterCustomInfo(NewCharacterCustomInfo));
 	RefreshLobbyTeamInfos();
 }
 
