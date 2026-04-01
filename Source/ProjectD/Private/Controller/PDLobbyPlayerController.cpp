@@ -8,6 +8,7 @@
 #include "PlayerState/PDPlayerState.h"
 #include "GameMode/PDLobbyGameMode.h"
 #include "GameInstance/PDGameInstance.h"
+#include "GameInstance/PDCharacterCustomInfo.h"
 #include "UI/Lobby/FriendsLobby.h"
 
 namespace

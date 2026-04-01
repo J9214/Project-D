@@ -2,6 +2,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Border.h"
 #include "GameFramework/GameStateBase.h"
+#include "GameInstance/PDCharacterCustomInfo.h"
 #include "PlayerState/PDPlayerState.h"
 #include "UI/PDTeamColorFunctionLibrary.h"
 

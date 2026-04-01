@@ -155,7 +155,6 @@ void UPDGameInstance::OnCreateHostSessionFailure()
 
 void UPDGameInstance::SetLocalCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterCustomInfo)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[CharacterCustomizationFlow][GameInstance::SetLocalCharacterCustomInfo] %s"), *DescribeCharacterCustomInfo(CharacterCustomInfo));
     LocalCharacterCustomInfo = CharacterCustomInfo;
 
 	TrySubmitCharacterCustomInfo();
@@ -174,15 +173,6 @@ void UPDGameInstance::TrySubmitCharacterCustomInfo()
 	{
 		return;
 	}
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[CharacterCustomizationFlow][GameInstance::TrySubmitCharacterCustomInfo] PC=%s HasAuthority=%d NetMode=%d %s"),
-		*GetNameSafe(PC),
-		PC->HasAuthority() ? 1 : 0,
-		static_cast<int32>(World->GetNetMode()),
-		*DescribeCharacterCustomInfo(LocalCharacterCustomInfo));
 
     if (SubmitCharacterCustomInfoThroughController(PC))
     {
@@ -210,49 +200,24 @@ bool UPDGameInstance::SubmitCharacterCustomInfoThroughController(APlayerControll
             return false;
         }
 
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[CharacterCustomizationFlow][GameInstance::SubmitThroughController] Route=AuthorityDirect PC=%s PS=%s %s"),
-			*GetNameSafe(PlayerController),
-			*GetNameSafe(PlayerState),
-			*DescribeCharacterCustomInfo(LocalCharacterCustomInfo));
         PlayerState->SetCharacterCustomInfo(LocalCharacterCustomInfo);
         return true;
     }
 
     if (APDLobbyPlayerController* LobbyPC = Cast<APDLobbyPlayerController>(PlayerController))
     {
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[CharacterCustomizationFlow][GameInstance::SubmitThroughController] Route=LobbyPC PC=%s %s"),
-			*GetNameSafe(LobbyPC),
-			*DescribeCharacterCustomInfo(LocalCharacterCustomInfo));
         LobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
         return true;
     }
 
     if (APDServerLobbyPlayerController* ServerLobbyPC = Cast<APDServerLobbyPlayerController>(PlayerController))
     {
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[CharacterCustomizationFlow][GameInstance::SubmitThroughController] Route=ServerLobbyPC PC=%s %s"),
-			*GetNameSafe(ServerLobbyPC),
-			*DescribeCharacterCustomInfo(LocalCharacterCustomInfo));
         ServerLobbyPC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
         return true;
     }
 
     if (APDPlayerController* GamePC = Cast<APDPlayerController>(PlayerController))
     {
-		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("[CharacterCustomizationFlow][GameInstance::SubmitThroughController] Route=GamePC PC=%s %s"),
-			*GetNameSafe(GamePC),
-			*DescribeCharacterCustomInfo(LocalCharacterCustomInfo));
         GamePC->Server_SubmitCharacterCustomInfo(LocalCharacterCustomInfo);
         return true;
     }

@@ -3,6 +3,7 @@
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/Inventory/PDInventoryComponent.h"
+#include "GameInstance/PDCharacterCustomInfo.h"
 #include <Controller/PDPlayerController.h>
 #include <GameMode/PDGameModeBase.h>
 #include <Controller/PDLobbyPlayerController.h>
