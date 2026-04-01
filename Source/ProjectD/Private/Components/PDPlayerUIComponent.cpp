@@ -5,6 +5,7 @@
 #include "Pawn/PDPawnBase.h"
 #include "AttributeSet/PDAttributeSetBase.h"
 #include "Components/WidgetComponent.h"
+#include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "PlayerState/PDPlayerState.h"
 #include "UI/Ingame/IngmaeHPBar.h"
@@ -79,21 +80,61 @@ void UPDPlayerUIComponent::SetupHeadHPWidget()
 {
 	if (!IsValid(HeadHPWidgetComp))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UPDPlayerUIComponent::SetupHeadHPWidget HeadHPWidgetComp"));
+		UE_LOG(LogTemp, Warning, TEXT("[HeadHPWidget] Widget component is null. Owner=%s"), *GetPathNameSafe(GetOwner()));
 		return;
 	}
 
-	if (HeadHPWidgetClass && HeadHPWidgetComp->GetWidgetClass() != HeadHPWidgetClass)
+	UClass* ConfiguredWidgetClass = HeadHPWidgetClass.Get();
+	UClass* ComponentWidgetClass = HeadHPWidgetComp->GetWidgetClass();
+
+	if (ConfiguredWidgetClass && ComponentWidgetClass != ConfiguredWidgetClass)
 	{
-		HeadHPWidgetComp->SetWidgetClass(HeadHPWidgetClass);
+		UE_LOG(LogTemp, Warning, TEXT("[HeadHPWidget] Overriding widget class. Owner=%s Component=%s Previous=%s Configured=%s"),
+			*GetPathNameSafe(GetOwner()),
+			*GetPathNameSafe(HeadHPWidgetComp),
+			*GetPathNameSafe(ComponentWidgetClass),
+			*GetPathNameSafe(ConfiguredWidgetClass));
+		HeadHPWidgetComp->SetWidgetClass(ConfiguredWidgetClass);
+		ComponentWidgetClass = ConfiguredWidgetClass;
+	}
+	else if (!ConfiguredWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[HeadHPWidget] HeadHPWidgetClass is not set. Falling back to component widget class. Owner=%s Component=%s WidgetClass=%s"),
+			*GetPathNameSafe(GetOwner()),
+			*GetPathNameSafe(HeadHPWidgetComp),
+			*GetPathNameSafe(ComponentWidgetClass));
+	}
+
+	if (!ComponentWidgetClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[HeadHPWidget] Widget class is null before InitWidget. Owner=%s Component=%s"),
+			*GetPathNameSafe(GetOwner()),
+			*GetPathNameSafe(HeadHPWidgetComp));
+		return;
 	}
 
 	HeadHPWidgetComp->InitWidget();
-	HeadHPWidget = Cast<UIngmaeHPBar>(HeadHPWidgetComp->GetUserWidgetObject());
+	UUserWidget* CreatedWidget = HeadHPWidgetComp->GetUserWidgetObject();
+	if (!IsValid(CreatedWidget))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[HeadHPWidget] InitWidget did not create a user widget. Owner=%s Component=%s WidgetClass=%s"),
+			*GetPathNameSafe(GetOwner()),
+			*GetPathNameSafe(HeadHPWidgetComp),
+			*GetPathNameSafe(ComponentWidgetClass));
+		return;
+	}
+
+	HeadHPWidget = Cast<UIngmaeHPBar>(CreatedWidget);
 
 	if (!IsValid(HeadHPWidget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UPDPlayerUIComponent::SetupHeadHPWidget HeadHPWidget"));
+		UE_LOG(LogTemp, Error, TEXT("[HeadHPWidget] Created widget type mismatch. Owner=%s Component=%s ExpectedBase=%s RequestedClass=%s CreatedWidget=%s CreatedClass=%s"),
+			*GetPathNameSafe(GetOwner()),
+			*GetPathNameSafe(HeadHPWidgetComp),
+			*GetPathNameSafe(UIngmaeHPBar::StaticClass()),
+			*GetPathNameSafe(ComponentWidgetClass),
+			*GetPathNameSafe(CreatedWidget),
+			*GetPathNameSafe(CreatedWidget->GetClass()));
 		return;
 	}
 }

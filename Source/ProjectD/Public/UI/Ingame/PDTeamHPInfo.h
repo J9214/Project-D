@@ -46,6 +46,11 @@ public:
 	void SetTeamTextColor(ETeamType LocalTeamID, ETeamType TargetTeamID);
 
 protected:
+	bool CacheBarMaterials(const TCHAR* Context);
+	bool CacheBarFillMaterial(const TCHAR* Context);
+	FString BuildWidgetTreeSummary() const;
+	void LogWidgetState(ELogVerbosity::Type Verbosity, const TCHAR* Context, const TCHAR* Detail) const;
+
 	UPROPERTY()
 	TObjectPtr<UMaterialInstanceDynamic> CachedBarFillMID;
 
@@ -58,10 +63,10 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> BarGlow;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NickName;
 
-	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UPROPERTY(Transient, meta = (BindWidgetAnimOptional))
 	TObjectPtr<UWidgetAnimation> Damaged;
 
 	UPROPERTY()
