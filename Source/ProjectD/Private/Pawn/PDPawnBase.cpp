@@ -39,20 +39,6 @@
 #include "UI/HUD/IngameHUD.h"
 #include "Components/Inventory/PDInventoryComponent.h"
 
-namespace
-{
-FString DescribeCharacterCustomInfoBrief(const FPDCharacterCustomInfo& CharacterCustomInfo)
-{
-	return FString::Printf(
-		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
-		CharacterCustomInfo.CharacterId,
-		CharacterCustomInfo.EnumParameters.Num(),
-		CharacterCustomInfo.FloatParameters.Num(),
-		CharacterCustomInfo.ColorParameters.Num(),
-		CharacterCustomInfo.BoolParameters.Num());
-}
-}
-
 APDPawnBase::APDPawnBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -323,31 +309,11 @@ void APDPawnBase::UnbindCustomizationSyncFromPlayerState()
 
 void APDPawnBase::HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterCustomInfo& NewCharacterCustomInfo)
 {
-	const APDPlayerState* PS = GetPlayerState<APDPlayerState>();
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[CharacterCustomizationFlow][Pawn::HandleReplicatedCharacterCustomInfoChanged] Pawn=%s PlayerState=%s PlayerNetId=[%s] Team=%d %s"),
-		*GetNameSafe(this),
-		*GetNameSafe(PS),
-		PS ? *PS->GetUniqueId().ToString() : TEXT("None"),
-		PS ? static_cast<int32>(PS->GetTeamID()) : static_cast<int32>(ETeamType::None),
-		*DescribeCharacterCustomInfoBrief(NewCharacterCustomInfo));
 	ApplyCharacterCustomization(NewCharacterCustomInfo);
 }
 
 void APDPawnBase::ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo)
 {
-	const APDPlayerState* PS = GetPlayerState<APDPlayerState>();
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[CharacterCustomizationFlow][Pawn::ApplyCharacterCustomization] Pawn=%s PlayerState=%s PlayerNetId=[%s] Team=%d %s"),
-		*GetNameSafe(this),
-		*GetNameSafe(PS),
-		PS ? *PS->GetUniqueId().ToString() : TEXT("None"),
-		PS ? static_cast<int32>(PS->GetTeamID()) : static_cast<int32>(ETeamType::None),
-		*DescribeCharacterCustomInfoBrief(CharacterCustomInfo));
 	BP_ApplyCharacterCustomization(CharacterCustomInfo);
 }
 
@@ -359,15 +325,6 @@ void APDPawnBase::ApplyCustomizationFromPlayerState()
 		return;
 	}
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[CharacterCustomizationFlow][Pawn::ApplyCustomizationFromPlayerState] Pawn=%s PlayerState=%s PlayerNetId=[%s] Team=%d %s"),
-		*GetNameSafe(this),
-		*GetNameSafe(PS),
-		*PS->GetUniqueId().ToString(),
-		static_cast<int32>(PS->GetTeamID()),
-		*DescribeCharacterCustomInfoBrief(PS->GetCharacterCustomInfo()));
 	ApplyCharacterCustomization(PS->GetCharacterCustomInfo());
 }
 

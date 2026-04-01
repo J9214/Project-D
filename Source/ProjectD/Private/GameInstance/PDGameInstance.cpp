@@ -10,65 +10,6 @@
 #include "Controller/PDServerLobbyPlayerController.h"
 #include "PlayerState/PDPlayerState.h"
 
-namespace
-{
-FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterCustomInfo)
-{
-	FString Summary = FString::Printf(
-		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
-		CharacterCustomInfo.CharacterId,
-		CharacterCustomInfo.EnumParameters.Num(),
-		CharacterCustomInfo.FloatParameters.Num(),
-		CharacterCustomInfo.ColorParameters.Num(),
-		CharacterCustomInfo.BoolParameters.Num());
-
-	for (int32 Index = 0; Index < CharacterCustomInfo.EnumParameters.Num(); ++Index)
-	{
-		const FPDMutableEnumParameter& Param = CharacterCustomInfo.EnumParameters[Index];
-		Summary += FString::Printf(
-			TEXT(" | Enum[%d]={Name='%s',Option='%s',Range=%d}"),
-			Index,
-			*Param.ParameterName,
-			*Param.SelectedOptionName,
-			Param.RangeIndex);
-	}
-
-	for (int32 Index = 0; Index < CharacterCustomInfo.FloatParameters.Num(); ++Index)
-	{
-		const FPDMutableFloatParameter& Param = CharacterCustomInfo.FloatParameters[Index];
-		Summary += FString::Printf(
-			TEXT(" | Float[%d]={Name='%s',Value=%.3f,Range=%d}"),
-			Index,
-			*Param.ParameterName,
-			Param.Value,
-			Param.RangeIndex);
-	}
-
-	for (int32 Index = 0; Index < CharacterCustomInfo.ColorParameters.Num(); ++Index)
-	{
-		const FPDMutableColorParameter& Param = CharacterCustomInfo.ColorParameters[Index];
-		Summary += FString::Printf(
-			TEXT(" | Color[%d]={Name='%s',Value=%s}"),
-			Index,
-			*Param.ParameterName,
-			*Param.Value.ToString());
-	}
-
-	for (int32 Index = 0; Index < CharacterCustomInfo.BoolParameters.Num(); ++Index)
-	{
-		const FPDMutableBoolParameter& Param = CharacterCustomInfo.BoolParameters[Index];
-		Summary += FString::Printf(
-			TEXT(" | Bool[%d]={Name='%s',Value=%d}"),
-			Index,
-			*Param.ParameterName,
-			Param.Value ? 1 : 0);
-	}
-
-	return Summary;
-}
-}
-
-
 void UPDGameInstance::Init()
 {
     Super::Init();

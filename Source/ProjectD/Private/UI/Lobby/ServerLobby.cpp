@@ -25,21 +25,6 @@ FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
 
 	return Summary;
 }
-
-const TCHAR* LobbyAvatarTargetToString(ELobbyAvatarTarget AvatarTarget)
-{
-	switch (AvatarTarget)
-	{
-	case ELobbyAvatarTarget::LocalTeam:
-		return TEXT("LocalTeam");
-	case ELobbyAvatarTarget::OtherTeamB:
-		return TEXT("OtherTeamB");
-	case ELobbyAvatarTarget::OtherTeamC:
-		return TEXT("OtherTeamC");
-	default:
-		return TEXT("Unknown");
-	}
-}
 }
 
 void UServerLobby::ApplyLobbyTeamInfos(const TArray<FTeamInfo>& InTeamInfos, ETeamType InLocalTeamID)
@@ -288,8 +273,7 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 	UE_LOG(
 		LogTemp,
 		Warning,
-		TEXT("[LobbyAvatarTarget] Target=%s(%d) SourceTeam=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d %s"),
-		LobbyAvatarTargetToString(AvatarTarget),
+		TEXT("[LobbyAvatarTarget] Target=%d SourceTeam=%d Slot=%d DisplayName=[%s] PlayerName=[%s] Resolved=[%s] NetId=[%s] AvatarIdValid=%d %s"),
 		static_cast<int32>(AvatarTarget),
 		static_cast<int32>(SourceTeamID),
 		SlotIndex,
@@ -298,21 +282,7 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 		*SlotPlayerState->GetResolvedDisplayName(),
 		*SlotPlayerState->GetUniqueId().ToString(),
 		AvatarUniqueNetId.IsValid() ? 1 : 0,
-			*DescribeCharacterCustomInfo(SlotPlayerState->GetCharacterCustomInfo()));
-
-	const APDPlayerState* LocalPlayerState = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<APDPlayerState>() : nullptr;
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("[LobbyAvatarDispatch] Widget=%s LocalPS=%s LocalNetId=[%s] -> Target=%s Slot=%d SourcePS=%s SourceNetId=[%s] CharacterId=%d"),
-		*GetNameSafe(this),
-		*GetNameSafe(LocalPlayerState),
-		LocalPlayerState ? *LocalPlayerState->GetUniqueId().ToString() : TEXT("None"),
-		LobbyAvatarTargetToString(AvatarTarget),
-		SlotIndex,
-		*GetNameSafe(SlotPlayerState),
-		*SlotPlayerState->GetUniqueId().ToString(),
-		SlotPlayerState->GetCharacterCustomInfo().CharacterId);
+		*DescribeCharacterCustomInfo(SlotPlayerState->GetCharacterCustomInfo()));
 
 	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId, SlotPlayerState->GetCharacterCustomInfo());
 }
