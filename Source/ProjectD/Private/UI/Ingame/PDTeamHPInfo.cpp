@@ -58,7 +58,7 @@ void UPDTeamHPInfo::SetDisplayName(const FString& DisplayName)
     }
 }
 
-float UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
+void UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
 {
     if (MaxHPValue <= 0.0f)
     {
@@ -91,7 +91,6 @@ float UPDTeamHPInfo::HandleHealthChanged(float OldValue, float NewValue)
     {
         PlayAnimation(Damaged, 0.f, 1, EUMGSequencePlayMode::Forward, 1.f);
     }
-
 }
 
 void UPDTeamHPInfo::SetMaxHealth(float NewMaxHealth)

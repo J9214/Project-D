@@ -10,6 +10,28 @@
 #include "GameInstance/PDGameInstance.h"
 #include "UI/Lobby/FriendsLobby.h"
 
+namespace
+{
+FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+{
+	FString Summary = FString::Printf(
+		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
+		CharacterInfo.CharacterId,
+		CharacterInfo.EnumParameters.Num(),
+		CharacterInfo.FloatParameters.Num(),
+		CharacterInfo.ColorParameters.Num(),
+		CharacterInfo.BoolParameters.Num());
+
+	for (int32 Index = 0; Index < CharacterInfo.EnumParameters.Num(); ++Index)
+	{
+		const FPDMutableEnumParameter& Param = CharacterInfo.EnumParameters[Index];
+		Summary += FString::Printf(TEXT(" | Enum[%d]={Name='%s',Option='%s',Range=%d}"), Index, *Param.ParameterName, *Param.SelectedOptionName, Param.RangeIndex);
+	}
+
+	return Summary;
+}
+}
+
 void APDLobbyPlayerController::BeginPlay()
 {
     Super::BeginPlay();
@@ -178,6 +200,13 @@ void APDLobbyPlayerController::Server_SubmitCharacterCustomInfo_Implementation(c
         return;
     }
 
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][LobbyPC::Server_SubmitCharacterCustomInfo] PC=%s PS=%s %s"),
+		*GetNameSafe(this),
+		*GetNameSafe(PS),
+		*DescribeCharacterCustomInfo(CharacterInfo));
     PS->SetCharacterCustomInfo(CharacterInfo);
 }
 
@@ -194,6 +223,12 @@ void APDLobbyPlayerController::Client_RequestCharacterCustomInfo_Implementation(
         return;
     }
 
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][LobbyPC::Client_RequestCharacterCustomInfo] PC=%s %s"),
+		*GetNameSafe(this),
+		*DescribeCharacterCustomInfo(GI->GetLocalCharacterCustomInfo()));
     Server_SubmitCharacterCustomInfo(GI->GetLocalCharacterCustomInfo());
 }
 

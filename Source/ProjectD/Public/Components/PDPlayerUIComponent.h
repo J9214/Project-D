@@ -8,6 +8,7 @@
 #include "PDPlayerUIComponent.generated.h"
 
 class APDPawnBase;
+class APlayerCameraManager;
 class UWidgetComponent;
 class UPDAttributeSetBase;
 class UIngmaeHPBar;

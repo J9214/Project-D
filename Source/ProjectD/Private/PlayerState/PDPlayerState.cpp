@@ -7,6 +7,28 @@
 #include <GameMode/PDGameModeBase.h>
 #include <Controller/PDLobbyPlayerController.h>
 
+namespace
+{
+FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+{
+	FString Summary = FString::Printf(
+		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
+		CharacterInfo.CharacterId,
+		CharacterInfo.EnumParameters.Num(),
+		CharacterInfo.FloatParameters.Num(),
+		CharacterInfo.ColorParameters.Num(),
+		CharacterInfo.BoolParameters.Num());
+
+	for (int32 Index = 0; Index < CharacterInfo.EnumParameters.Num(); ++Index)
+	{
+		const FPDMutableEnumParameter& Param = CharacterInfo.EnumParameters[Index];
+		Summary += FString::Printf(TEXT(" | Enum[%d]={Name='%s',Option='%s',Range=%d}"), Index, *Param.ParameterName, *Param.SelectedOptionName, Param.RangeIndex);
+	}
+
+	return Summary;
+}
+}
+
 APDPlayerState::APDPlayerState()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -34,6 +56,13 @@ void APDPlayerState::SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCha
 		return;
 	}
 
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][PlayerState::SetCharacterCustomInfo] PS=%s NetId=[%s] %s"),
+		*GetNameSafe(this),
+		*GetUniqueId().ToString(),
+		*DescribeCharacterCustomInfo(NewCharacterCustomInfo));
 	CharacterCustomInfo = NewCharacterCustomInfo;
 	HandleCharacterCustomInfoChanged();
 	ForceNetUpdate();
@@ -153,6 +182,13 @@ void APDPlayerState::SetReviveState()
 
 void APDPlayerState::OnRep_CharacterCustomInfo()
 {
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][PlayerState::OnRep_CharacterCustomInfo] PS=%s NetId=[%s] %s"),
+		*GetNameSafe(this),
+		*GetUniqueId().ToString(),
+		*DescribeCharacterCustomInfo(CharacterCustomInfo));
 	HandleCharacterCustomInfoChanged();
 
 	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
@@ -163,6 +199,13 @@ void APDPlayerState::OnRep_CharacterCustomInfo()
 
 void APDPlayerState::HandleCharacterCustomInfoChanged()
 {
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[CharacterCustomizationFlow][PlayerState::HandleCharacterCustomInfoChanged] PS=%s NetId=[%s] %s"),
+		*GetNameSafe(this),
+		*GetUniqueId().ToString(),
+		*DescribeCharacterCustomInfo(CharacterCustomInfo));
 	CharacterCustomInfoChangedNative.Broadcast(CharacterCustomInfo);
 }
 
