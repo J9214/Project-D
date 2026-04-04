@@ -1,0 +1,59 @@
+#include "Gimmick/Teleporter/PDTeleporter.h"
+
+#include "Components/BoxComponent.h"
+
+#include "MoverComponent.h"
+
+#include "ProjectD/ProjectD.h"
+
+APDTeleporter::APDTeleporter()
+{
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(TEXT("Capsule"));
+	BoxComp->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+	BoxComp->SetupAttachment(RootComponent);
+
+	Destination = CreateDefaultSubobject<USceneComponent>(TEXT("Destination"));
+	Destination->SetupAttachment(RootComponent);
+
+	Shape = BoxComp;
+}
+
+void APDTeleporter::OnInteract_Implementation(AActor* Interactor)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!TeleportDest.IsValid())
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Invalid Destination!"));
+		return;
+	}
+
+	UMoverComponent* Mover = Interactor->GetComponentByClass<UMoverComponent>();
+	if (!IsValid(Mover))
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Interactor has Invalid Mover!"));
+		return;
+	}
+
+	USceneComponent* UpdatedComp = Mover->GetUpdatedComponent();
+	if (!IsValid(UpdatedComp))
+	{
+		UE_LOG(LogProjectD, Warning, TEXT("APDTeleporter::OnInteract - Mover has Invalid Updated Component!"));
+		return;
+	}
+
+	UpdatedComp->SetWorldLocationAndRotation(
+		TeleportDest->Destination->GetComponentLocation(),
+		TeleportDest->GetActorQuat(),
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics
+	);
+}
+
+void APDTeleporter::OnEndInteract_Implementation(AActor* Interactor)
+{
+}
