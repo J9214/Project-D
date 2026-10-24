@@ -47,13 +47,18 @@ void APDLobbyGameMode::BeginPlay()
 {
     Super::BeginPlay();
 
-    for (int32 i = 0; i < TEAM_COUNT; i++)
+    // 리슨 서버와 PIE에서는 호스트의 PostLogin이 BeginPlay보다 먼저 불린다.
+    // 이미 들어온 플레이어가 있으면 팀 정보를 지우지 않는다(지우면 호스트 자리가 빈 것으로 계산됨).
+    if (GetNumPlayers() == 0)
     {
-        TeamInfos[i].LeaderSteamId = TEXT("");
-        TeamInfos[i].PlayerCount = 0;
-        TeamInfos[i].PendingCount = 0;
+        for (int32 i = 0; i < TEAM_COUNT; i++)
+        {
+            TeamInfos[i].LeaderSteamId = TEXT("");
+            TeamInfos[i].PlayerCount = 0;
+            TeamInfos[i].PendingCount = 0;
+        }
+        LoginInfo.Empty();
     }
-    LoginInfo.Empty();
     LobbyMatchStartServerTimeSec = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
     if (IsRunningDedicatedServer() && !bIsSessionCreating)

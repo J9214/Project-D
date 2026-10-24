@@ -38,6 +38,64 @@
 #include "Controller/PDPlayerController.h"
 #include "UI/HUD/IngameHUD.h"
 #include "Components/Inventory/PDInventoryComponent.h"
+#include "MuCO/CustomizableObjectInstance.h"
+#include "MuCO/CustomizableSkeletalComponent.h"
+#include "Misc/ScopeExit.h"
+
+namespace
+{
+// 비주얼 오버라이드 캐릭터의 Mutable 컴포넌트(머리, 몸)는 에셋 인스턴스(CO_PDCharacter_Inst)를 공유한다.
+// 공유한 채로 파라미터를 바꾸면 모든 플레이어의 의상이 같이 바뀌므로, 폰마다 사본을 하나 만들어
+// 그 폰의 컴포넌트들이 같이 쓰게 하고, 그 사본을 돌려준다.
+UCustomizableObjectInstance* MakePawnMutableInstancesUnique(AActor* PawnActor)
+{
+	TArray<AActor*> ActorsToCheck;
+	ActorsToCheck.Add(PawnActor);
+	PawnActor->GetAttachedActors(ActorsToCheck, false, true);
+
+	TMap<UCustomizableObjectInstance*, UCustomizableObjectInstance*> ClonedInstances;
+	UCustomizableObjectInstance* PawnInstance = nullptr;
+
+	for (AActor* Actor : ActorsToCheck)
+	{
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
+		TArray<UCustomizableSkeletalComponent*> CustomizableComponents;
+		Actor->GetComponents<UCustomizableSkeletalComponent>(CustomizableComponents, true);
+
+		for (UCustomizableSkeletalComponent* CustomizableComponent : CustomizableComponents)
+		{
+			UCustomizableObjectInstance* CurrentInstance = CustomizableComponent->GetCustomizableObjectInstance();
+			if (!IsValid(CurrentInstance))
+			{
+				continue;
+			}
+
+			if (CurrentInstance->GetOuter() != PawnActor)
+			{
+				UCustomizableObjectInstance*& PawnCopy = ClonedInstances.FindOrAdd(CurrentInstance);
+				if (!PawnCopy)
+				{
+					PawnCopy = CurrentInstance->CloneStatic(PawnActor);
+				}
+
+				CustomizableComponent->SetCustomizableObjectInstance(PawnCopy);
+				CurrentInstance = PawnCopy;
+			}
+
+			if (!PawnInstance)
+			{
+				PawnInstance = CurrentInstance;
+			}
+		}
+	}
+
+	return PawnInstance;
+}
+}
 
 APDPawnBase::APDPawnBase()
 {
@@ -314,6 +372,39 @@ void APDPawnBase::HandleReplicatedCharacterCustomInfoChanged(const FPDCharacterC
 
 void APDPawnBase::ApplyCharacterCustomization(const FPDCharacterCustomInfo& CharacterCustomInfo)
 {
+	// BP_ApplyCharacterCustomization이 서버에서 PlayerState::SetCharacterCustomInfo를 부르면 변경 알림이 다시 이 함수로 들어온다.
+	// 같은 폰의 적용 도중 다시 들어오면 건너뛰어 무한 반복을 막는다.
+	static TSet<const APDPawnBase*> PawnsApplyingCustomization;
+	if (PawnsApplyingCustomization.Contains(this))
+	{
+		return;
+	}
+	PawnsApplyingCustomization.Add(this);
+	ON_SCOPE_EXIT
+	{
+		PawnsApplyingCustomization.Remove(this);
+	};
+
+	// BP_ApplyCharacterCustomization은 PlayerState의 인스턴스에 의상을 적용하고, 비어 있으면 채워질 때까지 기다린다.
+	// 이 폰 전용 사본을 그 PlayerState에 넣어 두어야 플레이어마다 자기 캐릭터에 자기 의상이 적용된다.
+	UCustomizableObjectInstance* PawnInstance = MakePawnMutableInstancesUnique(this);
+	if (APDPlayerState* PDPlayerState = GetPlayerState<APDPlayerState>())
+	{
+		if (PawnInstance)
+		{
+			PDPlayerState->SetCustomizableObjectInstance(PawnInstance);
+		}
+		else
+		{
+			// 비주얼 오버라이드 액터가 아직 붙지 않았으면 잠시 뒤 다시 시도한다
+			FTimerHandle RetryHandle;
+			GetWorldTimerManager().SetTimer(RetryHandle, FTimerDelegate::CreateWeakLambda(this, [this]()
+				{
+					ApplyCustomizationFromPlayerState();
+				}), 0.2f, false);
+		}
+	}
+
 	BP_ApplyCharacterCustomization(CharacterCustomInfo);
 }
 
