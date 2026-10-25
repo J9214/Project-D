@@ -4,7 +4,7 @@
 
 namespace
 {
-FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+FString DescribeCustomizationLibraryInfo(const FPDCharacterCustomInfo& CharacterInfo)
 {
 	FString Summary = FString::Printf(
 		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
@@ -63,7 +63,7 @@ bool UPDCharacterCustomizationLibrary::ApplyCharacterCustomInfoToMutableInstance
 		bUpdateSkeletalMesh ? 1 : 0,
 		bIgnoreCloseDist ? 1 : 0,
 		bForceHighPriority ? 1 : 0,
-		*DescribeCharacterCustomInfo(CharacterCustomInfo));
+		*DescribeCustomizationLibraryInfo(CharacterCustomInfo));
 
 	for (const FPDMutableEnumParameter& EnumParameter : CharacterCustomInfo.EnumParameters)
 	{

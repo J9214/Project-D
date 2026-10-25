@@ -8,7 +8,7 @@
 
 namespace
 {
-FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+FString DescribeServerLobbyCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
 {
 	FString Summary = FString::Printf(
 		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
@@ -283,7 +283,7 @@ void UServerLobby::NotifyAvatarTarget(ELobbyAvatarTarget AvatarTarget, int32 Slo
 		*SlotPlayerState->GetResolvedDisplayName(),
 		*SlotPlayerState->GetUniqueId().ToString(),
 		AvatarUniqueNetId.IsValid() ? 1 : 0,
-		*DescribeCharacterCustomInfo(SlotPlayerState->GetCharacterCustomInfo()));
+		*DescribeServerLobbyCustomInfo(SlotPlayerState->GetCharacterCustomInfo()));
 
 	BP_UpdateLobbyMemberAvatar(AvatarTarget, SlotIndex, true, AvatarUniqueNetId, SlotPlayerState->GetCharacterCustomInfo());
 }
@@ -481,7 +481,7 @@ void UServerLobby::HandleLobbyPlayerCharacterCustomInfoChanged(const FPDCharacte
 		Warning,
 		TEXT("[CharacterCustomizationFlow][ServerLobby::HandleLobbyPlayerCharacterCustomInfoChanged] Widget=%s %s"),
 		*GetNameSafe(this),
-		*DescribeCharacterCustomInfo(NewCharacterCustomInfo));
+		*DescribeServerLobbyCustomInfo(NewCharacterCustomInfo));
 	RefreshLobbyTeamInfos();
 }
 

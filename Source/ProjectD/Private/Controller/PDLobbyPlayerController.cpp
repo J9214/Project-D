@@ -13,7 +13,7 @@
 
 namespace
 {
-FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+FString DescribeLobbyControllerCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
 {
 	FString Summary = FString::Printf(
 		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
@@ -207,7 +207,7 @@ void APDLobbyPlayerController::Server_SubmitCharacterCustomInfo_Implementation(c
 		TEXT("[CharacterCustomizationFlow][LobbyPC::Server_SubmitCharacterCustomInfo] PC=%s PS=%s %s"),
 		*GetNameSafe(this),
 		*GetNameSafe(PS),
-		*DescribeCharacterCustomInfo(CharacterInfo));
+		*DescribeLobbyControllerCustomInfo(CharacterInfo));
     PS->SetCharacterCustomInfo(CharacterInfo);
 }
 
@@ -229,7 +229,7 @@ void APDLobbyPlayerController::Client_RequestCharacterCustomInfo_Implementation(
 		Warning,
 		TEXT("[CharacterCustomizationFlow][LobbyPC::Client_RequestCharacterCustomInfo] PC=%s %s"),
 		*GetNameSafe(this),
-		*DescribeCharacterCustomInfo(GI->GetLocalCharacterCustomInfo()));
+		*DescribeLobbyControllerCustomInfo(GI->GetLocalCharacterCustomInfo()));
     Server_SubmitCharacterCustomInfo(GI->GetLocalCharacterCustomInfo());
 }
 
