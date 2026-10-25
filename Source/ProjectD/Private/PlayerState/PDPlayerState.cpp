@@ -10,7 +10,7 @@
 
 namespace
 {
-FString DescribeCharacterCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
+FString DescribePlayerStateCustomInfo(const FPDCharacterCustomInfo& CharacterInfo)
 {
 	FString Summary = FString::Printf(
 		TEXT("CharacterId=%d Enum=%d Float=%d Color=%d Bool=%d"),
@@ -63,7 +63,7 @@ void APDPlayerState::SetCharacterCustomInfo(const FPDCharacterCustomInfo& NewCha
 		TEXT("[CharacterCustomizationFlow][PlayerState::SetCharacterCustomInfo] PS=%s NetId=[%s] %s"),
 		*GetNameSafe(this),
 		*GetUniqueId().ToString(),
-		*DescribeCharacterCustomInfo(NewCharacterCustomInfo));
+		*DescribePlayerStateCustomInfo(NewCharacterCustomInfo));
 	CharacterCustomInfo = NewCharacterCustomInfo;
 	HandleCharacterCustomInfoChanged();
 	ForceNetUpdate();
@@ -189,7 +189,7 @@ void APDPlayerState::OnRep_CharacterCustomInfo()
 		TEXT("[CharacterCustomizationFlow][PlayerState::OnRep_CharacterCustomInfo] PS=%s NetId=[%s] %s"),
 		*GetNameSafe(this),
 		*GetUniqueId().ToString(),
-		*DescribeCharacterCustomInfo(CharacterCustomInfo));
+		*DescribePlayerStateCustomInfo(CharacterCustomInfo));
 	HandleCharacterCustomInfoChanged();
 
 	if (APDLobbyPlayerController* LocalPC = Cast<APDLobbyPlayerController>(GetWorld()->GetFirstPlayerController()))
@@ -206,7 +206,7 @@ void APDPlayerState::HandleCharacterCustomInfoChanged()
 		TEXT("[CharacterCustomizationFlow][PlayerState::HandleCharacterCustomInfoChanged] PS=%s NetId=[%s] %s"),
 		*GetNameSafe(this),
 		*GetUniqueId().ToString(),
-		*DescribeCharacterCustomInfo(CharacterCustomInfo));
+		*DescribePlayerStateCustomInfo(CharacterCustomInfo));
 	CharacterCustomInfoChangedNative.Broadcast(CharacterCustomInfo);
 }
 
